@@ -49,8 +49,7 @@ struct background
 
   double Omega0_lambda; /**< \f$ \Omega_{0_\Lambda} \f$: cosmological constant */
 
-  double Omega0_fld; /**< \f$ \Omega_{0 de} \f$: fluid with constant
-			\f$ w \f$ and \f$ c_s^2 \f$ */
+  double Omega0_fld; /**< \f$ \Omega_{0 de} \f$: fluid */
   double w0_fld; /**< \f$ w0_{DE} \f$: current fluid equation of state parameter */
   double wa_fld; /**< \f$ wa_{DE} \f$: fluid equation of state parameter derivative */
 
@@ -58,6 +57,14 @@ struct background
 		     in the frame comoving with the fluid (so, this is
 		     not [delta p/delta rho] in the synchronous or
 		     newtonian gauge!!!) */
+
+  short use_ppf; /**< flag switching on PPF perturbation equations
+                    instead of true fluid equations for
+                    perturbations. It could have been defined inside
+                    perturbation structure, but we leave it here in
+                    such way to have all fld parameters grouped. */
+
+  double c_gamma_over_c_fld; /**< ppf parameter defined in eq. (16) of 0808.3125 [astro-ph] */
 
   double Omega0_ur; /**< \f$ \Omega_{0 \nu r} \f$: ultra-relativistic neutrinos */
 
@@ -154,7 +161,8 @@ struct background
   int index_bg_rho_b;         /**< baryon density */
   int index_bg_rho_cdm;       /**< cdm density */
   int index_bg_rho_lambda;    /**< cosmological constant density */
-  int index_bg_rho_fld;       /**< fluid with constant w density */
+  int index_bg_rho_fld;       /**< fluid density */
+  int index_bg_w_fld;         /**< fluid equation of state */
   int index_bg_rho_ur;        /**< relativistic neutrinos/relics density */
   int index_bg_rho_dcdm;      /**< dcdm density */
   int index_bg_rho_dr;        /**< dr density */
@@ -183,8 +191,8 @@ struct background
   int index_bg_time;          /**< proper (cosmological) time in Mpc */
   int index_bg_rs;            /**< comoving sound horizon in Mpc */
 
-  int index_bg_D;             /**< density growth factor in dust universe, \f$ D = H \int [da/(aH)^3] \f$ (arbitrary normalization) */
-  int index_bg_f;             /**< velocity growth factor in dust universe, [dlnD]/[dln a] */
+  int index_bg_D;             /**< scale independent growth factor D(a) for CDM perturbations */
+  int index_bg_f;             /**< corresponding velocity growth factor [dlnD]/[dln a] */
 
   int bg_size_short;  /**< size of background vector in the "short format" */
   int bg_size_normal; /**< size of background vector in the "normal format" */
@@ -229,13 +237,15 @@ struct background
   int index_bi_a;       /**< {B} scale factor */
   int index_bi_rho_dcdm;/**< {B} dcdm density */
   int index_bi_rho_dr;  /**< {B} dr density */
+  int index_bi_rho_fld; /**< {B} fluid density */
   int index_bi_phi_scf;       /**< {B} scalar field value */
   int index_bi_phi_prime_scf; /**< {B} scalar field derivative wrt conformal time */
 
   int index_bi_time;    /**< {C} proper (cosmological) time in Mpc */
   int index_bi_rs;      /**< {C} sound horizon */
   int index_bi_tau;     /**< {C} conformal time in Mpc */
-  int index_bi_growth;  /**< {C} integral over \f$ [da/(aH)^3]=[d\tau/(aH^2)]\f$, useful for growth factor */
+  int index_bi_D;       /**< {C} scale independent growth factor D(a) for CDM perturbations. */
+  int index_bi_D_prime; /**< {C} D satisfies \f$ [D''(\tau)=-aHD'(\tau)+3/2 a^2 \rho_M D(\tau) \f$ */
 
   int bi_B_size;        /**< Number of {B} parameters */
   int bi_size;          /**< Number of {B}+{C} parameters */
@@ -367,6 +377,12 @@ extern "C" {
 			double * pvecback
 			);
 
+  int background_tau_of_z(
+                          struct background *pba,
+                          double z,
+                          double * tau
+                          );
+
   int background_functions(
 			   struct background *pba,
 			   double * pvecback_B,
@@ -374,11 +390,12 @@ extern "C" {
 			   double * pvecback
 			   );
 
-  int background_tau_of_z(
-			  struct background *pba,
-			  double z,
-			  double * tau
-			  );
+  int background_w_fld(
+                       struct background * pba,
+                       double a,
+                       double * w_fld,
+                       double * dw_over_da_fld,
+                       double * integral_fld);
 
   int background_init(
 		      struct precision *ppr,

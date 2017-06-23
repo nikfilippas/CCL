@@ -15,7 +15,7 @@
 #ifndef __COMMON__
 #define __COMMON__
 
-#define _VERSION_ "v2.5.0"
+#define _VERSION_ "v2.6.0"
 /* @cond INCLUDE_WITH_DOXYGEN */
 
 #define _TRUE_ 1 /**< integer associated to true statement */
@@ -59,6 +59,7 @@ typedef char FileName[_FILENAMESIZE_];
 #define _MAXTITLESTRINGLENGTH_ 8000 /**< Maximum number of characters in title strings */
 
 #define _DELIMITER_ "\t" /**< character used for delimiting titles in the title strings */
+
 
 
 #ifndef __CLASSDIR__

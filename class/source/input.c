@@ -3,9 +3,6 @@
  * Julien Lesgourgues, 27.08.2010
  */
 
-/* modified for CCL to include sigma_8 following recipe in 
-  https://github.com/lesgourg/class_public/issues/83 */
-
 #include "input.h"
 
 /**
@@ -231,15 +228,16 @@ int input_init(
    * These two arrays must contain the strings of names to be searched
    *  for and the corresponding new parameter */
   char * const target_namestrings[] = {"100*theta_s","Omega_dcdmdr","omega_dcdmdr",
-                                       "Omega_scf","Omega_ini_dcdm","omega_ini_dcdm","sigma8"};
+                                       "Omega_scf","Omega_ini_dcdm","omega_ini_dcdm"};
   char * const unknown_namestrings[] = {"h","Omega_ini_dcdm","Omega_ini_dcdm",
-                                        "scf_shooting_parameter","Omega_dcdmdr","omega_dcdmdr","A_s"};
+                                        "scf_shooting_parameter","Omega_dcdmdr","omega_dcdmdr"};
   enum computation_stage target_cs[] = {cs_thermodynamics, cs_background, cs_background,
                                         cs_background, cs_background, cs_background};
 
   int input_verbose = 0, int1, aux_flag, shooting_failed=_FALSE_;
 
   class_read_int("input_verbose",input_verbose);
+  if (input_verbose >0) printf("Reading input parameters\n");
 
   /** - Do we need to fix unknown parameters? */
   unknown_parameters_size = 0;
@@ -551,6 +549,7 @@ int input_read_parameters(
 
   double z_max=0.;
   int bin;
+  int input_verbose=0;
 
   sigma_B = 2. * pow(_PI_,5) * pow(_k_B_,4) / 15. / pow(_h_P_,3) / pow(_c_,2);
 
@@ -575,6 +574,8 @@ int input_read_parameters(
   /** - if entries passed in file_content structure, carefully read
       and interpret each of them, and tune the relevant input
       parameters accordingly*/
+
+  class_read_int("input_verbose",input_verbose);
 
   /** Knowing the gauge from the very beginning is useful (even if
       this could be a run not requiring perturbations at all: even in
@@ -975,13 +976,30 @@ int input_read_parameters(
     Omega_tot += pba->Omega0_scf;
   }
   /* Step 2 */
-  if (flag1 == _FALSE_) //Fill with Lambda
+  if (flag1 == _FALSE_) {
+    //Fill with Lambda
     pba->Omega0_lambda= 1. - pba->Omega0_k - Omega_tot;
-  else if (flag2 == _FALSE_)  // Fill up with fluid
-    pba->Omega0_fld = 1. - pba->Omega0_k - Omega_tot;
-  else if ((flag3 == _TRUE_) && (param3 < 0.)){ // Fill up with scalar field
-    pba->Omega0_scf = 1. - pba->Omega0_k - Omega_tot;
+    if (input_verbose > 0) printf(" -> matched budget equations by adjusting Omega_Lambda = %e\n",pba->Omega0_lambda);
   }
+  else if (flag2 == _FALSE_) {
+    // Fill up with fluid
+    pba->Omega0_fld = 1. - pba->Omega0_k - Omega_tot;
+    if (input_verbose > 0) printf(" -> matched budget equations by adjusting Omega_fld = %e\n",pba->Omega0_fld);
+  }
+  else if ((flag3 == _TRUE_) && (param3 < 0.)){
+    // Fill up with scalar field
+    pba->Omega0_scf = 1. - pba->Omega0_k - Omega_tot;
+    if (input_verbose > 0) printf(" -> matched budget equations by adjusting Omega_scf = %e\n",pba->Omega0_scf);
+  }
+
+  /*
+  fprintf(stderr,"%e %e %e %e %e\n",
+          pba->Omega0_lambda,
+          pba->Omega0_fld,
+          pba->Omega0_scf,
+          pba->Omega0_k,
+          Omega_tot);
+  */
 
   /** - Test that the user have not specified Omega_scf = -1 but left either
       Omega_lambda or Omega_fld unspecified:*/
@@ -993,6 +1011,25 @@ int input_read_parameters(
     class_read_double("w0_fld",pba->w0_fld);
     class_read_double("wa_fld",pba->wa_fld);
     class_read_double("cs2_fld",pba->cs2_fld);
+
+    class_call(parser_read_string(pfc,
+                                  "use_ppf",
+                                  &string1,
+                                  &flag1,
+                                  errmsg),
+                errmsg,
+                errmsg);
+
+    if (flag1 == _TRUE_){
+      if((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL)){
+        pba->use_ppf = _TRUE_;
+        class_read_double("c_gamma_over_c_fld",pba->c_gamma_over_c_fld);
+      }
+      else {
+        pba->use_ppf = _FALSE_;
+      }
+    }
+
   }
 
   /* Additional SCF parameters: */
@@ -1097,10 +1134,14 @@ int input_read_parameters(
       pth->reio_parametrization=reio_many_tanh;
       flag2=_TRUE_;
     }
+    if (strcmp(string1,"reio_inter") == 0) {
+      pth->reio_parametrization=reio_inter;
+      flag2=_TRUE_;
+    }
 
     class_test(flag2==_FALSE_,
                errmsg,
-               "could not identify reionization_parametrization value, check that it is one of 'reio_none', 'reio_camb', 'reio_bins_tanh', 'reio_half_tanh', 'reio_many_tanh'...");
+               "could not identify reionization_parametrization value, check that it is one of 'reio_none', 'reio_camb', 'reio_bins_tanh', 'reio_half_tanh', 'reio_many_tanh', 'reio_inter'...");
   }
 
   /** - reionization parameters if reio_parametrization=reio_camb */
@@ -1144,6 +1185,13 @@ int input_read_parameters(
     class_read_list_of_doubles("many_tanh_z",pth->many_tanh_z,pth->many_tanh_num);
     class_read_list_of_doubles("many_tanh_xe",pth->many_tanh_xe,pth->many_tanh_num);
     class_read_double("many_tanh_width",pth->many_tanh_width);
+  }
+
+  /** - reionization parameters if reio_parametrization=reio_many_tanh */
+  if (pth->reio_parametrization == reio_inter) {
+    class_read_int("reio_inter_num",pth->reio_inter_num);
+    class_read_list_of_doubles("reio_inter_z",pth->reio_inter_z,pth->reio_inter_num);
+    class_read_list_of_doubles("reio_inter_xe",pth->reio_inter_xe,pth->reio_inter_num);
   }
 
   /** - energy injection parameters from CDM annihilation/decay */
@@ -1264,6 +1312,16 @@ int input_read_parameters(
       ppt->has_perturbations = _TRUE_;
     }
 
+  }
+
+  if (ppt->has_density_transfers == _TRUE_) {
+    class_call(parser_read_string(pfc,"extra metric transfer functions",&string1,&flag1,errmsg),
+               errmsg,
+               errmsg);
+
+    if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"y") != NULL))) {
+      ppt->has_metricpotential_transfers = _TRUE_;
+    }
   }
 
   if (ppt->has_cl_cmb_temperature == _TRUE_) {
@@ -2255,7 +2313,7 @@ int input_read_parameters(
                errmsg,
                errmsg);
 
-    if (flag1 == _TRUE_) {
+    if ((flag1 == _TRUE_)) {
       if ((strstr(string1,"analytic") != NULL))
         ptr->has_nz_analytic = _TRUE_;
       else{
@@ -2272,7 +2330,7 @@ int input_read_parameters(
                errmsg,
                errmsg);
 
-    if (flag1 == _TRUE_) {
+    if ((flag1 == _TRUE_)) {
       if ((strstr(string1,"analytic") != NULL))
         ptr->has_nz_evo_analytic = _TRUE_;
       else{
@@ -2839,6 +2897,8 @@ int input_default_params(
   pba->w0_fld=-1.;
   pba->wa_fld=0.;
   pba->cs2_fld=1.;
+  pba->use_ppf = _TRUE_;
+  pba->c_gamma_over_c_fld = 0.4;
 
   pba->shooting_failed = _FALSE_;
 
@@ -2885,6 +2945,7 @@ int input_default_params(
   ppt->has_pk_matter = _FALSE_;
   ppt->has_density_transfers = _FALSE_;
   ppt->has_velocity_transfers = _FALSE_;
+  ppt->has_metricpotential_transfers = _FALSE_;
 
   ppt->has_nl_corrections_based_on_delta_m = _FALSE_;
 
@@ -3257,7 +3318,7 @@ int input_default_precision ( struct precision * ppr ) {
 
   ppr->hyper_x_min = 1.e-5;
   ppr->hyper_sampling_flat = 8.;
-  ppr->hyper_sampling_curved_low_nu = 6.0;
+  ppr->hyper_sampling_curved_low_nu = 7.0; // changed from 6.0 to 7.0 in v2.6.0, otherwise C2 can be very wrong with large curvature
   ppr->hyper_sampling_curved_high_nu = 3.0;
   ppr->hyper_nu_sampling_step = 1000.;
   ppr->hyper_phi_min_abs = 1.e-10;
@@ -3537,19 +3598,6 @@ int input_try_unknown_parameters(double * unknown_parameter,
     input_verbose = param;
   else
     input_verbose = 0;
-  // Optimise flags for sigma8 calculation.
-  pt.k_max_for_pk=1.0;
-  pt.has_pk_matter=_TRUE_;
-  pt.has_perturbations = _TRUE_;
-  pt.has_cl_cmb_temperature = _FALSE_;
-  pt.has_cls = _FALSE_;
-  pt.has_cl_cmb_polarization = _FALSE_;
-  pt.has_cl_cmb_lensing_potential = _FALSE_;
-  pt.has_cl_number_count = _FALSE_;
-  pt.has_cl_lensing_potential=_FALSE_;
-  pt.has_density_transfers=_FALSE_;
-  pt.has_velocity_transfers=_FALSE_;
-
 
   /** - Do computations */
   if (pfzw->required_computation_stage >= cs_background){
@@ -3605,9 +3653,6 @@ int input_try_unknown_parameters(double * unknown_parameter,
 
   for (i=0; i < pfzw->target_size; i++) {
     switch (pfzw->target_name[i]) {
-    case tn_sigma8:
-      output[i] = sp.sigma8 - pfzw->target_value[i];
-      break;
     case theta_s:
       output[i] = 100.*th.rs_rec/th.ra_rec-pfzw->target_value[i];
       break;
@@ -3720,11 +3765,6 @@ int input_get_guess(double *xguess,
 
   for (index_guess=0; index_guess < pfzw->target_size; index_guess++) {
     switch (pfzw->target_name[index_guess]) {
-      case tn_sigma8:
-      // Assume linear relationship between A_s and sigma8 and fix coefficient according to vanilla LambdaCDM. Should be good enough ...
-        xguess[index_guess] = 2.43e-9/0.87659*pfzw->target_value[index_guess];
-        dxdy[index_guess] = 2.43e-9/0.87659;
-    break;
     case theta_s:
       xguess[index_guess] = 3.54*pow(pfzw->target_value[index_guess],2)-5.455*pfzw->target_value[index_guess]+2.548;
       dxdy[index_guess] = (7.08*pfzw->target_value[index_guess]-5.455);
