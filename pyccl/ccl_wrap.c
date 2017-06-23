@@ -15880,28 +15880,6 @@ SWIGINTERN PyObject *EPS_SCALEFAC_GROWTH_swigconstant(PyObject *SWIGUNUSEDPARM(s
 }
 
 
-SWIGINTERN PyObject *Z_MIN_SOURCES_swigconstant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *module;
-  PyObject *d;
-  if (!PyArg_ParseTuple(args,(char*)"O:swigconstant", &module)) return NULL;
-  d = PyModule_GetDict(module);
-  if (!d) return NULL;
-  SWIG_Python_SetConstant(d, "Z_MIN_SOURCES",SWIG_From_double((double)(0.1)));
-  return SWIG_Py_Void();
-}
-
-
-SWIGINTERN PyObject *Z_MAX_SOURCES_swigconstant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *module;
-  PyObject *d;
-  if (!PyArg_ParseTuple(args,(char*)"O:swigconstant", &module)) return NULL;
-  d = PyModule_GetDict(module);
-  if (!d) return NULL;
-  SWIG_Python_SetConstant(d, "Z_MAX_SOURCES",SWIG_From_double((double)(3.0)));
-  return SWIG_Py_Void();
-}
-
-
 SWIGINTERN PyObject *_wrap_user_pz_info_your_pz_func_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   user_pz_info *arg1 = (user_pz_info *) 0 ;
@@ -16362,6 +16340,28 @@ SWIGINTERN PyObject *DNDZ_NC_swigconstant(PyObject *SWIGUNUSEDPARM(self), PyObje
   d = PyModule_GetDict(module);
   if (!d) return NULL;
   SWIG_Python_SetConstant(d, "DNDZ_NC",SWIG_From_int((int)(4)));
+  return SWIG_Py_Void();
+}
+
+
+SWIGINTERN PyObject *Z_MIN_SOURCES_swigconstant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *module;
+  PyObject *d;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigconstant", &module)) return NULL;
+  d = PyModule_GetDict(module);
+  if (!d) return NULL;
+  SWIG_Python_SetConstant(d, "Z_MIN_SOURCES",SWIG_From_double((double)(0.1)));
+  return SWIG_Py_Void();
+}
+
+
+SWIGINTERN PyObject *Z_MAX_SOURCES_swigconstant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *module;
+  PyObject *d;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigconstant", &module)) return NULL;
+  d = PyModule_GetDict(module);
+  if (!d) return NULL;
+  SWIG_Python_SetConstant(d, "Z_MAX_SOURCES",SWIG_From_double((double)(3.0)));
   return SWIG_Py_Void();
 }
 
@@ -17874,8 +17874,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"EPSREL_GROWTH_swigconstant", EPSREL_GROWTH_swigconstant, METH_VARARGS, NULL},
 	 { (char *)"EPSREL_DNDZ_swigconstant", EPSREL_DNDZ_swigconstant, METH_VARARGS, NULL},
 	 { (char *)"EPS_SCALEFAC_GROWTH_swigconstant", EPS_SCALEFAC_GROWTH_swigconstant, METH_VARARGS, NULL},
-	 { (char *)"Z_MIN_SOURCES_swigconstant", Z_MIN_SOURCES_swigconstant, METH_VARARGS, NULL},
-	 { (char *)"Z_MAX_SOURCES_swigconstant", Z_MAX_SOURCES_swigconstant, METH_VARARGS, NULL},
 	 { (char *)"user_pz_info_your_pz_func_set", _wrap_user_pz_info_your_pz_func_set, METH_VARARGS, (char *)"user_pz_info_your_pz_func_set(user_pz_info self, double (*)(double,double,void *,int *) your_pz_func)"},
 	 { (char *)"user_pz_info_your_pz_func_get", _wrap_user_pz_info_your_pz_func_get, METH_VARARGS, (char *)"user_pz_info_your_pz_func_get(user_pz_info self) -> double (*)(double,double,void *,int *)"},
 	 { (char *)"user_pz_info_your_pz_params_set", _wrap_user_pz_info_your_pz_params_set, METH_VARARGS, (char *)"user_pz_info_your_pz_params_set(user_pz_info self, void * your_pz_params)"},
@@ -17893,6 +17891,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"DNDZ_WL_FID_swigconstant", DNDZ_WL_FID_swigconstant, METH_VARARGS, NULL},
 	 { (char *)"DNDZ_WL_OPT_swigconstant", DNDZ_WL_OPT_swigconstant, METH_VARARGS, NULL},
 	 { (char *)"DNDZ_NC_swigconstant", DNDZ_NC_swigconstant, METH_VARARGS, NULL},
+	 { (char *)"Z_MIN_SOURCES_swigconstant", Z_MIN_SOURCES_swigconstant, METH_VARARGS, NULL},
+	 { (char *)"Z_MAX_SOURCES_swigconstant", Z_MAX_SOURCES_swigconstant, METH_VARARGS, NULL},
 	 { (char *)"specs_bias_clustering_vec", _wrap_specs_bias_clustering_vec, METH_VARARGS, (char *)"specs_bias_clustering_vec(cosmology cosmo, double * a, double * output, int * status)"},
 	 { (char *)"specs_sigmaz_clustering_vec", _wrap_specs_sigmaz_clustering_vec, METH_VARARGS, (char *)"specs_sigmaz_clustering_vec(double * z, double * output)"},
 	 { (char *)"specs_sigmaz_sources_vec", _wrap_specs_sigmaz_sources_vec, METH_VARARGS, (char *)"specs_sigmaz_sources_vec(double * z, double * output)"},

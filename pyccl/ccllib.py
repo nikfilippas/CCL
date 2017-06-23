@@ -859,12 +859,6 @@ EPSREL_DNDZ = _ccllib.EPSREL_DNDZ
 
 _ccllib.EPS_SCALEFAC_GROWTH_swigconstant(_ccllib)
 EPS_SCALEFAC_GROWTH = _ccllib.EPS_SCALEFAC_GROWTH
-
-_ccllib.Z_MIN_SOURCES_swigconstant(_ccllib)
-Z_MIN_SOURCES = _ccllib.Z_MIN_SOURCES
-
-_ccllib.Z_MAX_SOURCES_swigconstant(_ccllib)
-Z_MAX_SOURCES = _ccllib.Z_MAX_SOURCES
 class user_pz_info(_object):
     """Proxy of C user_pz_info struct."""
 
@@ -930,6 +924,12 @@ DNDZ_WL_OPT = _ccllib.DNDZ_WL_OPT
 
 _ccllib.DNDZ_NC_swigconstant(_ccllib)
 DNDZ_NC = _ccllib.DNDZ_NC
+
+_ccllib.Z_MIN_SOURCES_swigconstant(_ccllib)
+Z_MIN_SOURCES = _ccllib.Z_MIN_SOURCES
+
+_ccllib.Z_MAX_SOURCES_swigconstant(_ccllib)
+Z_MAX_SOURCES = _ccllib.Z_MAX_SOURCES
 
 def specs_bias_clustering_vec(cosmo, a, output, status):
     """specs_bias_clustering_vec(cosmology cosmo, double * a, double * output, int * status)"""
