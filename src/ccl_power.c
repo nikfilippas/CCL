@@ -278,6 +278,8 @@ static void ccl_fill_class_parameters(ccl_cosmology * cosmo, struct file_content
   strcpy(fc->name[3],"z_max_pk");
   sprintf(fc->value[3],"%e",1./ccl_splines->A_SPLINE_MIN-1.);
 
+  //add horndeski params
+
   strcpy(fc->name[4],"modes");
   strcpy(fc->value[4],"s");
 
