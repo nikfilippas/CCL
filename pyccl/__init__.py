@@ -52,6 +52,9 @@ from .correlation import correlation, correlation_3d
 # Properties of haloes
 from .halomodel import halomodel_matter_power, halo_concentration
 
+# 1-loop PT power spectra
+from .ptpower import PTPower
+
 # Specific to massive neutrinos
 from .neutrinos import Omeganuh2, nu_masses
 
