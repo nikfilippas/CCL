@@ -10,6 +10,37 @@
 
 CCL_BEGIN_DECLS
 
+
+//p2d extrapolation types for early times 
+typedef enum ccl_p2d_extrap_growth_t
+{
+  ccl_p2d_cclgrowth = 401, //Use CCL's linear growth
+  ccl_p2d_customgrowth = 402, //Use a custom growth function
+  ccl_p2d_constantgrowth = 403, //Use a constant growth factor
+  ccl_p2d_no_extrapol = 404, //Do not extrapolate, just throw an exception
+} ccl_p2d_extrap_growth_t;
+
+//p2d interpolation types
+typedef enum ccl_p2d_interp_t
+{
+  ccl_p2d_3 = 303, //Bicubic interpolation
+} ccl_p2d_interp_t;
+
+/**
+ * Struct containing a 2D power spectrum
+ */
+typedef struct {
+  double lkmin,lkmax; /**< Edges in log(k)*/
+  double amin,amax; /**< Edges in a*/
+  int extrap_order_lok; /**< Order of extrapolating polynomial in log(k) for low k*/
+  int extrap_order_hik; /**< Order of extrapolating polynomial in log(k) for high k*/
+  ccl_p2d_extrap_growth_t extrap_linear_growth;  /**< Extrapolation type at high redshifts*/
+  int is_log; /**< Do I hold the values of log(P(k,a))?*/
+  double (*growth)(double); /**< Custom extrapolating growth function*/
+  double growth_factor_0; /**< Constant extrapolating growth factor*/
+  gsl_spline2d *pk; /**< Spline holding the values of P(k,a)*/
+} ccl_p2d_t;
+
 /**
  * Struct containing the parameters defining a cosmology
  */
@@ -108,12 +139,8 @@ typedef struct ccl_data{
   gsl_spline * etahmf;
 
   // These are all functions of the wavenumber k and the scale factor a.
-  gsl_spline2d * p_lin;
-  gsl_spline2d * p_nl;
-  double k_min_lin; //k_min  [1/Mpc] <- minimum wavenumber that the power spectrum has been computed to
-  double k_min_nl;
-  double k_max_lin;
-  double k_max_nl;
+  ccl_p2d_t * p_lin;
+  ccl_p2d_t * p_nl;
 } ccl_data;
 
 /**
@@ -226,7 +253,6 @@ ccl_parameters ccl_parameters_read_yaml(const char * filename, int *status);
  * @return void
  */
 void ccl_cosmology_free(ccl_cosmology * cosmo);
-
 
 CCL_END_DECLS
 
