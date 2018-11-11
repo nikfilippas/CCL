@@ -179,6 +179,8 @@ static int window_lensing(double chi,ccl_cosmology *cosmo,SplPar *spl_pz,double 
                                 w, &result, &eresult);
   *win=result;
   gsl_integration_workspace_free(w);
+  if(fabs(result)<=1E-50)
+    return 0;
   if(gslstatus!=GSL_SUCCESS || *ip.status) {
     ccl_raise_gsl_warning(gslstatus, "ccl_cls.c: window_lensing():");
     return 1;
