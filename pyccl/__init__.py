@@ -43,6 +43,9 @@ from .massfunction import massfunc, massfunc_m2r, sigmaM, halo_bias
 # Cl's and tracers
 from .cls import angular_cl, NumberCountsTracer, WeakLensingTracer, CMBLensingTracer
 
+# Cl SSC
+from .ssc import angular_cl_ssc
+
 from .lsst_specs import bias_clustering, sigmaz_clustering, \
     sigmaz_sources, dNdz_tomog, PhotoZFunction, PhotoZGaussian
 

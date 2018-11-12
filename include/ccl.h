@@ -30,6 +30,7 @@
 #include "ccl_p2d.h"
 #include "ccl_power.h"
 #include "ccl_cls.h"
+#include "ccl_ssc.h"
 #include "ccl_background.h"
 #include "ccl_correlation.h"
 #include "ccl_massfunc.h"

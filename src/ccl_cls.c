@@ -903,25 +903,15 @@ static double ccl_angular_cl_native(ccl_cosmology *cosmo,CCL_ClWorkspace *cw,int
   IntClPar ipar;
   double result=0,eresult;
   double lkmin,lkmax;
-  ccl_p2d_t *psp_use;
   gsl_function F;
   gsl_integration_workspace *w=gsl_integration_workspace_alloc(ccl_gsl->N_ITERATION);
-
-  if(psp==NULL) {
-    if (!cosmo->computed_power) ccl_cosmology_compute_power(cosmo, status);
-    // Return if compilation failed
-    if (!cosmo->computed_power) return NAN;
-    psp_use=cosmo->data.p_nl;
-  }
-  else
-    psp_use=psp;
   
   ipar.il=il;
   ipar.cosmo=cosmo;
   ipar.w=cw;
   ipar.clt1=clt1;
   ipar.clt2=clt2;
-  ipar.psp=psp_use;
+  ipar.psp=psp;
   ipar.status = &clastatus;
   F.function=&cl_integrand;
   F.params=&ipar;
@@ -1024,11 +1014,23 @@ void ccl_angular_cls(ccl_cosmology *cosmo,CCL_ClWorkspace *w,
     ccl_check_status(cosmo,status);
   }
 
+  ccl_p2d_t *psp_use;
+  if(*status==0) {
+    //Initialize power spectrum if necessary
+    if(psp==NULL) {
+      if (!cosmo->computed_power)
+	ccl_cosmology_compute_power(cosmo, status);
+      psp_use=cosmo->data.p_nl;
+    }
+    else
+      psp_use=psp;
+  }
+  
   if(*status==0) {
     //Compute limber nodes
     for(ii=0;ii<w->n_ls;ii++) {
       if((!do_angpow) || (w->l_arr[ii]>w->l_limber))
-	cl_nodes[ii]=ccl_angular_cl_native(cosmo,w,ii,clt1,clt2,psp,status);
+	cl_nodes[ii]=ccl_angular_cl_native(cosmo,w,ii,clt1,clt2,psp_use,status);
     }
 
     //Interpolate into ells requested by user
