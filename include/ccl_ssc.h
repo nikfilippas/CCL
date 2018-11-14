@@ -4,6 +4,32 @@
 
 CCL_BEGIN_DECLS
 
+
+typedef struct {
+  double chimin;
+  double chimax;
+  int nchi;
+  double dchi;
+  double *chiarr;
+  double *aarr;
+  double *sbarr;
+  int nell;
+  double *larr;
+  double *kernel;
+} SSCWorkspace;
+
+SSCWorkspace *ccl_ssc_workspace_new(ccl_cosmology *cosmo,double fsky,
+				    ccl_p2d_t *psp1,ccl_p2d_t *psp2,
+				    ccl_p2d_t *resp,int nl_out,double *l_out,
+				    int *status);
+
+void ccl_ssc_workspace_free(SSCWorkspace *w);
+
+void ccl_angular_cl_ssc_from_workspace(ccl_cosmology *cosmo,SSCWorkspace *w,
+				       CCL_ClTracer *clt1,CCL_ClTracer *clt2,
+				       CCL_ClTracer *clt3,CCL_ClTracer *clt4,
+				       double *ssc_out,int *status);
+
 /**
  * Computes Limber approximation to the super-sample covariance matrix (SSC)
  * of the angular power spectrum between two power spectra C_12 and C_34, where
