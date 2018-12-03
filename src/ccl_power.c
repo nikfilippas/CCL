@@ -521,12 +521,13 @@ static void ccl_cosmology_compute_power_class(ccl_cosmology * cosmo, int * statu
   if(*status==0)
     cosmo->data.p_lin=ccl_p2d_t_new(na,z,nk,x,y2d_lin,1,2,ccl_p2d_cclgrowth,1,NULL,0,ccl_p2d_3,status);
 
-  if(*status==0) {
-    // At the moment KMIN can't be less than CLASS's kmin in the nonlinear case.
-    if (kmin<(exp(sp.ln_k[0]))) {
-      *status = CCL_ERROR_CLASS;
-      ccl_cosmology_set_status_message(cosmo, "ccl_power.c: ccl_cosmology_compute_power_class(): K_MIN is less than CLASS's kmin. Not yet supported for nonlinear P(k).\n");
-    }
+  //Non-linear power
+  //At the moment KMIN can't be less than CLASS's kmin in the nonlinear case.
+  
+  //If error, store status, we will free later
+  if (kmin<(exp(sp.ln_k[0]))) {
+    *status = CCL_ERROR_CLASS;
+    ccl_cosmology_set_status_message(cosmo, "ccl_power.c: ccl_cosmology_compute_power_class(): K_MIN is less than CLASS's kmin. Not yet supported for nonlinear P(k).\n");
   }
   
   if(*status==0) {
@@ -1321,6 +1322,7 @@ static void ccl_cosmology_compute_power_emu(ccl_cosmology * cosmo, int * status)
 				   1,NULL,0,ccl_p2d_3,status);
   }
 
+  ccl_free_class_structs(cosmo, &ba,&th,&pt,&tr,&pm,&sp,&nl,&le,init_arr,status);
   free(x);
   free(y);
   free(y2d_lin);
@@ -1328,7 +1330,7 @@ static void ccl_cosmology_compute_power_emu(ccl_cosmology * cosmo, int * status)
   free(xstar);
   free(zemu);
   free(y2d_nl);
-}
+  }
 
 /*------ ROUTINE: ccl_cosmology_compute_power -----
 INPUT: ccl_cosmology * cosmo
