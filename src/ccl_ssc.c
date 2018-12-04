@@ -9,6 +9,16 @@
 
 #include "ccl.h"
 
+static double correct_response_nc(double z,CCL_ClTracer *clt1,CCL_ClTracer *clt2)
+{
+  double corr=0;
+  if(clt1->tracer_type==ccl_number_counts_tracer)
+    corr+=ccl_spline_eval(z,clt1->spl_bz);
+  if(clt2->tracer_type==ccl_number_counts_tracer)
+    corr+=ccl_spline_eval(z,clt2->spl_bz);
+  return corr;
+}
+
 typedef struct {
   ccl_cosmology *cosmo;
   double a;
@@ -230,6 +240,10 @@ static double cl_ssc_integrand(double lk,void *params)
   double r34=ccl_p2d_t_eval(p->resp,lk34,a,p->cosmo,p->status);
   double sigmab=sigma_b(p->sp_sigmab,a);
 
+  double z=1./a-1;
+  r12-=correct_response_nc(z,p->clt1,p->clt2);
+  r34-=correct_response_nc(z,p->clt3,p->clt4);
+  
   return d1*d2*d3*d4*r12*p12*r34*p34*sigmab/(chi*chi*chi);
 }
 
@@ -264,6 +278,9 @@ static double cl_ssc_integrand_chi(double z,void *params)
   double r34=ccl_p2d_t_eval(p->resp,lk34,a,p->cosmo,p->status);
   double sigmab=sigma_b(p->sp_sigmab,a);
 
+  r12-=correct_response_nc(z,p->clt1,p->clt2);
+  r34-=correct_response_nc(z,p->clt3,p->clt4);
+  
   return d1*d2*d3*d4*r12*p12*r34*p34*sigmab/(chi*chi*chi*chi*hz);
 }
 
@@ -414,6 +431,8 @@ void ccl_ssc_workspace_free(SSCWorkspace *w)
 }
 
 SSCWorkspace *ccl_ssc_workspace_new(ccl_cosmology *cosmo,double fsky,
+				    CCL_ClTracer *clt1,CCL_ClTracer *clt2,
+				    CCL_ClTracer *clt3,CCL_ClTracer *clt4,
 				    ccl_p2d_t *psp1,ccl_p2d_t *psp2,
 				    ccl_p2d_t *resp,int nl_out,double *l_out,
 				    int *status)
@@ -521,6 +540,10 @@ SSCWorkspace *ccl_ssc_workspace_new(ccl_cosmology *cosmo,double fsky,
 	  double r1=ccl_p2d_t_eval(resp,log(k1),a,cosmo,status);
 	  double p2=ccl_p2d_t_eval(psp2_use,log(k2),a,cosmo,status);
 	  double r2=ccl_p2d_t_eval(resp,log(k2),a,cosmo,status);
+	  double z=1./a-1;
+	  r1-=correct_response_nc(z,clt1,clt2);
+	  r2-=correct_response_nc(z,clt3,clt4);
+	  
 	  w->kernel[kk+w->nchi*(jj+w->nell*ii)]=r1*r2*p1*p2*sb/(chi*chi*chi*chi);
 	}
       }

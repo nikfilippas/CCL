@@ -9,7 +9,7 @@ import collections
 NoneArr = np.array([])
 
 class SSCWorkspace(object) :
-    def __init__(self,cosmo,fsky,ell,response,p_of_k_a_12=None,p_of_k_a_34=None) :
+    def __init__(self,cosmo,fsky,cltracer1,cltracer2,cltracer3,cltracer4,ell,response,p_of_k_a_12=None,p_of_k_a_34=None) :
         # Access ccl_cosmology object
         cosmo = cosmo.cosmo
         
@@ -34,8 +34,14 @@ class SSCWorkspace(object) :
         else :
             psp34=None
 
+        # Access CCL_ClTracer objects
+        clt1 = cltracer1.cltracer
+        clt2 = cltracer2.cltracer
+        clt3 = cltracer3.cltracer
+        clt4 = cltracer4.cltracer
+        
         status=0
-        self.wsp,status=lib.set_ssc_workspace_new(cosmo,fsky,psp12,psp34,resp,ell,status)
+        self.wsp,status=lib.set_ssc_workspace_new(cosmo,fsky,clt1,clt2,clt3,clt4,psp12,psp34,resp,ell,status)
         check(status)
         self.has_wsp=True
     

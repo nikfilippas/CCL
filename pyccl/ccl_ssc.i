@@ -32,10 +32,13 @@ void angular_cl_ssc_from_workspace_vec(ccl_cosmology *cosmo,SSCWorkspace *w,
 }
  
 SSCWorkspace *set_ssc_workspace_new(ccl_cosmology *cosmo,double fsky,
+				    CCL_ClTracer *clt1,CCL_ClTracer *clt2,
+				    CCL_ClTracer *clt3,CCL_ClTracer *clt4,
 				    ccl_p2d_t *psp12,ccl_p2d_t *psp34,ccl_p2d_t *resp,
 				    double *ell,int nell,int *status)
 {
-  SSCWorkspace *wsp=ccl_ssc_workspace_new(cosmo,fsky,psp12,psp34,resp,nell,ell,status);
+  SSCWorkspace *wsp=ccl_ssc_workspace_new(cosmo,fsky,clt1,clt2,clt3,clt4,
+					  psp12,psp34,resp,nell,ell,status);
   return wsp;
 }
  

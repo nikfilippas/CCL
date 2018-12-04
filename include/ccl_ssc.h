@@ -19,6 +19,8 @@ typedef struct {
 } SSCWorkspace;
 
 SSCWorkspace *ccl_ssc_workspace_new(ccl_cosmology *cosmo,double fsky,
+				    CCL_ClTracer *clt1,CCL_ClTracer *clt2,
+				    CCL_ClTracer *clt3,CCL_ClTracer *clt4,
 				    ccl_p2d_t *psp1,ccl_p2d_t *psp2,
 				    ccl_p2d_t *resp,int nl_out,double *l_out,
 				    int *status);
