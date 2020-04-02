@@ -414,19 +414,20 @@ Correlation function result will be in array xi
  */
 
 void ccl_correlation_3d(ccl_cosmology *cosmo, double a,
+                        int n_k,double *k,double *pk,
                         int n_r,double *r,double *xi,
                         int do_taper_pk,double *taper_pk_limits,
                         int *status) {
   int i,N_ARR;
   double *k_arr,*pk_arr,*r_arr,*xi_arr;
 
-  if (!cosmo->computed_nonlin_power) {
-    *status = CCL_ERROR_NONLIN_POWER_INIT;
-    ccl_cosmology_set_status_message(
-      cosmo,
-      "ccl_correlation.c: ccl_correlation_3d(): non-linear power spctrum has not been computed!");
-    return;
-  }
+  // if (!cosmo->computed_nonlin_power) { //not needed if pk is user input
+  //   *status = CCL_ERROR_NONLIN_POWER_INIT;
+  //   ccl_cosmology_set_status_message(
+  //     cosmo,
+  //     "ccl_correlation.c: ccl_correlation_3d(): non-linear power spctrum has not been computed!");
+  //   return;
+  // }
 
   //number of data points for k and pk array
   N_ARR=(int)(cosmo->spline_params.N_K_3DCOR*log10(cosmo->spline_params.K_MAX/cosmo->spline_params.K_MIN));
@@ -446,9 +447,30 @@ void ccl_correlation_3d(ccl_cosmology *cosmo, double a,
     return;
   }
 
-  for (i=0; i<N_ARR; i++){
-    pk_arr[i] = ccl_nonlin_matter_power(cosmo, k_arr[i], a, status);
+  // for (i=0; i<N_ARR; i++){
+  //   pk_arr[i] = ccl_nonlin_matter_power(cosmo, k_arr[i], a, status);
+  // }
+
+
+  //Interpolate input pk into array needed for FFTLog
+  ccl_f1d_t *pk_spl=ccl_f1d_t_new(n_k,l,pk,pk[0],0,
+          ccl_f1d_extrap_const,
+          ccl_f1d_extrap_logx_logy,
+          status);
+  if(pk_spl==NULL) {
+    free(k_arr);
+    free(pk_arr);
+    *status=CCL_ERROR_MEMORY;
+    ccl_cosmology_set_status_message(cosmo,
+             "ccl_correlation3d.c: "
+             "ran out of memory\n");
+    return;
   }
+
+  for(i=0;i<N_ARR;i++)
+    pk_arr[i]=ccl_f1d_t_eval(pk_spl,k_arr[i]);
+  ccl_f1d_t_free(pk_spl);
+
   if (do_taper_pk)
     taper_cl(N_ARR,k_arr,pk_arr,taper_pk_limits);
 
