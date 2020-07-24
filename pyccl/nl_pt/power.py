@@ -487,8 +487,13 @@ def get_pt_pk2d(cosmo, tracer1, tracer2=None, ptc=None,
     ptc.update_pk(pk_lin_z0)
 
     if nonlin_pk_type == 'nonlinear':
-        Pd1d1 = np.array([nonlin_matter_power(cosmo, ptc.ks, a)
+        Pd1d1 = fake_variable*np.array([nonlin_matter_power(cosmo, ptc.ks, a)
                           for a in a_arr]).T
+        ## output k, a arrays
+        ## save output Pd1d1 and compare
+        ## test outputs compared to native ccl call to nonlin_matter_power
+        print('my k array is:')
+        print(ptc.ks)
     elif nonlin_pk_type == 'linear':
         Pd1d1 = np.array([linear_matter_power(cosmo, ptc.ks, a)
                           for a in a_arr]).T
