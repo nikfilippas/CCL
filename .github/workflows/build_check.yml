@@ -1,0 +1,124 @@
+name: Build and Check
+
+on: [push, pull_request]
+
+jobs:
+  build-gcc-ubuntu:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prereq using apt
+      run: |
+        sudo apt update
+        sudo apt install flake8 libgsl0-dev libfftw3-dev libopenblas-dev python3-pytest-cov python3-scipy python3-nose python3-numpy cython3 -y
+    - name: Setting python3
+      run: sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+    - name: Install prereq using pip
+      run: |
+        pip install --upgrade -U fast-pt camb isitgr
+    - name: Install CLASS
+      run: |
+        git clone -b v2.7.2 --single-branch --depth 1 "https://github.com/lesgourg/class_public.git"
+        cd class_public
+        PYTHON=python make
+    - name: Run flake8
+      run: |
+        flake8 pyccl
+        flake8 --exclude=data benchmarks
+      continue-on-error: true
+    - name: Configure cmake
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DFORCE_OPENMP=YES -DCMAKE_VERBOSE_MAKEFILE=ON ..
+    - name: Compile CCL
+      run: |
+        cd build
+        make -j4
+    - name: Check CCL
+      run: |
+        CLASS_PARAM_DIR=./build/extern/share/class/ OMP_NUM_THREADS=2 ./build/check_ccl
+    - name: Build CCL python support
+      run: |
+        python setup.py build
+        sudo python setup.py develop
+    - name: Check CCL python support
+      run: |
+        OMP_NUM_THREADS=2 pytest-3 -vv pyccl --cov=pyccl
+        OMP_NUM_THREADS=2 pytest-3 -vv benchmarks --cov=pyccl --cov-append
+    - name: Coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        sudo pip install coveralls
+        coveralls
+
+  build-doc-only-ubuntu:
+  
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install prereq using apt
+      run: |
+        sudo apt install texlive texlive-bibtex-extra texlive-science texlive-publishers latexmk python3-sphinx python3-sphinx-rtd-theme python3-nbconvert python3-jupyter-client jupyter-client jupyter-nbconvert sphinx-common pandoc python3-setuptools -y
+        sudo pip install mkauthlist
+    - name: Building docs
+      run: |
+        cd doc/0000-ccl_note
+        make
+
+
+  build-gcc-macos:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+
+    - name: Install prereq
+      run: |
+        brew install fftw swig gsl
+        echo "CC=gcc-9" >> $GITHUB_ENV
+    - name: Install prereq using pip
+      run: |
+        pip install --upgrade -U fast-pt camb isitgr cython flake8 pytest pytest-cov
+    - name: Install CLASS
+      run: |
+        git clone -b v2.7.2 --single-branch --depth 1 "https://github.com/lesgourg/class_public.git"
+        cd class_public
+        make CC=gcc-9
+    - name: Run flake8
+      run: |
+        flake8 pyccl
+        flake8 --exclude=data benchmarks
+      continue-on-error: true
+    - name: Configure cmake
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DFORCE_OPENMP=YES -DCMAKE_VERBOSE_MAKEFILE=ON ..
+    - name: Compile CCL
+      run: |
+        cd build
+        make -j4
+    - name: Check CCL
+      run: |
+        CLASS_PARAM_DIR=./build/extern/share/class/ OMP_NUM_THREADS=2 ./build/check_ccl
+    - name: Build CCL python support
+      run: |
+        python setup.py build
+        sudo python setup.py develop
+    - name: Check CCL python support
+      run: |
+        OMP_NUM_THREADS=2 pytest -vv pyccl --cov=pyccl
+        OMP_NUM_THREADS=2 pytest -vv benchmarks --cov=pyccl --cov-append
+
+        
