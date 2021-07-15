@@ -8,6 +8,7 @@ import numpy as np
 from numpy.testing import assert_raises, assert_, assert_no_warnings
 
 import pyccl as ccl
+import warnings
 
 
 def test_cosmo_methods():
@@ -39,9 +40,12 @@ def test_cosmo_methods():
     hmd = ccl.halos.MassDef200m()
     hmf = ccl.halos.MassFuncTinker08(cosmo)
     hbf = ccl.halos.HaloBiasTinker10(cosmo)
-    hmc = ccl.halos.HMCalculator(cosmo, massfunc=hmf, hbias=hbf, mass_def=hmd)
-    assert ccl.halos.halomod_power_spectrum(cosmo, hmc, 1., 1., prof) == \
-        cosmo.halomod_power_spectrum(hmc, 1., 1., prof)
+    hmc = ccl.halos.HMCalculator(cosmo, mass_function=hmf, halo_bias=hbf,
+                                 mass_def=hmd)
+    P1 = ccl.halos.halomod_power_spectrum(cosmo, hmc, 1., 1., prof,
+                                          normprof=False)
+    P2 = cosmo.halomod_power_spectrum(hmc, 1., 1., prof, normprof=False)
+    assert P1 == P2
 
 
 def test_cosmology_critical_init():
@@ -215,6 +219,35 @@ def test_cosmology_repr():
         ccl.comoving_radial_distance(cosmo, 0.5) ==
         ccl.comoving_radial_distance(cosmo3, 0.5))
 
+    # adding extra parameters
+    cosmo = ccl.Cosmology(
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        extra_parameters={"camb": {"halofit_version": "mead2020",
+                                   "HMCode_logT_AGN": 7.8}})
+
+    cosmo2 = eval(str(cosmo))
+    assert_(
+        ccl.comoving_radial_distance(cosmo, 0.5) ==
+        ccl.comoving_radial_distance(cosmo2, 0.5))
+
+    cosmo3 = eval(repr(cosmo))
+    assert_(
+        ccl.comoving_radial_distance(cosmo, 0.5) ==
+        ccl.comoving_radial_distance(cosmo3, 0.5))
+
+    # testing with vanilla cosmology
+    cosmo = ccl.CosmologyVanillaLCDM()
+
+    cosmo2 = eval(str(cosmo))
+    assert_(
+        ccl.comoving_radial_distance(cosmo, 0.5) ==
+        ccl.comoving_radial_distance(cosmo2, 0.5))
+
+    cosmo3 = eval(repr(cosmo))
+    assert_(
+        ccl.comoving_radial_distance(cosmo, 0.5) ==
+        ccl.comoving_radial_distance(cosmo3, 0.5))
+
 
 def test_cosmology_context():
     """Check that using a Cosmology object in a context manager
@@ -234,3 +267,32 @@ def test_cosmology_context():
 
     with pytest.raises(AttributeError):
         cosmo.has_growth
+
+
+@pytest.mark.parametrize('c', ['bhattacharya2011', 'duffy2008',
+                               'constant_concentration'])
+def test_cosmology_concentrations(c):
+    cosmo = ccl.CosmologyVanillaLCDM(matter_power_spectrum="halo_model",
+                                     halo_concentration=c)
+    with pytest.warns(RuntimeWarning):
+        cosmo.compute_nonlin_power()
+
+
+@pytest.mark.parametrize('hmf', ['angulo', 'tinker', 'tinker10',
+                                 'watson', 'shethtormen'])
+def test_cosmology_mass_functions(hmf):
+    """Check halo concentration and halo mass function passed into choice
+    `halo_model` of matter power spectrum in Cosmology."""
+    valid_hmf = ["tinker10", "shethtormen"]
+    cosmo = ccl.CosmologyVanillaLCDM(matter_power_spectrum="halo_model",
+                                     mass_function=hmf)
+    if hmf in valid_hmf:
+        with pytest.warns(RuntimeWarning):
+            cosmo.compute_nonlin_power()
+    else:
+        # ignore the warning this time because we are interested
+        # in the error that is raised
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with pytest.raises(ValueError):
+                cosmo.compute_nonlin_power()

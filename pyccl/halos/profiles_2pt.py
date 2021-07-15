@@ -1,4 +1,7 @@
 from .profiles import HaloProfile, HaloProfileHOD
+from ..pyutils import warn_api
+from ..errors import CCLWarning
+import warnings
 
 
 class Profile2pt(object):
@@ -23,18 +26,20 @@ class Profile2pt(object):
             of the fourier profiles.
 
     """
-    def __init__(self, r_corr=0.):
+    @warn_api()
+    def __init__(self, *, r_corr=0.):
         self.r_corr = r_corr
 
-    def update_parameters(self, r_corr=None):
+    @warn_api()
+    def update_parameters(self, *, r_corr=None):
         """ Update any of the parameters associated with this 1-halo
         2-point correlator. Any parameter set to `None` won't be updated.
         """
         if r_corr is not None:
             self.r_corr = r_corr
 
-    def fourier_2pt(self, prof, cosmo, k, M, a,
-                    prof2=None, mass_def=None):
+    def fourier_2pt(self, cosmo, k, M, a, prof, *,
+                    prof2=None, mass_def):
         """ Return the Fourier-space two-point moment between
         two profiles.
 
@@ -42,9 +47,6 @@ class Profile2pt(object):
            (1+\\rho_{u_1,u_2})\\langle u_1(k)\\rangle\\langle u_2(k) \\rangle
 
         Args:
-            prof (:class:`~pyccl.halos.profiles.HaloProfile`):
-                halo profile for which the second-order moment
-                is desired.
             cosmo (:class:`~pyccl.core.Cosmology`):
                 a Cosmology object.
             k (float or array_like):
@@ -53,6 +55,9 @@ class Profile2pt(object):
                 halo mass in units of M_sun.
             a (float):
                 scale factor.
+            prof (:class:`~pyccl.halos.profiles.HaloProfile`):
+                halo profile for which the second-order moment
+                is desired.
             prof2 (:class:`~pyccl.halos.profiles.HaloProfile`):
                 second halo profile for which the second-order moment
                 is desired. If `None`, the assumption is that you want
@@ -67,6 +72,16 @@ class Profile2pt(object):
             respectively. If `k` or `M` are scalars, the
             corresponding dimension will be squeezed out on output.
         """
+        # patch to check if new or old API is used
+        from ..core import Cosmology
+        if not isinstance(cosmo, Cosmology):
+            warnings.warn("Official API for Profile2pt.fourier_2pt "
+                          "has changed. Argument order "
+                          "(prof, cosmo, k, M, a) has been replaced by "
+                          "(cosmo, k, M, a, prof).", CCLWarning)
+            prof, cosmo, k, M, a = cosmo, k, M, a, prof  # old to new API
+            assert isinstance(cosmo, Cosmology)
+
         if not isinstance(prof, HaloProfile):
             raise TypeError("prof must be of type `HaloProfile`")
 
@@ -96,19 +111,19 @@ class Profile2ptHOD(Profile2pt):
     where all quantities are described in the documentation of
     :class:`~pyccl.halos.profiles.HaloProfileHOD`.
     """
-    def fourier_2pt(self, prof, cosmo, k, M, a,
-                    prof2=None, mass_def=None):
+    def fourier_2pt(self, cosmo, k, M, a, prof, *,
+                    prof2=None, mass_def):
         """ Returns the Fourier-space two-point moment for the HOD
         profile.
 
         Args:
-            prof (:class:`~pyccl.halos.profiles.HaloProfileHOD`):
-                halo profile for which the second-order moment
-                is desired.
             cosmo (:class:`~pyccl.core.Cosmology`): a Cosmology object.
             k (float or array_like): comoving wavenumber in Mpc^-1.
             M (float or array_like): halo mass in units of M_sun.
             a (float): scale factor.
+            prof (:class:`~pyccl.halos.profiles.HaloProfileHOD`):
+                halo profile for which the second-order moment
+                is desired.
             prof2 (:class:`~pyccl.halos.profiles.HaloProfile`):
                 second halo profile for which the second-order moment
                 is desired. If `None`, the assumption is that you want
@@ -124,6 +139,16 @@ class Profile2ptHOD(Profile2pt):
             respectively. If `k` or `M` are scalars, the
             corresponding dimension will be squeezed out on output.
         """
+        # patch to check if new or old API is used
+        from ..core import Cosmology
+        if not isinstance(cosmo, Cosmology):
+            warnings.warn("Official API for Profile2pt.fourier_2pt "
+                          "has changed. Argument order "
+                          "(prof, cosmo, k, M, a) has been replaced by "
+                          "(cosmo, k, M, a, prof).", CCLWarning)
+            prof, cosmo, k, M, a = cosmo, k, M, a, prof  # old to new API
+            assert isinstance(cosmo, Cosmology)
+
         if not isinstance(prof, HaloProfileHOD):
             raise TypeError("prof must be of type `HaloProfileHOD`")
 

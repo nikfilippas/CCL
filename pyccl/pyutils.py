@@ -6,6 +6,7 @@ from .errors import CCLError, CCLWarning
 import functools
 import warnings
 import numpy as np
+from inspect import signature, Parameter
 try:
     from collections.abc import Iterable
 except ImportError:  # pragma: no cover  (for py2.7)
@@ -570,3 +571,212 @@ def _get_spline2d_arrays(gsl_spline):
     check(status)
 
     return yarr, xarr, zarr.reshape(y_size, x_size)
+
+
+def warn_api(pairs=None, order=None):
+    """ This decorator translates old API to new API for:
+      - functions/methods with changed argument order;
+      - functions/methods whose arguments have been renamed.
+
+    Parameters
+    ----------
+    pairs : list of pairs, optional
+        List of renaming pairs ``('new', 'old')``. The default is None.
+    order : list, optional
+        List of the **old** order of the arguments whose order
+        has been changed, under their **new** name. The default is None.
+
+    Example
+    -------
+    We have the legacy function
+
+    >>> def func(a, b, c, d):
+            # do something
+            return a, b, c, d
+
+    and we want to change the API to
+
+    >>> def func(a, *, see, bee, d):
+            # do the same thing
+            return a, bee, see, d
+
+    Then, adding this decorator to our function would preserve API
+
+    >>> @warn_api(pairs=[('bee', 'b'), ('see', 'c')],
+                  order=['see', 'bee'])
+
+    Notes
+    -----
+    Similar implementations for more specific usecases:
+      1. ``TreeCorr``: https://github.com/rmjarvis/TreeCorr/blob/main/treecorr/util.py#L932
+      2. ``Matplotlib``: https://github.com/matplotlib/matplotlib/blob/master/lib/matplotlib/_api/deprecation.py#L454
+      3. ``legacy-api-wrap``: https://github.com/flying-sheep/legacy-api-wrap/blob/master/legacy_api_wrap.py#L27
+
+    """  # noqa
+
+    def wrapper(func):
+        """ This wrapper assumes that
+        1. there are no positional-only arguments;
+        2. the order of the positional-or-keyword arguments is unchanged.
+        """
+        POK = Parameter.POSITIONAL_OR_KEYWORD
+        KWO = Parameter.KEYWORD_ONLY
+
+        # extract new parameters
+        params = signature(func).parameters
+        pos_names = [n for n, p in params.items() if p.kind == POK]
+        kwo_names = [n for n, p in params.items() if p.kind == KWO]
+        names = pos_names + kwo_names
+        npos = len(pos_names)
+
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            # check for normprof - we'll need that later (1 of 3)
+            def normprof_warning():
+                # all the variables we need will already be in locals
+                if ("normprof" in names) and ("normprof" not in kwargs):
+                    # backwards-compatibility
+                    kwargs["normprof"] = False
+                    warnings.warn(
+                        "Halo profile normalization `normprof` "
+                        "has to be explicitly specified to prevent "
+                        "unwanted behavior. Not specifying it "
+                        "will trigger an exception in the future",
+                        CCLWarning)
+
+            # transform decorator input
+            rename = np.atleast_2d(pairs) if pairs is not None else None
+            swap = order.copy() if order is not None else None
+
+            # rename any keyword-arguments?
+            if rename is not None:
+                these_kwargs = list(kwargs.keys())
+                do_rename = not all([n in names for n in these_kwargs])
+                if do_rename:
+                    olds = []
+                    news = []
+                    for new, old in rename:
+                        if old in kwargs:
+                            olds.append(old)
+                            news.append(new)
+                            kwargs[new] = kwargs.pop(old)
+                            if (swap is not None) and (new in swap):
+                                swap.remove(new)
+
+                    # warn about API change
+                    s = "" if len(olds) == 1 else "s"
+                    if len(olds) == 1:
+                        news = news[0]
+                        olds = olds[0]
+                    warnings.warn(
+                        f"Use of argument{s} {olds} is deprecated "
+                        f"in {func.__qualname__}. Pass the new name{s} "
+                        f"of the argument{s} {news}, respectively.",
+                        CCLWarning)
+
+            # return if we have everything we need
+            if len(args) <= npos:
+                # 1. wrapper assumes positional arguments are not swapped
+                # 2. not checking for new function
+                # 3. raise normprof warning? (2 of 3)
+                normprof_warning()
+                return func(*args, **kwargs)
+
+            # remove what was already added from todo list
+            if swap is not None:
+                for key in kwargs:
+                    if key in swap:
+                        swap.remove(key)
+
+            # include new positionals to kwarg dict
+            for name, value in zip(pos_names, args):
+                kwargs[name] = value
+            args = args[npos:]
+
+            # deal with the remaining arguments
+            extra_names = [n for n in names if n not in kwargs]
+            if len(extra_names) > 0:
+                if (swap is not None) and len(swap) > 0:
+                    indices = [extra_names.index(n) for n in swap]
+                    idx1, idx2 = min(indices), max(indices)
+                    extra_names_api = extra_names[:idx1] + swap + \
+                                      extra_names[idx2+1:]  # noqa
+                else:
+                    extra_names_api = extra_names
+
+                for name, value in zip(extra_names_api, args):
+                    kwargs[name] = value
+
+            # warn about API change
+            no_kw = names[npos : npos + len(args)]  # noqa
+            s = "" if len(no_kw) == 1 else "s"
+            no_kw = f"`{no_kw[0]}`" if len(no_kw) == 1 else no_kw
+            warnings.warn(
+                f"Use of argument{s} {no_kw} as positional is deprecated "
+                f"in {func.__qualname__}. Pass the name{s} of the "
+                f"keyword-only argument{s} explicitly.", CCLWarning)
+
+            # raise normprof warning? (3 of 3)
+            normprof_warning()
+
+            return func(**kwargs)
+
+        return new_func
+
+    return wrapper
+
+
+def deprecate_attr(pairs=None):
+    """ This decorator can be used to deprecate any attributes of a class,
+    warning the users about it and pointing them to the new attribute.
+
+    Parameters
+    ----------
+    pairs : list of pairs, optional
+        List of renaming pairs ``('new', 'old')``. The default is None.
+
+    Example
+    -------
+    We have the legacy class attribute ``mdef`` which we want to rename
+    to ``mass_def``. To achieve this we override the ``__getattr__`` method
+    of the attribute class using this decorator:
+
+    >>> @deprecate_attr([('mass_def', 'mdef')])
+        def __getattr__(self, name):
+            return getattr(self, name)
+
+    Now, every time the attribute is called via its old name, the user will
+    be warned about the renaming, and the attribute value will be returned.
+
+    """
+
+    def wrapper(getter):
+
+        new_names, old_names = np.asarray(pairs).T.tolist()
+
+        @functools.wraps(getter)
+        def new_getter(cls, this_name):
+
+            # an attribute may not exist because
+            # it has been renamed...
+            if this_name in old_names:
+                idx = old_names.index(this_name)
+                new_name = new_names[idx]
+                class_name = cls.__class__.__name__
+
+                warnings.warn(
+                    f"Attribute {this_name} is deprecated in {class_name}. "
+                    f"Pass the new name {new_name}.", CCLWarning)
+
+                this_name = new_name
+
+            # ...or because it simply does not exist
+            try:
+                attr = cls.__getattribute__(this_name)
+                return attr
+            except AttributeError:
+                return None
+
+            return getter(cls, this_name)
+        return new_getter
+    return wrapper

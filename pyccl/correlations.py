@@ -10,6 +10,7 @@ from . import ccllib as lib
 from . import constants as const
 from .core import check
 from .pk2d import parse_pk2d
+from .pyutils import warn_api
 import numpy as np
 import warnings
 
@@ -27,7 +28,8 @@ correlation_types = {
 }
 
 
-def correlation(cosmo, ell, C_ell, theta, type='NN', corr_type=None,
+@warn_api()
+def correlation(cosmo, *, ell, C_ell, theta, type='NN', corr_type=None,
                 method='fftlog'):
     """Compute the angular correlation function.
 
@@ -111,14 +113,15 @@ def correlation(cosmo, ell, C_ell, theta, type='NN', corr_type=None,
     return wth
 
 
-def correlation_3d(cosmo, a, r, p_of_k_a=None):
+@warn_api(pairs=[("dist", "r")])
+def correlation_3d(cosmo, a, *, dist, p_of_k_a=None):
     """Compute the 3D correlation function.
 
     Args:
         cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
         a (float): scale factor.
-        r (float or array_like): distance(s) at which to calculate the 3D
-                                 correlation function (in Mpc).
+        dist (float or array_like): distance(s) at which to calculate the 3D
+                                    correlation function (in Mpc).
         p_of_k_a (:class:`~pyccl.pk2d.Pk2D`, `str` or None): 3D Power spectrum
             to integrate. If a string, it must correspond to one of the
             non-linear power spectra stored in `cosmo` (e.g.
@@ -139,29 +142,30 @@ def correlation_3d(cosmo, a, r, p_of_k_a=None):
 
     # Convert scalar input into an array
     scalar = False
-    if isinstance(r, float) or isinstance(r, int):
+    if isinstance(dist, float) or isinstance(dist, int):
         scalar = True
-        r = np.array([r, ])
+        dist = np.array([dist, ])
 
     # Call 3D correlation function
-    xi, status = lib.correlation_3d_vec(cosmo, psp, a, r,
-                                        len(r), status)
+    xi, status = lib.correlation_3d_vec(cosmo, psp, a, dist,
+                                        len(dist), status)
     check(status, cosmo_in)
     if scalar:
         return xi[0]
     return xi
 
 
-def correlation_multipole(cosmo, a, beta, l, s, p_of_k_a=None):
+@warn_api(pairs=[("dist", "s"), ("ell", "l")], order=["beta", "ell", "dist"])
+def correlation_multipole(cosmo, a, *, ell, dist, beta, p_of_k_a=None):
     """Compute the correlation multipoles.
 
     Args:
         cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
         a (float): scale factor.
+        ell (int) : the desired multipole
+        dist (float or array_like): distance(s) at which to calculate
+                                    the 3DRsd correlation function (in Mpc).
         beta (float): growth rate divided by galaxy bias.
-        l (int) : the desired multipole
-        s (float or array_like): distance(s) at which to calculate the 3DRsd
-                                 correlation function (in Mpc).
         p_of_k_a (:class:`~pyccl.pk2d.Pk2D`, `str` or None): 3D Power spectrum
             to integrate. If a string, it must correspond to one of the
             non-linear power spectra stored in `cosmo` (e.g.
@@ -182,20 +186,22 @@ def correlation_multipole(cosmo, a, beta, l, s, p_of_k_a=None):
 
     # Convert scalar input into an array
     scalar = False
-    if isinstance(s, float) or isinstance(s, int):
+    if isinstance(dist, float) or isinstance(dist, int):
         scalar = True
-        s = np.array([s, ])
+        dist = np.array([dist, ])
 
     # Call 3D correlation function
-    xis, status = lib.correlation_multipole_vec(cosmo, psp, a, beta, l, s,
-                                                len(s), status)
+    xis, status = lib.correlation_multipole_vec(cosmo, psp, a, beta, ell,
+                                                dist, len(dist), status)
     check(status, cosmo_in)
     if scalar:
         return xis[0]
     return xis
 
 
-def correlation_3dRsd(cosmo, a, s, mu, beta, use_spline=True, p_of_k_a=None):
+@warn_api(pairs=[("dist", "s")])
+def correlation_3dRsd(cosmo, a, *, dist, mu, beta,
+                      use_spline=True, p_of_k_a=None):
     """
     Compute the 3DRsd correlation function using linear approximation
     with multipoles.
@@ -203,7 +209,7 @@ def correlation_3dRsd(cosmo, a, s, mu, beta, use_spline=True, p_of_k_a=None):
     Args:
         cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
         a (float): scale factor.
-        s (float or array_like): distance(s) at which to calculate the
+        dist (float or array_like): distance(s) at which to calculate the
                                  3DRsd correlation function (in Mpc).
         mu (float): cosine of the angle at which to calculate the 3DRsd
                     correlation function (in Radian).
@@ -230,28 +236,30 @@ def correlation_3dRsd(cosmo, a, s, mu, beta, use_spline=True, p_of_k_a=None):
 
     # Convert scalar input into an array
     scalar = False
-    if isinstance(s, float) or isinstance(s, int):
+    if isinstance(dist, float) or isinstance(dist, int):
         scalar = True
-        s = np.array([s, ])
+        dist = np.array([dist, ])
 
     # Call 3D correlation function
-    xis, status = lib.correlation_3dRsd_vec(cosmo, psp, a, mu, beta, s,
-                                            len(s), int(use_spline), status)
+    xis, status = lib.correlation_3dRsd_vec(cosmo, psp, a, mu, beta, dist,
+                                            len(dist), int(use_spline),
+                                            status)
     check(status, cosmo_in)
     if scalar:
         return xis[0]
     return xis
 
 
-def correlation_3dRsd_avgmu(cosmo, a, s, beta, p_of_k_a=None):
+@warn_api(pairs=[("dist", "s")])
+def correlation_3dRsd_avgmu(cosmo, a, *, dist, beta, p_of_k_a=None):
     """
     Compute the 3DRsd correlation function averaged over mu at constant s.
 
     Args:
         cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
         a (float): scale factor.
-        s (float or array_like): distance(s) at which to calculate the 3DRsd
-                                 correlation function (in Mpc).
+        dist (float or array_like): distance(s) at which to calculate
+                                    the 3DRsd correlation function (in Mpc).
         beta (float): growth rate divided by galaxy bias.
         p_of_k_a (:class:`~pyccl.pk2d.Pk2D`, `str` or None): 3D Power spectrum
             to integrate. If a string, it must correspond to one of the
@@ -273,21 +281,23 @@ def correlation_3dRsd_avgmu(cosmo, a, s, beta, p_of_k_a=None):
 
     # Convert scalar input into an array
     scalar = False
-    if isinstance(s, float) or isinstance(s, int):
+    if isinstance(dist, float) or isinstance(dist, int):
         scalar = True
-        s = np.array([s, ])
+        dist = np.array([dist, ])
 
     # Call 3D correlation function
-    xis, status = lib.correlation_3dRsd_avgmu_vec(cosmo, psp, a, beta, s,
-                                                  len(s), status)
+    xis, status = lib.correlation_3dRsd_avgmu_vec(cosmo, psp, a, beta, dist,
+                                                  len(dist), status)
     check(status, cosmo_in)
     if scalar:
         return xis[0]
     return xis
 
 
-def correlation_pi_sigma(cosmo, a, beta, pi, sig,
-                         use_spline=True, p_of_k_a=None):
+@warn_api(pairs=[("sigma", "sig")],
+          order=["beta", "pi", "sigma", "use_spline", "p_of_k_a"])
+def correlation_pi_sigma(cosmo, a, *, pi, sigma, beta,
+                         p_of_k_a=None, use_spline=True):
     """
     Compute the 3DRsd correlation in pi-sigma space.
 
@@ -295,14 +305,15 @@ def correlation_pi_sigma(cosmo, a, beta, pi, sig,
         cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
         a (float): scale factor.
         pi (float): distance times cosine of the angle (in Mpc).
-        sig (float or array-like): distance(s) times sine of the angle
-                                   (in Mpc).
+        sigma (float or array-like): distance(s) times sine of the angle
+                                     (in Mpc).
         beta (float): growth rate divided by galaxy bias.
         p_of_k_a (:class:`~pyccl.pk2d.Pk2D`, `str` or None): 3D Power spectrum
             to integrate. If a string, it must correspond to one of the
             non-linear power spectra stored in `cosmo` (e.g.
             `'delta_matter:delta_matter'`). If `None`, the non-linear matter
             power spectrum stored in `cosmo` will be used.
+        use_spline (bool): whether to use a spline
 
     Returns:
         Value(s) of the correlation function at the input pi and sigma.
@@ -318,13 +329,13 @@ def correlation_pi_sigma(cosmo, a, beta, pi, sig,
 
     # Convert scalar input into an array
     scalar = False
-    if isinstance(sig, float) or isinstance(sig, int):
+    if isinstance(sigma, float) or isinstance(sigma, int):
         scalar = True
-        sig = np.array([sig, ])
+        sigma = np.array([sigma, ])
 
     # Call 3D correlation function
-    xis, status = lib.correlation_pi_sigma_vec(cosmo, psp, a, beta, pi, sig,
-                                               len(sig), int(use_spline),
+    xis, status = lib.correlation_pi_sigma_vec(cosmo, psp, a, beta, pi, sigma,
+                                               len(sigma), int(use_spline),
                                                status)
     check(status, cosmo_in)
     if scalar:

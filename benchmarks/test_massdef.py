@@ -22,13 +22,13 @@ cs_200c_p = dc[7]
 cs_200c_di = dc[8]
 
 hmd_vir = ccl.halos.MassDefVir()
-hmd_vir_b = ccl.halos.MassDefVir('Bhattacharya13')
+hmd_vir_b = ccl.halos.MassDefVir(c_m_relation='Bhattacharya13')
 hmd_200m = ccl.halos.MassDef200m()
-hmd_200m_b = ccl.halos.MassDef200m('Bhattacharya13')
+hmd_200m_b = ccl.halos.MassDef200m(c_m_relation='Bhattacharya13')
 hmd_200c = ccl.halos.MassDef200c()
-hmd_200c_b = ccl.halos.MassDef200c('Bhattacharya13')
-hmd_200c_p = ccl.halos.MassDef200c('Prada12')
-hmd_200c_di = ccl.halos.MassDef200c('Diemer15')
+hmd_200c_b = ccl.halos.MassDef200c(c_m_relation='Bhattacharya13')
+hmd_200c_p = ccl.halos.MassDef200c(c_m_relation='Prada12')
+hmd_200c_di = ccl.halos.MassDef200c(c_m_relation='Diemer15')
 hmd_500c = ccl.halos.MassDef(500, 'critical')
 
 
@@ -74,5 +74,6 @@ def test_mdef_concentration():
 
 
 def test_mdef_translate_mass():
-    Ms_500c_h = hmd_200m.translate_mass(cosmo, Ms, 1., hmd_500c)
+    Ms_500c_h = hmd_200m.translate_mass(cosmo, Ms, 1.,
+                                        mass_def_other=hmd_500c)
     assert np.all(np.fabs(Ms_500c_h/Ms_500c-1) < 1E-6)

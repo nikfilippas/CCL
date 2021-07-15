@@ -21,7 +21,7 @@ def get_tk3d(alpha=1, beta=1):
                                k_arr[:, None], a,
                                alpha, beta)
                          for a in a_arr])
-    return ccl.Tk3D(a_arr, np.log(k_arr),
+    return ccl.Tk3D(a_arr=a_arr, lk_arr=np.log(k_arr),
                     tkk_arr=np.log(tkka_arr),
                     is_logt=True)
 
@@ -60,7 +60,8 @@ def test_cov_NG_sanity(alpha, beta, typ):
         cov_p = pred_covar(ls[None, :], ls[:, None], alpha, beta)
 
         def cov_f(ll, **kwargs):
-            return ccl.angular_cl_cov_cNG(COSMO, tr, tr, ll, tsp, **kwargs)
+            return ccl.angular_cl_cov_cNG(COSMO, tr, tr, ell=ll,
+                                          t_of_kk_a=tsp, **kwargs)
     elif typ == 'SSC':
         a_s = np.linspace(0.1, 1., 1024)
         s2b = np.ones_like(a_s)
@@ -68,8 +69,10 @@ def test_cov_NG_sanity(alpha, beta, typ):
                            prefac=1., chi_power=4)
 
         def cov_f(ll, **kwargs):
-            return ccl.angular_cl_cov_SSC(COSMO, tr, tr, ll, tsp,
-                                          sigma2_B=(a_s, s2b), **kwargs)
+            return ccl.angular_cl_cov_SSC(COSMO, tr, tr, ell=ll,
+                                          t_of_kk_a=tsp,
+                                          sigma2_B=(a_s, s2b),
+                                          **kwargs)
 
     cov = cov_f(ls)
     assert np.all(np.fabs(cov/cov_p-1).flatten() < 1E-5)
@@ -79,7 +82,7 @@ def test_cov_NG_sanity(alpha, beta, typ):
     assert np.all(np.fabs(cov/cov_p-1).flatten() < 4E-2)
 
     # Different tracers
-    cov = cov_f(ls, cltracer3=tr, cltracer4=tr)
+    cov = cov_f(ls, tracer3=tr, tracer4=tr)
     assert np.all(np.fabs(cov/cov_p-1).flatten() < 1E-5)
 
     # Different ells
@@ -111,11 +114,14 @@ def test_cov_NG_errors(typ):
     ls = np.array([2., 20., 200.])
 
     assert_raises(ValueError, cov_f,
-                  COSMO, tr, tr, ls, tsp,
+                  COSMO, tr, tr, ell=ls, t_of_kk_a=tsp,
                   integration_method='cag_cuad')
 
-    assert_raises(ValueError, cov_f,
-                  COSMO, tr, tr, ls, tr)
+    assert_raises(TypeError, cov_f,
+                  COSMO, tr, tr, ell=ls, tracer3=tr)
+
+    assert_raises(TypeError, cov_f,
+                  COSMO, tr, tr, ell=ls, t_of_kk_a=None)
 
 
 def test_Sigma2B():
@@ -126,14 +132,14 @@ def test_Sigma2B():
 
     fsky = 0.1
     # Default sampling
-    a, s2b_a = ccl.sigma2_B_disc(COSMO, fsky=fsky)
-    idx = (a > 0.5) & (a < 1)
+    a_arr, s2b_a = ccl.sigma2_B_disc(COSMO, fsky=fsky)
+    idx = (a_arr > 0.5) & (a_arr < 1)
 
-    a_use = a[idx]
+    a_use = a_arr[idx]
     # Input sampling
-    s2b_b = ccl.sigma2_B_disc(COSMO, a=a_use, fsky=fsky)
+    s2b_b = ccl.sigma2_B_disc(COSMO, a_arr=a_use, fsky=fsky)
     # Scalar input sampling
-    s2b_c = np.array([ccl.sigma2_B_disc(COSMO, a=a, fsky=fsky)
+    s2b_c = np.array([ccl.sigma2_B_disc(COSMO, a_arr=a, fsky=fsky)
                       for a in a_use])
 
     # Alternative calculation
@@ -162,6 +168,6 @@ def test_Sigma2B():
     mask_wl = (ell+0.5)/(2*np.pi) * (2*jv(1, kR)/(kR))**2
 
     a_use = np.array([0.2, 0.5, 1.0])
-    s2b_e = ccl.sigma2_B_from_mask(COSMO, a=a_use, mask_wl=mask_wl)
-    s2b_f = ccl.sigma2_B_disc(COSMO, a=a_use, fsky=fsky)
+    s2b_e = ccl.sigma2_B_from_mask(COSMO, a_arr=a_use, mask_wl=mask_wl)
+    s2b_f = ccl.sigma2_B_disc(COSMO, a_arr=a_use, fsky=fsky)
     assert np.all(np.fabs(s2b_e/s2b_f-1) < 1E-3)

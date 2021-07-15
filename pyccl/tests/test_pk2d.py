@@ -154,7 +154,7 @@ def test_pk2d_function():
     ptrue = pk2d(ktest, atest)
     phere = psp.eval(ktest, atest, cosmo)
     assert_almost_equal(np.fabs(phere/ptrue), 1., 6)
-    dphere = psp.eval_dlogpk_dlogk(ktest, atest, cosmo)
+    dphere = psp.eval_dlPk_dlk(ktest, atest, cosmo)
     assert_almost_equal(dphere, -1., 6)
 
     ktest = 1
@@ -162,7 +162,7 @@ def test_pk2d_function():
     ptrue = pk2d(ktest, atest)
     phere = psp.eval(ktest, atest, cosmo)
     assert_almost_equal(np.fabs(phere/ptrue), 1., 6)
-    dphere = psp.eval_dlogpk_dlogk(ktest, atest, cosmo)
+    dphere = psp.eval_dlPk_dlk(ktest, atest, cosmo)
     assert_almost_equal(dphere, -1., 6)
 
     # Test at array of points
@@ -170,14 +170,14 @@ def test_pk2d_function():
     ptrue = pk2d(ktest, atest)
     phere = psp.eval(ktest, atest, cosmo)
     assert_allclose(phere, ptrue, rtol=1E-6)
-    dphere = psp.eval_dlogpk_dlogk(ktest, atest, cosmo)
+    dphere = psp.eval_dlPk_dlk(ktest, atest, cosmo)
     assert_allclose(dphere, -1.*np.ones_like(dphere), 6)
 
     # Test input is not logarithmic
     psp = ccl.Pk2D(pkfunc=pk2d, is_logp=False, cosmo=cosmo)
     phere = psp.eval(ktest, atest, cosmo)
     assert_allclose(phere, ptrue, rtol=1E-6)
-    dphere = psp.eval_dlogpk_dlogk(ktest, atest, cosmo)
+    dphere = psp.eval_dlPk_dlk(ktest, atest, cosmo)
     assert_allclose(dphere, -1.*np.ones_like(dphere), 6)
 
     # Test input is arrays
@@ -188,7 +188,7 @@ def test_pk2d_function():
         a_arr=aarr, lk_arr=np.log(karr), pk_arr=parr, is_logp=False)
     phere = psp.eval(ktest, atest, cosmo)
     assert_allclose(phere, ptrue, rtol=1E-6)
-    dphere = psp.eval_dlogpk_dlogk(ktest, atest, cosmo)
+    dphere = psp.eval_dlPk_dlk(ktest, atest, cosmo)
     assert_allclose(dphere, -1.*np.ones_like(dphere), 6)
 
 
@@ -201,20 +201,20 @@ def test_pk2d_cls():
         Omega_c=0.27, Omega_b=0.045, h=0.67, A_s=1e-10, n_s=0.96)
     z = np.linspace(0., 1., 200)
     n = np.exp(-((z-0.5)/0.1)**2)
-    lens1 = ccl.WeakLensingTracer(cosmo, (z, n))
+    lens1 = ccl.WeakLensingTracer(cosmo, dndz=(z, n))
     ells = np.arange(2, 10)
 
     # Check that passing no power spectrum is fine
-    cells = ccl.angular_cl(cosmo, lens1, lens1, ells)
+    cells = ccl.angular_cl(cosmo, lens1, lens1, ell=ells)
     assert all_finite(cells)
 
     # Check that passing a bogus power spectrum fails as expected
     assert_raises(
-        ValueError, ccl.angular_cl, cosmo, lens1, lens1, ells, p_of_k_a=1)
+        ValueError, ccl.angular_cl, cosmo, lens1, lens1, ell=ells, p_of_k_a=1)
 
     # Check that passing a correct power spectrum runs as expected
     psp = ccl.Pk2D(pkfunc=lpk2d, cosmo=cosmo)
-    cells = ccl.angular_cl(cosmo, lens1, lens1, ells, p_of_k_a=psp)
+    cells = ccl.angular_cl(cosmo, lens1, lens1, ell=ells, p_of_k_a=psp)
     assert all_finite(cells)
 
 
@@ -233,16 +233,16 @@ def test_pk2d_parsing():
                    'a:b': pk_arr})
     z = np.linspace(0., 1., 200)
     n = np.exp(-((z-0.5)/0.1)**2)
-    lens1 = ccl.WeakLensingTracer(cosmo, (z, n))
+    lens1 = ccl.WeakLensingTracer(cosmo, dndz=(z, n))
     ells = np.linspace(2, 100, 10)
 
-    cls1 = ccl.angular_cl(cosmo, lens1, lens1, ells,
+    cls1 = ccl.angular_cl(cosmo, lens1, lens1, ell=ells,
                           p_of_k_a=None)
-    cls2 = ccl.angular_cl(cosmo, lens1, lens1, ells,
+    cls2 = ccl.angular_cl(cosmo, lens1, lens1, ell=ells,
                           p_of_k_a='delta_matter:delta_matter')
-    cls3 = ccl.angular_cl(cosmo, lens1, lens1, ells,
+    cls3 = ccl.angular_cl(cosmo, lens1, lens1, ell=ells,
                           p_of_k_a='a:b')
-    cls4 = ccl.angular_cl(cosmo, lens1, lens1, ells,
+    cls4 = ccl.angular_cl(cosmo, lens1, lens1, ell=ells,
                           p_of_k_a=psp)
     assert all_finite(cls1)
     assert all_finite(cls2)
@@ -254,10 +254,10 @@ def test_pk2d_parsing():
 
     # Wrong name
     with pytest.raises(KeyError):
-        ccl.angular_cl(cosmo, lens1, lens1, ells,
+        ccl.angular_cl(cosmo, lens1, lens1, ell=ells,
                        p_of_k_a='a:c')
 
     # Wrong type
     with pytest.raises(ValueError):
-        ccl.angular_cl(cosmo, lens1, lens1, ells,
+        ccl.angular_cl(cosmo, lens1, lens1, ell=ells,
                        p_of_k_a=3)

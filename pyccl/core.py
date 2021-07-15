@@ -11,7 +11,7 @@ from . import ccllib as lib
 from .errors import CCLError, CCLWarning
 from ._types import error_types
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
-from .pyutils import check
+from .pyutils import check, warn_api
 from .pk2d import Pk2D
 from .bcm import bcm_correct_pk2d
 
@@ -210,10 +210,12 @@ class Cosmology(object):
         if list(pars)[0] == "cosmo":
             vars()[name] = func
     del background, boltzmann, bcm, cls, correlations, covariances, \
-        neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt
+        neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt, \
+        subs, funcs, func, name, pars  # clear unnecessary locals
 
+    @warn_api()
     def __init__(
-            self, Omega_c=None, Omega_b=None, h=None, n_s=None,
+            self, *, Omega_c=None, Omega_b=None, h=None, n_s=None,
             sigma8=None, A_s=None,
             Omega_k=0., Omega_g=None, Neff=3.046, m_nu=0., m_nu_type=None,
             w0=-1., wa=0., T_CMB=None,
@@ -280,7 +282,7 @@ class Cosmology(object):
                     d[k] = float(v)
                 elif isinstance(v, np.integer):
                     d[k] = int(v)
-                elif isinstance(v, np.bool):
+                elif isinstance(v, bool):
                     d[k] = bool(v)
                 elif isinstance(v, dict):
                     make_yaml_friendly(v)
@@ -438,8 +440,7 @@ class Cosmology(object):
             nz_mg = -1
 
         # Check to make sure specified amplitude parameter is consistent
-        if ((A_s is None and sigma8 is None) or
-                (A_s is not None and sigma8 is not None)):
+        if not (A_s is None) ^ (sigma8 is None):
             raise ValueError("Must set either A_s or sigma8 and not both.")
 
         # Set norm_pk to either A_s or sigma8
@@ -672,6 +673,59 @@ class Cosmology(object):
         # and rebuild the C data
         self._build_cosmo()
 
+    def _build_string(self, kw, padding=3, eq_sign="=", is_dict=False):
+        """Build a justified string containing the parameters
+        specified in the input dictionary.
+        """
+        pad = padding * " "
+        has_dict = False
+        prefix0 = f"\n{pad}"
+        # deduce justification padding
+        l_just, r_just = 0, 0
+        for key, val in kw.items():
+            if isinstance(val, dict):
+                has_dict = True
+                continue  # dicts are too long
+            l_just = max(len(str(key)), l_just)
+            r_just = max(len(str(val)), r_just)
+        l_just += 2
+        r_just += 2
+
+        # construct output string
+        string = ""
+        for num, (key, val) in enumerate(kw.items()):
+            prefix = prefix0
+            if is_dict:
+                # dictionary keys should be strings
+                key = f"'{key}'"
+                if num == 0:
+                    prefix = f"\n{pad[:-1]}" + "{"
+
+            if val is None:
+                # assign value to None
+                val = "None"
+            elif isinstance(val, str):
+                # show strings as strings
+                val = f"'{val}'"
+            elif isinstance(val, dict):
+                # go 1 level deeper for dicts
+                string += f"{prefix}{key:<{l_just}}{eq_sign}"
+                # break
+                string += self._build_string(val, padding+3, ":",
+                                             is_dict=has_dict)
+                continue
+            elif hasattr(val, "__len__"):
+                # add commas in iterables
+                val = str(list(val))
+
+            string += f"{prefix}{key:<{l_just}}{eq_sign}{val:>{r_just}} ,"
+
+        # remove final comma and close bracket
+        if is_dict:
+            return string[:-2] + "} ,"
+        else:
+            return string[:-2] + " )"
+
     def __repr__(self):
         """Make an eval-able string.
 
@@ -681,44 +735,29 @@ class Cosmology(object):
         >>> cosmo = pyccl.Cosmology(...)
         >>> cosmo2 = eval(repr(cosmo))
         """
-        string = "pyccl.Cosmology("
-        string += ", ".join(
-            "%s=%s" % (k, v)
-            for k, v in self._params_init_kwargs.items()
-            if k not in ['m_nu', 'm_nu_type', 'z_mg', 'df_mg'])
-
-        if hasattr(self._params_init_kwargs['m_nu'], '__len__'):
-            string += ", m_nu=[%s, %s, %s]" % tuple(
-                self._params_init_kwargs['m_nu'])
-        else:
-            string += ', m_nu=%s' % self._params_init_kwargs['m_nu']
-
-        if self._params_init_kwargs['m_nu_type'] is not None:
-            string += (
-                ", m_nu_type='%s'" % self._params_init_kwargs['m_nu_type'])
-        else:
-            string += ', m_nu_type=None'
-
-        if self._params_init_kwargs['z_mg'] is not None:
-            vals = ", ".join(
-                ["%s" % v for v in self._params_init_kwargs['z_mg']])
-            string += ", z_mg=[%s]" % vals
-        else:
-            string += ", z_mg=%s" % self._params_init_kwargs['z_mg']
-
-        if self._params_init_kwargs['df_mg'] is not None:
-            vals = ", ".join(
-                ["%s" % v for v in self._params_init_kwargs['df_mg']])
-            string += ", df_mg=[%s]" % vals
-        else:
-            string += ", df_mg=%s" % self._params_init_kwargs['df_mg']
-
-        string += ", "
-        string += ", ".join(
-            "%s='%s'" % (k, v) for k, v in self._config_init_kwargs.items())
-        string += ")"
-
+        kw = {**self._params_init_kwargs, **self._config_init_kwargs}
+        string = self._build_string(kw, padding=3, eq_sign="=")
+        string = "pyccl.Cosmology(" + string
         return string
+
+    def __str__(self):
+        """Like __repr__ but don't include any values
+        that equal the default values.
+        """
+        kw = {**self._params_init_kwargs, **self._config_init_kwargs}
+        pars = signature(self.__init__).parameters
+        kw_defaults = {key: val.default for key, val in pars.items()}
+        kw = {key: val
+              for key, val in kw.items()
+              if not np.all(val == kw_defaults.get(key))}
+
+        string = self._build_string(kw, padding=3, eq_sign="=")
+        string = "pyccl.Cosmology(" + string
+        return string
+
+    def _repr_pretty_(self, p, cycle):
+        """Alias for iPython consoles."""
+        return p.text(self.__str__())
 
     def compute_distances(self):
         """Compute the distance splines."""
@@ -838,35 +877,36 @@ class Cosmology(object):
 
     def _get_halo_model_nonlin_power(self):
         from . import halos as hal
-        mdef = hal.MassDef('vir', 'matter')
+        mass_def = hal.MassDef('vir', 'matter')
         conc = self._config.halo_concentration_method
         mfm = self._config.mass_function_method
 
         if conc == lib.bhattacharya2011:
-            c = hal.ConcentrationBhattacharya13(mdef=mdef)
+            c = hal.ConcentrationBhattacharya13(mass_def=mass_def)
         elif conc == lib.duffy2008:
-            c = hal.ConcentrationDuffy08(mdef=mdef)
+            c = hal.ConcentrationDuffy08(mass_def=mass_def)
         elif conc == lib.constant_concentration:
-            c = hal.ConcentrationConstant(c=4., mdef=mdef)
+            c = hal.ConcentrationConstant(c=4., mass_def=mass_def)
 
         if mfm == lib.tinker10:
-            hmf = hal.MassFuncTinker10(self, mass_def=mdef,
+            hmf = hal.MassFuncTinker10(self, mass_def=mass_def,
                                        mass_def_strict=False)
-            hbf = hal.HaloBiasTinker10(self, mass_def=mdef,
+            hbf = hal.HaloBiasTinker10(self, mass_def=mass_def,
                                        mass_def_strict=False)
         elif mfm == lib.shethtormen:
-            hmf = hal.MassFuncSheth99(self, mass_def=mdef,
+            hmf = hal.MassFuncSheth99(self, mass_def=mass_def,
                                       mass_def_strict=False,
                                       use_delta_c_fit=True)
-            hbf = hal.HaloBiasSheth99(self, mass_def=mdef,
+            hbf = hal.HaloBiasSheth99(self, mass_def=mass_def,
                                       mass_def_strict=False)
         else:
             raise ValueError("Halo model spectra not available for your "
                              "current choice of mass function with the "
                              "deprecated implementation.")
-        prf = hal.HaloProfileNFW(c)
-        hmc = hal.HMCalculator(self, hmf, hbf, mdef)
-        return hal.halomod_Pk2D(self, hmc, prf, normprof1=True)
+        prf = hal.HaloProfileNFW(c_m_relation=c)
+        hmc = hal.HMCalculator(self, mass_function=hmf,
+                               halo_bias=hbf, mass_def=mass_def)
+        return hal.halomod_Pk2D(self, hmc, prf, normprof=True)
 
     def compute_nonlin_power(self):
         """Compute the non-linear power spectrum."""
@@ -927,7 +967,7 @@ class Cosmology(object):
             if pkl is None:
                 raise CCLError("The linear power spectrum is a "
                                "necessary input for halofit")
-            pk = Pk2D.apply_halofit(self, pkl)
+            pk = Pk2D.apply_halofit(self, pk_linear=pkl)
         elif mps == 'emu':
             pk = Pk2D.pk_from_model(self, model='emu')
         elif mps == 'linear':
@@ -1078,7 +1118,14 @@ class CosmologyVanillaLCDM(Cosmology):
             raise ValueError("You cannot change the LCDM parameters: "
                              "%s " % list(p.keys()))
         kwargs.update(p)
+        self._params_init_user = kwargs
         super(CosmologyVanillaLCDM, self).__init__(**kwargs)
+
+    def __str__(self):
+        kw = self._params_init_user
+        string = self._build_string(kw, padding=3, eq_sign="=")
+        string = "pyccl.Cosmology(" + string
+        return string
 
 
 class CosmologyCalculator(Cosmology):
@@ -1185,8 +1232,9 @@ class CosmologyCalculator(Cosmology):
             corresponding to the "HALOFIT" transformation of
             Takahashi et al. 2012 (arXiv:1208.2701).
     """
+    @warn_api()
     def __init__(
-            self, Omega_c=None, Omega_b=None, h=None, n_s=None,
+            self, *, Omega_c=None, Omega_b=None, h=None, n_s=None,
             sigma8=None, A_s=None, Omega_k=0., Omega_g=None,
             Neff=3.046, m_nu=0., m_nu_type=None, w0=-1., wa=0.,
             T_CMB=None, background=None, growth=None,
@@ -1408,7 +1456,7 @@ class CosmologyCalculator(Cosmology):
 
             if model == 'halofit':
                 pkl = self._pk_lin[name]
-                self._pk_nl[name] = Pk2D.apply_halofit(self, pkl)
+                self._pk_nl[name] = Pk2D.apply_halofit(self, pk_linear=pkl)
             elif model is None:
                 pass
             else:

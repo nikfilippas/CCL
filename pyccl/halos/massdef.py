@@ -1,6 +1,7 @@
 from .. import ccllib as lib
 from ..core import check
 from ..background import species_types, rho_x, omega_x
+from ..pyutils import warn_api
 import numpy as np
 
 
@@ -23,7 +24,8 @@ def mass2radius_lagrangian(cosmo, M):
     return R
 
 
-def convert_concentration(cosmo, c_old, Delta_old, Delta_new):
+@warn_api()
+def convert_concentration(cosmo, *, c_old, Delta_old, Delta_new):
     """ Computes the concentration parameter for a different mass definition.
     This is done assuming an NFW profile. The output concentration `c_new` is
     found by solving the equation:
@@ -83,7 +85,9 @@ class MassDef(object):
             If `None`, no c(M) relation will be attached to this mass
             definition (and hence one can't translate into other definitions).
     """
-    def __init__(self, Delta, rho_type, c_m_relation=None):
+
+    @warn_api()
+    def __init__(self, Delta, rho_type, *, c_m_relation=None):
         # Check it makes sense
         if (Delta != 'fof') and (Delta != 'vir'):
             if isinstance(Delta, str):
@@ -104,8 +108,7 @@ class MassDef(object):
             self._concentration_init(c_m_relation)
 
     def __eq__(self, other):
-        """ Allows you to compare two mass definitions
-        """
+        """ Allows you to compare two mass definitions."""
         return (self.Delta == other.Delta) and \
             (self.rho_type == other.rho_type)
 
@@ -117,7 +120,7 @@ class MassDef(object):
             # Grab class
             conc_class = concentration_from_name(c_m_relation)
             # instantiate with this mass definition
-            self.concentration = conc_class(mdef=self)
+            self.concentration = conc_class(mass_def=self)
         else:
             raise ValueError("c_m_relation must be `None`, "
                              " a string or a `Concentration` object")
@@ -202,19 +205,20 @@ class MassDef(object):
         else:
             return self.concentration.get_concentration(cosmo, M, a)
 
-    def translate_mass(self, cosmo, M, a, m_def_other):
+    @warn_api(pairs=[("mass_def_other", "mdef_other")])
+    def translate_mass(self, cosmo, M, a, *, mass_def_other):
         """ Translate halo mass in this definition into another definition
 
         Args:
             cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
             M (float or array_like): halo mass in units of M_sun.
             a (float): scale factor.
-            m_def_other (:obj:`MassDef`): another mass definition.
+            mass_def_other (:obj:`MassDef`): another mass definition.
 
         Returns:
             float or array_like: halo masses in new definition.
         """
-        if self == m_def_other:
+        if self == mass_def_other:
             return M
         else:
             if self.concentration is None:
@@ -225,11 +229,13 @@ class MassDef(object):
                 D_this = self.get_Delta(cosmo, a) * om_this
                 c_this = self._get_concentration(cosmo, M, a)
                 R_this = self.get_radius(cosmo, M, a)
-                om_new = omega_x(cosmo, a, m_def_other.rho_type)
-                D_new = m_def_other.get_Delta(cosmo, a) * om_new
-                c_new = convert_concentration(cosmo, c_this, D_this, D_new)
+                om_new = omega_x(cosmo, a, mass_def_other.rho_type)
+                D_new = mass_def_other.get_Delta(cosmo, a) * om_new
+                c_new = convert_concentration(cosmo, c_old=c_this,
+                                              Delta_old=D_this,
+                                              Delta_new=D_new)
                 R_new = c_new * R_this / c_this
-                return m_def_other.get_mass(cosmo, R_new, a)
+                return mass_def_other.get_mass(cosmo, R_new, a)
 
 
 class MassDef200m(MassDef):
@@ -237,12 +243,13 @@ class MassDef200m(MassDef):
     density.
 
     Args:
-        c_m (string): concentration-mass relation.
+        c_m_relation (string): concentration-mass relation.
     """
-    def __init__(self, c_m='Duffy08'):
+    @warn_api(pairs=[("c_m_relation", "c_m")])
+    def __init__(self, *, c_m_relation='Duffy08'):
         super(MassDef200m, self).__init__(200,
                                           'matter',
-                                          c_m_relation=c_m)
+                                          c_m_relation=c_m_relation)
 
 
 class MassDef200c(MassDef):
@@ -250,12 +257,13 @@ class MassDef200c(MassDef):
     density.
 
     Args:
-        c_m (string): concentration-mass relation.
+        c_m_relation (string): concentration-mass relation.
     """
-    def __init__(self, c_m='Duffy08'):
+    @warn_api(pairs=[("c_m_relation", "c_m")])
+    def __init__(self, *, c_m_relation='Duffy08'):
         super(MassDef200c, self).__init__(200,
                                           'critical',
-                                          c_m_relation=c_m)
+                                          c_m_relation=c_m_relation)
 
 
 class MassDefVir(MassDef):
@@ -263,9 +271,10 @@ class MassDefVir(MassDef):
     critical density.
 
     Args:
-        c_m (string): concentration-mass relation.
+        c_m_relation (string): concentration-mass relation.
     """
-    def __init__(self, c_m='Klypin11'):
+    @warn_api(pairs=[("c_m_relation", "c_m")])
+    def __init__(self, *, c_m_relation='Klypin11'):
         super(MassDefVir, self).__init__('vir',
                                          'critical',
-                                         c_m_relation=c_m)
+                                         c_m_relation=c_m_relation)
