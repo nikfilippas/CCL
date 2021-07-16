@@ -20,33 +20,36 @@ PK2D = ccl.Pk2D(cosmo=COSMO, pkfunc=lambda k, a: a / k)
 
 
 def test_hmc_from_string_smoke():
-    hmc0 = ccl.halos.HMCalculator(massfunc=HMF,
-                                  hbias=HBF,
+    hmc0 = ccl.halos.HMCalculator(mass_function=HMF,
+                                  halo_bias=HBF,
                                   mass_def=M200)
     # all strings
-    hmc1 = ccl.halos.HMCalculator(massfunc="Tinker10",
-                                  hbias="Tinker10",
+    hmc1 = ccl.halos.HMCalculator(mass_function="Tinker10",
+                                  halo_bias="Tinker10",
                                   mass_def="200m")
     # no quality assurance of the following lines, because we
     # require an explicit type check, not an instance check (E721)
-    assert type(hmc1._massfunc) == type(hmc0._massfunc)  # noqa
-    assert type(hmc1._hbias) == type(hmc0._hbias)        # noqa
-    assert type(hmc1._mdef) == type(hmc0._mdef)          # noqa
+    assert type(hmc1.mass_function) == type(hmc0.mass_function)  # noqa
+    assert type(hmc1.halo_bias) == type(hmc0.halo_bias)        # noqa
+    assert type(hmc1.mass_def) == type(hmc0.mass_def)          # noqa
 
     # some strings
-    hmc2 = ccl.halos.HMCalculator(massfunc=HMF,
-                                  hbias="Tinker10",
+    hmc2 = ccl.halos.HMCalculator(mass_function=HMF,
+                                  halo_bias="Tinker10",
                                   mass_def="vir")
-    assert isinstance(hmc2._mdef, ccl.halos.MassDefVir)
+    assert isinstance(hmc2.mass_def, ccl.halos.MassDefVir)
 
 
 def test_hmc_raises():
     with pytest.raises(TypeError):
-        ccl.halos.HMCalculator(massfunc=None, hbias=HBF, mass_def=M200)
+        ccl.halos.HMCalculator(mass_function=None, halo_bias=HBF,
+                               mass_def=M200)
     with pytest.raises(TypeError):
-        ccl.halos.HMCalculator(massfunc=HMF, hbias=None, mass_def=M200)
+        ccl.halos.HMCalculator(mass_function=HMF, halo_bias=None,
+                               mass_def=M200)
     with pytest.raises(TypeError):
-        ccl.halos.HMCalculator(massfunc=HMF, hbias=HBF, mass_def=None)
+        ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                               mass_def=None)
 
 
 def test_prof2pt_smoke():
@@ -221,24 +224,24 @@ def test_pkhm_pk2d():
                   < 1E-4)
 
     # Testing profiles which are not equivalent (but very close)
-    G1 = ccl.halos.HaloProfileHOD(CON, lMmin_0=12.00000)
-    G2 = ccl.halos.HaloProfileHOD(CON, lMmin_0=11.99999)
+    G1 = ccl.halos.HaloProfileHOD(c_m_relation=CON, lMmin_0=12.00000)
+    G2 = ccl.halos.HaloProfileHOD(c_m_relation=CON, lMmin_0=11.99999)
     assert not G1.__eq__(G2)
     # I_1_1
     pk0 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
-                                           prof2=G1, normprof1=False,
+                                           prof2=G1, normprof=False,
                                            normprof2=False)
     pk1 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
-                                           prof2=G2, normprof1=False,
+                                           prof2=G2, normprof=False,
                                            normprof2=False)
     assert np.allclose(pk1, pk0, rtol=1e-4)
 
     # Profile normalization
     pk0 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
-                                           prof2=G1, normprof1=True,
+                                           prof2=G1, normprof=True,
                                            normprof2=True)
     pk1 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
-                                           prof2=G2, normprof1=True,
+                                           prof2=G2, normprof=True,
                                            normprof2=True)
     assert np.allclose(pk1, pk0, rtol=1e-4)
 
@@ -350,7 +353,7 @@ def test_pkhm_errors():
     with pytest.raises(TypeError):
         ccl.halos.halomod_Tk3D_SSC(COSMO, hmc, P1,
                                    prof2=P1, prof3=P1, prof4="hello",
-                                   normprof1=True)
+                                   normprof=True)
 
     # Wrong prof2
     with pytest.raises(TypeError):

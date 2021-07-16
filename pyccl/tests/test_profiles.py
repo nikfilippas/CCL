@@ -10,7 +10,7 @@ M200 = ccl.halos.MassDef200c()
 M500c = ccl.halos.MassDef(500, 'critical')
 
 
-def one_f(cosmo, M, a=None, mdef=None):
+def one_f(cosmo, M, a=None, mass_def=None):
     if np.ndim(M) == 0:
         return 1
     else:
@@ -54,8 +54,8 @@ def test_defaults():
 
 def test_profiles_equal():
     M200m = ccl.halos.MassDef200m()
-    cm = ccl.halos.ConcentrationDuffy08(mdef=M200m)
-    p1 = ccl.halos.HaloProfileHOD(c_M_relation=cm, lMmin_0=12.)
+    cm = ccl.halos.ConcentrationDuffy08(mass_def=M200m)
+    p1 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=12.)
 
     # different profile types
     p2 = ccl.halos.HaloProfile()
@@ -66,32 +66,32 @@ def test_profiles_equal():
     assert p1.__eq__(p2)
 
     # equivalent profiles
-    cm2 = ccl.halos.ConcentrationDuffy08(mdef=M200m)
-    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm2, lMmin_0=12.)
+    cm2 = ccl.halos.ConcentrationDuffy08(mass_def=M200m)
+    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm2, lMmin_0=12.)
     assert p1.__eq__(p2)
 
     # different parameters
-    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm, lMmin_0=11.)
+    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=11.)
     assert not p1.__eq__(p2)
 
     # different mass-concentration
     cm2 = ccl.halos.ConcentrationConstant()
-    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm2, lMmin_0=12.)
+    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm2, lMmin_0=12.)
     assert not p1.__eq__(p2)
 
     # different mass-concentration mass definition
     M200c = ccl.halos.MassDef200c()
-    cm2 = ccl.halos.ConcentrationDuffy08(mdef=M200c)
-    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm2, lMmin_0=12.)
+    cm2 = ccl.halos.ConcentrationDuffy08(mass_def=M200c)
+    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm2, lMmin_0=12.)
     assert not p1.__eq__(p2)
 
     # different FFTLog
-    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm, lMmin_0=12.)
+    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=12.)
     p2.update_precision_fftlog(**{"plaw_fourier": -2.0})
     assert not p1.__eq__(p2)
 
     # something else
-    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm, lMmin_0=12.)
+    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=12.)
     assert p1.__eq__(p2)
     p2.hello_here = 0.
     assert not p1.__eq__(p2)
@@ -263,8 +263,8 @@ def test_2pt_rcorr_smoke():
                          [ccl.halos.HaloProfileGaussian,
                           ccl.halos.HaloProfilePowerLaw])
 def test_simple_smoke(prof_class):
-    def r_s(cosmo, M, a, mdef):
-        return mdef.get_radius(cosmo, M, a)
+    def r_s(cosmo, M, a, mass_def):
+        return mass_def.get_radius(cosmo, M, a)
 
     if prof_class == ccl.halos.HaloProfileGaussian:
         p = prof_class(r_scale=r_s, rho0=one_f)

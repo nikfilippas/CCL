@@ -79,7 +79,7 @@ class HMCalculator(object):
             self.halo_bias = halo_bias
         elif isinstance(halo_bias, str):
             bMclass = halo_bias_from_name(halo_bias)
-            self._hbias = bMclass(mass_def=self.mass_def)
+            self.halo_bias = bMclass(mass_def=self.mass_def)
         else:
             raise TypeError("hbias must be of type `HaloBias` "
                             "or a halo bias name string")

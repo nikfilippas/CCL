@@ -102,7 +102,7 @@ def test_nM_bocquet_smoke(with_hydro):
             assert np.shape(n) == np.shape(m)
 
     md = ccl.halos.MassDef(1000, "matter")
-    hmf = ccl.halos.MassFuncBocquet16(COSMO, mass_def_strict=True)
+    hmf = ccl.halos.MassFuncBocquet16(mass_def_strict=True)
     assert hmf._check_mass_def_strict(md) is True
 
 
