@@ -1,8 +1,8 @@
 import warnings
 from .. import ccllib as lib
-from .hmfunc import MassFunc
-from .hbias import HaloBias
-from .massdef import MassDef
+from .hmfunc import MassFunc, mass_function_from_name
+from .hbias import HaloBias, halo_bias_from_name
+from .massdef import MassDef, mass_def_from_name
 from .profiles import HaloProfile
 from .profiles_2pt import Profile2pt
 from ..core import check
@@ -54,19 +54,36 @@ class HMCalculator(object):
     @warn_api(pairs=[("mass_function", "massfunc"), ("halo_bias", "hbias"),
                      ("lM_min", "log10M_min"), ("lM_max", "log10M_max"),
                      ("nlM", "nlog10M"), ("k_norm", "k_min")])
-    def __init__(self, cosmo, *, mass_function, halo_bias, mass_def,
+    def __init__(self,  *, mass_function, halo_bias, mass_def,
                  lM_min=8., lM_max=16., nlM=128,
                  integration_method_M='simpson', k_norm=1E-5):
-        self._rho0 = rho_x(cosmo, 1., 'matter', is_comoving=True)
-        if not isinstance(mass_function, MassFunc):
-            raise TypeError("mass_function must be of type `MassFunc`")
-        self.mass_function = mass_function
-        if not isinstance(halo_bias, HaloBias):
-            raise TypeError("halo_bias must be of type `HaloBias`")
-        self.halo_bias = halo_bias
-        if not isinstance(mass_def, MassDef):
-            raise TypeError("mass_def must be of type `MassDef`")
-        self.mass_def = mass_def
+        # halo mass definition
+        if isinstance(mass_def, MassDef):
+            self.mass_def = mass_def
+        elif isinstance(mass_def, str):
+            self.mass_def = mass_def_from_name(mass_def)()
+        else:
+            raise TypeError("mass_def must be of type `MassDef` "
+                            "or a mass definition name string")
+        # halo mass function
+        if isinstance(mass_function, MassFunc):
+            self.mass_function = mass_function
+        elif isinstance(mass_function, str):
+            nMclass = mass_function_from_name(mass_function)
+            self.mass_function = nMclass(mass_def=self.mass_def)
+        else:
+            raise TypeError("massfunc must be of type `MassFunc` "
+                            "or a mass function name string")
+        # halo bias function
+        if isinstance(halo_bias, HaloBias):
+            self.halo_bias = halo_bias
+        elif isinstance(halo_bias, str):
+            bMclass = halo_bias_from_name(halo_bias)
+            self._hbias = bMclass(mass_def=self.mass_def)
+        else:
+            raise TypeError("hbias must be of type `HaloBias` "
+                            "or a halo bias name string")
+
         self._prec = {'log10M_min': lM_min,
                       'log10M_max': lM_max,
                       'nlog10M': nlM,
@@ -102,13 +119,14 @@ class HMCalculator(object):
         return _spline_integrate(lM, fM, lM[0], lM[-1])
 
     def _get_ingredients(self, a, cosmo, get_bf):
+        rho0 = rho_x(cosmo, 1., 'matter', is_comoving=True)
         # Compute mass function and bias (if needed) at a new
         # value of the scale factor.
         if a != self._a_current_mf:
             self.mf = self.mass_function.get_mass_function(
                 cosmo, self._mass, a,
                 mass_def_other=self.mass_def)
-            self.mf0 = (self._rho0 -
+            self.mf0 = (rho0 -
                         self._integrator(self.mf * self._mass,
                                          self._lmass)) / self._m0
             self._a_current_mf = a
@@ -118,7 +136,7 @@ class HMCalculator(object):
                 self.bf = self.halo_bias.get_halo_bias(
                     cosmo, self._mass, a,
                     mass_def_other=self.mass_def)
-                self.mbf0 = (self._rho0 -
+                self.mbf0 = (rho0 -
                              self._integrator(self.mf * self.bf * self._mass,
                                               self._lmass)) / self._m0
             self._a_current_bf = a

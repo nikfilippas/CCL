@@ -85,6 +85,7 @@ class MassDef(object):
             If `None`, no c(M) relation will be attached to this mass
             definition (and hence one can't translate into other definitions).
     """
+    name = 'default'
 
     @warn_api()
     def __init__(self, Delta, rho_type, *, c_m_relation=None):
@@ -245,6 +246,8 @@ class MassDef200m(MassDef):
     Args:
         c_m_relation (string): concentration-mass relation.
     """
+    name = '200m'
+
     @warn_api(pairs=[("c_m_relation", "c_m")])
     def __init__(self, *, c_m_relation='Duffy08'):
         super(MassDef200m, self).__init__(200,
@@ -253,12 +256,14 @@ class MassDef200m(MassDef):
 
 
 class MassDef200c(MassDef):
-    """`MassDef` class for the mass definition with Delta=200 times the critical
-    density.
+    """`MassDef` class for the mass definition with Delta=200 times
+    the critical density.
 
     Args:
         c_m_relation (string): concentration-mass relation.
     """
+    name = '200c'
+
     @warn_api(pairs=[("c_m_relation", "c_m")])
     def __init__(self, *, c_m_relation='Duffy08'):
         super(MassDef200c, self).__init__(200,
@@ -271,12 +276,14 @@ class MassDef500c(MassDef):
     with Delta=200 times the critical density.
 
     Args:
-        c_m (string): concentration-mass relation.
+        c_m_relation (string): concentration-mass relation.
     """
-    def __init__(self, c_m='Ishiyama21'):
+    name = '500c'
+
+    def __init__(self, *, c_m_relation='Ishiyama21'):
         super(MassDef500c, self).__init__(500,
                                           'critical',
-                                          c_m_relation=c_m)
+                                          c_m_relation=c_m_relation)
 
 
 class MassDefVir(MassDef):
@@ -286,8 +293,28 @@ class MassDefVir(MassDef):
     Args:
         c_m_relation (string): concentration-mass relation.
     """
+    name = 'vir'
+
     @warn_api(pairs=[("c_m_relation", "c_m")])
     def __init__(self, *, c_m_relation='Klypin11'):
         super(MassDefVir, self).__init__('vir',
                                          'critical',
                                          c_m_relation=c_m_relation)
+
+
+def mass_def_from_name(name):
+    """ Return mass definition subclass from name string.
+
+    Args:
+        name (string):
+            a mass definition name (e.g. '200m' for Delta=200 matter)
+
+    Returns:
+        MassDef subclass corresponding to the input name.
+    """
+    mass_defs = {m.name: m for m in MassDef.__subclasses__()}
+
+    if name in mass_defs:
+        return mass_defs[name]
+    else:
+        raise ValueError("Mass definition %s not implemented")

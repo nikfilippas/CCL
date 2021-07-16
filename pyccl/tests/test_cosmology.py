@@ -38,9 +38,9 @@ def test_cosmo_methods():
         cosmo.get_camb_pk_lin().eval(1., 1., cosmo)
     prof = ccl.halos.HaloProfilePressureGNFW()
     hmd = ccl.halos.MassDef200m()
-    hmf = ccl.halos.MassFuncTinker08(cosmo)
-    hbf = ccl.halos.HaloBiasTinker10(cosmo)
-    hmc = ccl.halos.HMCalculator(cosmo, mass_function=hmf, halo_bias=hbf,
+    hmf = ccl.halos.MassFuncTinker08()
+    hbf = ccl.halos.HaloBiasTinker10()
+    hmc = ccl.halos.HMCalculator(mass_function=hmf, halo_bias=hbf,
                                  mass_def=hmd)
     P1 = ccl.halos.halomod_power_spectrum(cosmo, hmc, 1., 1., prof,
                                           normprof=False)
@@ -146,6 +146,15 @@ def test_cosmology_output():
     assert_(cosmo.has_linear_power is True)
     assert_(cosmo.has_nonlin_power is True)
     assert_(cosmo.has_sigma is True)
+
+
+def test_cosmology_equal():
+    """Check the Cosmology equivalence method."""
+    cosmo1 = ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.67,
+                           sigma8=0.81, n_s=0.96)
+    cosmo2 = ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.67,
+                           sigma8=0.81, n_s=0.96)
+    assert cosmo1.__eq__(cosmo2)
 
 
 def test_cosmology_pickles():
