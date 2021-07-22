@@ -202,9 +202,9 @@ class Cosmology(object):
     # and make every function that takes `cosmo` as its first argument
     # an attribute of this class.
     from . import background, baryons, boltzmann, \
-        cls, correlations, covariances, neutrinos, \
+        cells, correlations, covariances, neutrinos, \
         pk2d, power, tk3d, tracers, halos, nl_pt
-    subs = [background, boltzmann, baryons, cls, correlations, covariances,
+    subs = [background, boltzmann, baryons, cells, correlations, covariances,
             neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt]
     funcs = [getmembers(sub, isfunction) for sub in subs]
     funcs = [func for sub in funcs for func in sub]
@@ -212,7 +212,7 @@ class Cosmology(object):
         pars = signature(func).parameters
         if list(pars)[0] == "cosmo":
             vars()[name] = func
-    del background, boltzmann, bcm, cls, correlations, covariances, \
+    del background, boltzmann, baryons, cells, correlations, covariances, \
         neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt, \
         subs, funcs, func, name, pars  # clear unnecessary locals
 

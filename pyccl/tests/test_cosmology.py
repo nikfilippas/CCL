@@ -17,7 +17,7 @@ def test_cosmo_methods():
     """
     from inspect import getmembers, isfunction, signature
     from pyccl import background, baryons, boltzmann, \
-        cls, correlations, covariances, neutrinos, \
+        cells, correlations, covariances, neutrinos, \
         pk2d, power, tk3d, tracers, halos, nl_pt
     from pyccl.core import CosmologyVanillaLCDM
     cosmo = CosmologyVanillaLCDM()
