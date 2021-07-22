@@ -37,8 +37,8 @@ from .tk3d import Tk3D
 from .power import linear_power, nonlin_power, linear_matter_power, nonlin_matter_power, \
     sigmaR, sigmaV, sigma8, sigmaM, kNL
 
-# BCM stuff
-from .bcm import bcm_model_fka, bcm_correct_pk2d
+# Baryons stuff
+from .baryons import bcm_model_fka, bcm_correct_pk2d
 
 # Old halo mass function
 from .massfunction import massfunc, halo_bias, massfunc_m2r

@@ -16,12 +16,12 @@ def test_cosmo_methods():
     as their first argument are methods of the Cosmology object.
     """
     from inspect import getmembers, isfunction, signature
-    from pyccl import background, bcm, boltzmann, \
+    from pyccl import background, baryons, boltzmann, \
         cls, correlations, covariances, neutrinos, \
         pk2d, power, tk3d, tracers, halos, nl_pt
     from pyccl.core import CosmologyVanillaLCDM
     cosmo = CosmologyVanillaLCDM()
-    subs = [background, boltzmann, bcm, cls, correlations, covariances,
+    subs = [background, boltzmann, bcm, baryons, correlations, covariances,
             neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt]
     funcs = [getmembers(sub, isfunction) for sub in subs]
     funcs = [func for sub in funcs for func in sub]

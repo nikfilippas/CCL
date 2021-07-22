@@ -13,7 +13,7 @@ from ._types import error_types
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
-from .bcm import bcm_correct_pk2d
+from .baryons import bcm_correct_pk2d
 
 # Configuration types
 transfer_function_types = {
@@ -24,7 +24,8 @@ transfer_function_types = {
     'boltzmann_class': lib.boltzmann_class,
     'boltzmann_camb': lib.boltzmann_camb,
     'boltzmann_isitgr': lib.boltzmann_isitgr,
-    'calculator': lib.pklin_from_input
+    'calculator': lib.pklin_from_input,
+    'arico21': lib.pklin_from_input,
 }
 
 matter_power_spectrum_types = {
@@ -34,12 +35,14 @@ matter_power_spectrum_types = {
     'linear': lib.linear,
     'emu': lib.emu,
     'calculator': lib.pknl_from_input,
-    'camb': lib.pknl_from_boltzman
+    'camb': lib.pknl_from_boltzman,
+    'arico21': lib.pknl_from_input,
 }
 
 baryons_power_spectrum_types = {
     'nobaryons': lib.nobaryons,
-    'bcm': lib.bcm
+    'bcm': lib.bcm,
+    'arico21': lib.nobaryons,
 }
 
 # List which transfer functions can be used with the muSigma_MG
@@ -50,7 +53,7 @@ mass_function_types = {
     'tinker': lib.tinker,
     'tinker10': lib.tinker10,
     'watson': lib.watson,
-    'shethtormen': lib.shethtormen
+    'shethtormen': lib.shethtormen,
 }
 
 halo_concentration_types = {
@@ -61,7 +64,7 @@ halo_concentration_types = {
 
 emulator_neutrinos_types = {
     'strict': lib.emu_strict,
-    'equalize': lib.emu_equalize
+    'equalize': lib.emu_equalize,
 }
 
 
@@ -198,10 +201,10 @@ class Cosmology(object):
     # Go through all functions in the main package and the subpackages
     # and make every function that takes `cosmo` as its first argument
     # an attribute of this class.
-    from . import background, bcm, boltzmann, \
+    from . import background, baryons, boltzmann, \
         cls, correlations, covariances, neutrinos, \
         pk2d, power, tk3d, tracers, halos, nl_pt
-    subs = [background, boltzmann, bcm, cls, correlations, covariances,
+    subs = [background, boltzmann, baryons, cls, correlations, covariances,
             neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt]
     funcs = [getmembers(sub, isfunction) for sub in subs]
     funcs = [func for sub in funcs for func in sub]
@@ -982,6 +985,8 @@ class Cosmology(object):
         # Correct for baryons if required
         if self._config_init_kwargs['baryons_power_spectrum'] == 'bcm':
             bcm_correct_pk2d(self, pk)
+        elif self._config_init_kwargs['baryons_power_spectrum'] == 'arico21':
+            pass
 
         # Assign
         self._pk_nl['delta_matter:delta_matter'] = pk
