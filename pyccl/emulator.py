@@ -4,7 +4,6 @@ framework for CCL to work with emulators.
 """
 from . import ccllib as lib
 from .pyutils import CCLWarning
-from .core import CosmologyCalculator
 
 import warnings
 import numpy as np
