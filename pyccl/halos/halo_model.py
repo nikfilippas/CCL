@@ -54,7 +54,7 @@ class HMCalculator(object):
     @warn_api(pairs=[("mass_function", "massfunc"), ("halo_bias", "hbias"),
                      ("lM_min", "log10M_min"), ("lM_max", "log10M_max"),
                      ("nlM", "nlog10M"), ("k_norm", "k_min")])
-    def __init__(self,  *, mass_function, halo_bias, mass_def,
+    def __init__(self, *, mass_function, halo_bias, mass_def,
                  lM_min=8., lM_max=16., nlM=128,
                  integration_method_M='simpson', k_norm=1E-5):
         # halo mass definition
