@@ -1,7 +1,7 @@
 """The core functionality of ccl, including the core data types. This includes
 the cosmology and parameters objects used to instantiate a model from which one
 can compute a set of theoretical predictions.
-"""
+"""  # noqa
 import warnings
 import numpy as np
 import yaml
@@ -13,7 +13,7 @@ from ._types import error_types
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
-from .baryons import bcm_correct_pk2d
+from .baryons import bcm_correct_pk2d, baryon_correct
 
 # Configuration types
 transfer_function_types = {
@@ -718,11 +718,8 @@ class Cosmology(object):
                 val = f"'{val}'"
             elif isinstance(val, dict):
                 # go 1 level deeper for dicts
-                string += f"{prefix}{key:<{l_just}}{eq_sign}"
-                # break
-                string += self._build_string(val, padding+3, ":",
-                                             is_dict=has_dict)
-                continue
+                val = self._build_string(val, padding+3, ":",
+                                         is_dict=has_dict)
             elif hasattr(val, "__len__"):
                 # add commas in iterables
                 val = str(list(val))
@@ -731,7 +728,7 @@ class Cosmology(object):
 
         # remove final comma and close bracket
         if is_dict:
-            return string[:-2] + "} ,"
+            return string[:-2] + " }"
         else:
             return string[:-2] + " )"
 
@@ -812,7 +809,8 @@ class Cosmology(object):
 
         if (self['N_nu_mass'] > 0 and
                 self._config_init_kwargs['transfer_function'] in
-                ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles']):
+                ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles',
+                 'arico21']):
             warnings.warn(
                 "The '%s' linear power spectrum model does not properly "
                 "account for massive neutrinos!" %
@@ -867,8 +865,9 @@ class Cosmology(object):
         elif trf in ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles']:
             rescale_s8 = False
             rescale_mg = False
-            pk = Pk2D.pk_from_model(self,
-                                    model=trf)
+            pk = Pk2D.pk_from_model(self, model=trf)
+        elif trf in ['arico21', ]:
+            pk = Pk2D.pk_from_emulator(self, model=trf)
 
         # Rescale by sigma8/mu-sigma if needed
         if pk:
@@ -981,12 +980,16 @@ class Cosmology(object):
             pk = Pk2D.pk_from_model(self, model='emu')
         elif mps == 'linear':
             pk = self._pk_lin['delta_matter:delta_matter']
+        elif mps in ['arico21', ]:  # other emulators go in here
+            pkl = self._pk_lin['delta_matter:delta_matter']
+            pk = Pk2D.apply_model(self, model=mps, pk_linear=pkl)
 
         # Correct for baryons if required
-        if self._config_init_kwargs['baryons_power_spectrum'] == 'bcm':
+        bps = self._config_init_kwargs['baryons_power_spectrum']
+        if bps == 'bcm':
             bcm_correct_pk2d(self, pk)
-        elif self._config_init_kwargs['baryons_power_spectrum'] == 'arico21':
-            pass
+        elif bps in ['arico21', ]:  # other emulators go in here
+            pk = baryon_correct(self, model=bps, pk2d=pk)
 
         # Assign
         self._pk_nl['delta_matter:delta_matter'] = pk
