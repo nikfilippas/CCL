@@ -13,7 +13,7 @@ if environ.get("CLASS_PARAM_DIR") is None:
     environ["CLASS_PARAM_DIR"] = path.dirname(path.abspath(__file__))
 
 from . import ccllib as lib
-from . import core, constants, background, power, halomodel, pk2d, tk3d, haloprofile, halos, massfunction, nl_pt
+from . import core, constants, background, power, halomodel, pk2d, tk3d, emulator, haloprofile, halos, massfunction, nl_pt
 
 # Core data structures
 from .core import Cosmology, CosmologyVanillaLCDM, CosmologyCalculator
@@ -25,7 +25,8 @@ from .background import growth_factor, growth_factor_unnorm, \
     omega_x, rho_x, sigma_critical
 
 # Boltzmann solvers
-from .boltzmann import get_camb_pk_lin, get_isitgr_pk_lin, get_class_pk_lin
+from .boltzmann import get_camb_pk_lin, get_isitgr_pk_lin, get_class_pk_lin, \
+    PowerSpectrumArico21
 
 # Generalized power spectra
 from .pk2d import Pk2D, parse_pk2d
@@ -38,7 +39,7 @@ from .power import linear_power, nonlin_power, linear_matter_power, nonlin_matte
     sigmaR, sigmaV, sigma8, sigmaM, kNL
 
 # Baryons stuff
-from .baryons import bcm_model_fka, bcm_correct_pk2d
+from .baryons import bcm_model_fka, bcm_correct_pk2d, baryon_correct
 
 # Old halo mass function
 from .massfunction import massfunc, halo_bias, massfunc_m2r
@@ -66,6 +67,9 @@ from .haloprofile import nfw_profile_3d, einasto_profile_3d, hernquist_profile_3
 
 # Specific to massive neutrinos
 from .neutrinos import Omega_nu_h2, Omeganuh2, nu_masses
+
+# Emulator stuff
+from .emulator import Emulator, PowerSpectrumEmulator
 
 # Expose function to toggle debug mode
 from .pyutils import debug_mode, resample_array
