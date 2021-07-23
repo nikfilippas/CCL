@@ -21,7 +21,7 @@ def test_cosmo_methods():
         pk2d, power, tk3d, tracers, halos, nl_pt
     from pyccl.core import CosmologyVanillaLCDM
     cosmo = CosmologyVanillaLCDM()
-    subs = [background, boltzmann, bcm, baryons, correlations, covariances,
+    subs = [background, baryons, boltzmann, cells, correlations, covariances,
             neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt]
     funcs = [getmembers(sub, isfunction) for sub in subs]
     funcs = [func for sub in funcs for func in sub]
