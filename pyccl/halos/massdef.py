@@ -317,4 +317,4 @@ def mass_def_from_name(name):
     if name in mass_defs:
         return mass_defs[name]
     else:
-        raise ValueError("Mass definition %s not implemented")
+        raise ValueError(f"Mass definition {name} not implemented.")
