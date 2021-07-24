@@ -814,8 +814,7 @@ class Cosmology(object):
 
         if (self['N_nu_mass'] > 0 and
                 self._config_init_kwargs['transfer_function'] in
-                ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles',
-                 'arico21']):
+                ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles',]):
             warnings.warn(
                 "The '%s' linear power spectrum model does not properly "
                 "account for massive neutrinos!" %
