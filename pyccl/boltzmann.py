@@ -583,7 +583,8 @@ class PowerSpectrumArico21(PowerSpectrumEmulator):
         with warnings.catch_warnings():
             # supress pickling warnings
             warnings.simplefilter("ignore")
-            emu = baccoemu.Matter_powerspectrum(**self._config_emu_kwargs)
+            emu = baccoemu.Matter_powerspectrum(**self._config_emu_kwargs,
+                                                verbose=False)
         return emu
 
     def _build_emu_parameters(self, cosmo, baryon=False):
