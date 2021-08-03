@@ -15,6 +15,17 @@ if environ.get("CLASS_PARAM_DIR") is None:
 from . import ccllib as lib
 from . import core, constants, background, power, halomodel, pk2d, tk3d, emulator, haloprofile, halos, massfunction, nl_pt
 
+# Deprecated modules
+from . import baryons, cells
+import warnings
+def __getattr__(name):
+    rename = {"bcm": "baryons", "cls": "cells"}
+    if name in rename:
+        warnings.warn(f"Module {name} has been renamed to {rename[name]}.")
+        name = rename[name]
+        return eval(name)
+    raise AttributeError(f"No module named {name}.")
+
 # Core data structures
 from .core import Cosmology, CosmologyVanillaLCDM, CosmologyCalculator
 
