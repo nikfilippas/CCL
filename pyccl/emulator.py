@@ -2,7 +2,6 @@
 This script provides the tools needed for a uniform
 framework for CCL to work with emulators.
 """  # noqa
-from . import ccllib as lib
 from .pyutils import CCLWarning, _get_spline2d_arrays
 
 # We need to load all subclasses of PowerSpectrumEmulator
