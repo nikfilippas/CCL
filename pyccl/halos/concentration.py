@@ -371,21 +371,21 @@ class ConcentrationDuffy08M500c(Concentration):
     """ Concentration-mass relation by Duffy et al. 2008
     (arXiv:0804.2486) extended to Delta = 500-critical.
     Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`): a mass
+        mass_def (:class:`~pyccl.halos.massdef.MassDef`): a mass
             definition object that fixes
             the mass definition used by this c(M)
             parametrization.
     """
     name = 'Duffy08M500c'
 
-    def __init__(self, mdef=None):
-        super(ConcentrationDuffy08M500c, self).__init__(mdef)
+    def __init__(self, mass_def=None):
+        super(ConcentrationDuffy08M500c, self).__init__(mass_def=mass_def)
 
-    def _default_mdef(self):
-        self.mdef = MassDef(500, 'critical')
+    def _default_mass_def(self):
+        self.mass_def = MassDef(500, 'critical')
 
-    def _check_mdef(self, mdef):
-        if (mdef.Delta != 500) or (mdef.rho_type != 'critical'):
+    def _check_mass_def(self, mass_def):
+        if (mass_def.Delta != 500) or (mass_def.rho_type != 'critical'):
             return True
         return False
 
