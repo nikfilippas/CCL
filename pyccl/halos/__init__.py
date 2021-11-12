@@ -13,6 +13,7 @@ from .concentration import (  # noqa
     ConcentrationPrada12,
     ConcentrationKlypin11,
     ConcentrationDuffy08,
+    ConcentrationDuffy08M500c,
     ConcentrationIshiyama21,
     ConcentrationConstant,
     concentration_from_name)
