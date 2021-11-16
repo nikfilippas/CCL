@@ -1,13 +1,12 @@
 import warnings
 
 from .emulator import PowerSpectrumEmulator
-from .pyutils import check, warn_api, deprecated
+from .pyutils import check, warn_api, deprecated, _get_spline2d_arrays
 import numpy as np
 
 from . import ccllib as lib
 
 from .errors import CCLWarning
-from .pyutils import check, _get_spline2d_arrays
 
 
 class Pk2D(object):
@@ -383,9 +382,9 @@ class Pk2D(object):
         a_arr_a, lk_arr_a, pk_arr_a = self.get_spline_arrays()
         a_arr_b, lk_arr_b, pk_arr_b = other.get_spline_arrays()
 
-        same_a = np.allclose(a_arr_a, a_arr_b)
-        same_lk = np.allclose(lk_arr_a, lk_arr_b)
-        same_pk = np.allclose(pk_arr_a, pk_arr_b)
+        same_a = np.array_equiv(a_arr_a, a_arr_b)
+        same_lk = np.array_equiv(lk_arr_a, lk_arr_b)
+        same_pk = np.array_equiv(pk_arr_a, pk_arr_b)
         return same_a and same_lk and same_pk
 
     def __add__(self, other):
