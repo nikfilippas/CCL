@@ -1,8 +1,8 @@
 from .. import ccllib as lib
 from ..background import growth_factor, growth_rate, rho_x
 from .massdef import MassDef, mass2radius_lagrangian
-from ..power import linear_matter_power, sigmaM, sigmaR
-from ..pyutils import warn_api, deprecate_attr
+from ..power import linear_matter_power, sigmaM
+from ..pyutils import check, warn_api, deprecate_attr
 import numpy as np
 
 
@@ -419,7 +419,7 @@ class ConcentrationIshiyama21(Concentration):
     """
     name = 'Ishiyama21'
 
-    def __init__(self, mass_def=None, relaxed=False, Vmax=False):
+    def __init__(self, mass_def=None, *, relaxed=False, Vmax=False):
         self.relaxed = relaxed
         self.Vmax = Vmax
         super(ConcentrationIshiyama21, self).__init__(mass_def=mass_def)
@@ -519,14 +519,15 @@ class ConcentrationIshiyama21(Concentration):
                         self.b1 = 0.91
                         self.c_alpha = 0.26
 
-    def _dlsigmaR(self, cosmo, R, a, *, eps=1e-6):
-        # central finite difference
-        R_use = np.geomspace(R * (1-eps/2), R * (1+eps/2), 2, axis=-1)
-        shape = R_use.shape
+    def _dlsigmaR(self, cosmo, M, a):
+        # kappa multiplies radius, so in log, 3*kappa multiplies mass
+        logM = 3*np.log10(self.kappa) + np.log10(M)
 
-        sigR = sigmaR(cosmo, R_use.flatten(), a).reshape(shape)
-        deriv = np.diff(np.log(sigR)) / np.diff(np.log(R_use))
-        return deriv.squeeze(axis=-1)
+        status = 0
+        dlns_dlogM, status = lib.dlnsigM_dlogM_vec(cosmo.cosmo, a, logM,
+                                                   len(logM), status)
+        check(status)
+        return -3/np.log(10) * dlns_dlogM
 
     def _G(self, x, n_eff):
         fx = np.log(1 + x) - x / (1 + x)
@@ -545,11 +546,8 @@ class ConcentrationIshiyama21(Concentration):
     def _concentration(self, cosmo, M, a):
         M_use = np.atleast_1d(M)
 
-        rho_m0 = rho_x(cosmo, 1., species="matter")
         nu = 1.686 / sigmaM(cosmo, M_use, a)
-        kRL = self.kappa * (3 / (4 * np.pi) * M_use / rho_m0)**(1 / 3)
-
-        n_eff = -2 * self._dlsigmaR(cosmo, kRL, a) - 3
+        n_eff = -2 * self._dlsigmaR(cosmo, M_use, a) - 3
         alpha_eff = growth_rate(cosmo, a)
 
         A = self.a0 * (1 + self.a1 * (n_eff + 3))
