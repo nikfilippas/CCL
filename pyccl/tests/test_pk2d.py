@@ -5,6 +5,7 @@ from numpy.testing import (
     assert_raises, assert_almost_equal, assert_allclose)
 import pyccl as ccl
 from pyccl import CCLWarning
+import warnings
 
 
 def pk1d(k):
@@ -87,6 +88,25 @@ def test_pk2d_from_model(model):
         pk2 = ccl.linear_matter_power(cosmo, ks, a)
         maxdiff = np.amax(np.fabs(pk1/pk2-1))
         assert maxdiff < 1E-10
+
+
+@pytest.mark.parametrize('model', ['halofit', 'bacco', ])
+def test_pk2d_apply_model_smoke(model):
+    cosmo = ccl.CosmologyVanillaLCDM()
+    cosmo.compute_linear_power()
+    pkl = cosmo.get_linear_power()
+
+    k_arr = np.logspace(-1, 1, 16)
+    for z in [0., 0.5, 2.]:
+        a = 1./(1+z)
+        with warnings.catch_warnings():
+            # filter all warnings related to the emulator packages
+            warnings.simplefilter("ignore")
+            pknl = ccl.Pk2D.apply_model(cosmo, model=model, pk_linear=pkl)
+
+        pk0 = pkl.eval(k_arr, a, cosmo)
+        pk1 = pknl.eval(k_arr, a, cosmo)
+        assert not np.array_equal(pk1, pk0)
 
 
 def test_pk2d_from_model_emu():

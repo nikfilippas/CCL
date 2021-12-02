@@ -38,8 +38,7 @@ from .background import growth_factor, growth_factor_unnorm, \
     omega_x, rho_x, sigma_critical
 
 # Boltzmann solvers
-from .boltzmann import get_camb_pk_lin, get_isitgr_pk_lin, get_class_pk_lin, \
-    PowerSpectrumArico21
+from .boltzmann import get_camb_pk_lin, get_isitgr_pk_lin, get_class_pk_lin
 
 # Generalized power spectra
 from .pk2d import Pk2D, parse_pk2d

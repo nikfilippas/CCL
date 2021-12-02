@@ -185,7 +185,7 @@ class Pk2D(object):
         Args:
             cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
             model (:obj:`str`): model to use. These models allowed:
-                `'arico21'` (Arico, Angulo & Zennaro, 2021. arXiv:2104.14568)
+                `'bacco'` (Arico, Angulo & Zennaro, 2021. arXiv:2104.14568)
         """
         pk2d = PowerSpectrumEmulator.get_pk_linear(cosmo, model)
         return pk2d
@@ -226,10 +226,35 @@ class Pk2D(object):
             pk_linear (:class:`Pk2D`):
                 A :class:`Pk2D` object containing the linear
                 power spectrum to transform.
+
+        Returns:
+            :class:`Pk2D`:
+                The transormed power spectrum.
         """
-        from .boltzmann import PowerSpectrumEmulator
-        pk2d = PowerSpectrumEmulator.apply_model(cosmo, model, pk_linear)
-        return pk2d
+        if model == "halofit":
+            pk2d_new = Pk2D.apply_halofit(cosmo, pk_linear)
+        elif model in ["bacco", ]:  # other emulator names go in here
+            from .boltzmann import PowerSpectrumEmulator as PSE
+            pk2d_new = PSE.apply_model(cosmo, model, pk_linear)
+        return pk2d_new
+
+    @classmethod
+    def include_baryons(Pk2D, cosmo, model, *, pk_nonlin):
+        """Pk2D constructor that applies a correction for baryons to
+        a non-linear power spectrum.
+        Arguments:
+            cosmo (:class:`~pyccl.core.Cosmology`):
+                A Cosmology object.
+            model (str):
+                Model to use.
+            pk_nonlin (:class:`Pk2D`):
+                A :class:`Pk2D` object containing the non-linear
+                power spectrum to transform.
+        Returns:
+            :class:`Pk2D`:
+                The transformed power spectrum.
+        """
+        return cosmo.baryon_correct(model, pk_nonlin)
 
     def eval(self, k, a, cosmo):
         """Evaluate power spectrum.
