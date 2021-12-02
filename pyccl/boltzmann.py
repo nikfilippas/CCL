@@ -561,6 +561,7 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
       - linear: :arXiv:2104.14568
       - non-linear: :arXiv:2004.06245
       - baryon model: :arXiv:2011.15018
+
     This emulator is part of the BACCO project.
 
     Parameters:
@@ -568,7 +569,7 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
             Dictionary with the initial configuration of the emulator.
             Defaults should work in all cases with minimal overhead.
     """
-    name = 'bacco'
+    name = "bacco"
 
     def __init__(self, config=None):
         if config is None:
@@ -576,8 +577,7 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
                       "nonlinear_boost": True,
                       "baryonic_boost": True,
                       "smeared_bao": False,
-                      "compute_sigma8": True,
-                      "verbose": False}
+                      "compute_sigma8": True}
         self._config_emu_kwargs = config
         super().__init__()
 
@@ -602,7 +602,6 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
             "omega_baryon": cosmo["Omega_b"],
             "hubble": cosmo["h"],
             "ns": cosmo["n_s"],
-            "sigma8": cosmo["sigma8"],
             "w0": cosmo["w0"],
             "wa": cosmo["wa"],
             "neutrino_mass": np.sum(cosmo["m_nu"])
@@ -642,23 +641,24 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
             name = which_bounds
 
         if self._has_bounds(name):
-            B = self._get_bounds(name)
+            B = self._get_bounds(which_bounds)
         else:
             entry = emu.emulator[name]
             bounds = dict(zip(entry["keys"], entry["bounds"].tolist()))
             B = Bounds(bounds)
             self._set_bounds(B, which_bounds)
 
-        # sigma8 and n_s are scaling operations on the emulated linear
+        # sigma8, A_s, n_s are scaling operations on the emulated linear
         # power spectrum, so they can take any value.
         if which_bounds == "linear":
             check_dic = {}
             for key, val in self._param_emu_kwargs.items():
-                if key not in ["sigma8_cold", "ns"]:
+                if key not in ["sigma8_cold", "A_s", "ns"]:
                     check_dic[key] = val
         else:
             check_dic = self._param_emu_kwargs
 
+        B.check_bounds(check_dic)
 
     def _get_pk_linear(self, cosmo):
         # build params and check consistency
@@ -708,7 +708,7 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
         emu = self._get_model()
         h = self._param_emu_kwargs["hubble"]
 
-        a_min, a_max = self._get_bounds("baryon").bounds["expfactor"]
+        a_min, a_max = self._get_bounds("nonlin").bounds["expfactor"]
         na = lib.default_spline_params.A_SPLINE_NA_PK
         a_arr = np.linspace(a_min, a_max, na)
 
@@ -728,7 +728,7 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
         emu = self._get_model()
         h = self._param_emu_kwargs["hubble"]
 
-        a_min, a_max = self._get_bounds("nonlin").bounds["expfactor"]
+        a_min, a_max = self._get_bounds("baryon").bounds["expfactor"]
         na = lib.default_spline_params.A_SPLINE_NA_PK
         a_arr = np.linspace(a_min, a_max, na)
 
