@@ -28,6 +28,19 @@ def __getattr__(name):
         return eval(name)
     raise AttributeError(f"No module named {name}.")
 
+# Deprecated modules
+from . import baryons, cells
+def __getattr__(name):
+    rename = {"bcm": "baryons", "cls": "cells"}
+    if name in rename:
+        from .errors import CCLWarning
+        import warnings
+        warnings.warn(f"Module {name} has been renamed to {rename[name]}.",
+                      CCLWarning)
+        name = rename[name]
+        return eval(name)
+    raise AttributeError(f"No module named {name}.")
+
 # Core data structures
 from .core import Cosmology, CosmologyVanillaLCDM, CosmologyCalculator
 

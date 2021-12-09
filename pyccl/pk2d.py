@@ -1,8 +1,8 @@
 import warnings
+import numpy as np
 
 from .emulator import PowerSpectrumEmulator
-from .pyutils import check, warn_api, deprecated, _get_spline2d_arrays
-import numpy as np
+from .pyutils import _get_spline2d_arrays, check, warn_api, deprecated
 
 from . import ccllib as lib
 

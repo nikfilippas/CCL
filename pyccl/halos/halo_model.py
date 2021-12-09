@@ -621,7 +621,7 @@ def halomod_power_spectrum(cosmo, hmc, k, a, prof, *,
             (P_{1h}^{\\alpha(a)}(k)+P_{2h}^{\\alpha(a)}(k))^{1/\\alpha}`.
             If `None` the extra factor is just 1.
         suppress_1h (function or None):
-            suppress the 1-halo large scale contribution by a
+            Suppress the 1-halo large scale contribution by a
             time- and scale-dependent function :math:`k_*(a)`,
             defined as in HMCODE-2020 (``arXiv:2009.01858``):
             :math:`\\frac{(k/k_*(a))^4}{1+(k/k_*(a))^4}`.
@@ -801,7 +801,7 @@ def halomod_Pk2D(cosmo, hmc, prof, *,
             (P_{1h}^{\\alpha(a)}(k)+P_{2h}^{\\alpha(a)}(k))^{1/\\alpha}`.
             If `None` the extra factor is just 1.
         suppress_1h (function or None):
-            suppress the 1-halo large scale contribution by a
+            Suppress the 1-halo large scale contribution by a
             time- and scale-dependent function :math:`k_*(a)`,
             defined as in HMCODE-2020 (``arXiv:2009.01858``):
             :math:`\\frac{(k/k_*(a))^4}{1+(k/k_*(a))^4}`.
