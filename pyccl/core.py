@@ -13,7 +13,6 @@ from ._types import error_types
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
-from .baryons import bcm_correct_pk2d, baryon_correct
 
 # Configuration types
 transfer_function_types = {
@@ -887,12 +886,11 @@ class Cosmology(object):
                                    "power spectrum using CAMB and specified"
                                    " sigma8 but the non-linear power spectrum "
                                    "cannot be consistenty rescaled.")
-        elif trf in ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles']:
+        elif trf in ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles',
+                     'bacco']:
             rescale_s8 = False
             rescale_mg = False
             pk = Pk2D.pk_from_model(self, model=trf)
-        elif trf in ['bacco', ]:
-            pk = Pk2D.pk_from_emulator(self, model=trf)
 
         # Rescale by sigma8/mu-sigma if needed
         if pk:
@@ -1011,9 +1009,7 @@ class Cosmology(object):
 
         # Correct for baryons if required
         bps = self._config_init_kwargs['baryons_power_spectrum']
-        if bps == 'bcm':
-            bcm_correct_pk2d(self, pk)
-        elif bps in ['bacco', ]:  # other emulators go in here
+        if bps in ['bcm', 'bacco', ]:
             pk = pk.baryon_correct(self, model=bps)
 
         # Assign
