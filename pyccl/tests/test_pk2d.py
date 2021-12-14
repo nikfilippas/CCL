@@ -102,7 +102,7 @@ def test_pk2d_apply_model_smoke(model):
         with warnings.catch_warnings():
             # filter all warnings related to the emulator packages
             warnings.simplefilter("ignore")
-            pknl = ccl.Pk2D.apply_model(cosmo, model=model, pk_linear=pkl)
+            pknl = pkl.apply_model(cosmo, model=model)
 
         pk0 = pkl.eval(k_arr, a, cosmo)
         pk1 = pknl.eval(k_arr, a, cosmo)

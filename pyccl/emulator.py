@@ -267,7 +267,7 @@ class PowerSpectrumEmulator(Emulator):
         return pk2d
 
     @classmethod
-    def apply_model(cls, cosmo, name, pk_linear):
+    def apply_nonlin_model(cls, cosmo, name, pk_linear):
         from .pk2d import Pk2D
 
         emu = cls.from_name(name)()
