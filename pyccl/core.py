@@ -890,7 +890,7 @@ class Cosmology(object):
                      'bacco']:
             rescale_s8 = False
             rescale_mg = False
-            pk = Pk2D.pk_from_model(self, model=trf)
+            pk = Pk2D.from_model(self, model=trf)
 
         # Rescale by sigma8/mu-sigma if needed
         if pk:
@@ -1000,7 +1000,7 @@ class Cosmology(object):
                                "necessary input for halofit")
             pk = pkl.apply_halofit(self)
         elif mps == 'emu':
-            pk = Pk2D.pk_from_model(self, model='emu')
+            pk = Pk2D.from_model(self, model='emu')
         elif mps == 'linear':
             pk = self._pk_lin['delta_matter:delta_matter']
         elif mps in ['bacco', ]:  # other emulators go in here

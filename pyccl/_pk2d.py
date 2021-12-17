@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 from . import ccllib as lib
 from .emulator import PowerSpectrumEmulator
-from .pyutils import check, CCLWarning
+from .pyutils import check, CCLWarning, deprecated
 
 
 class _Pk2D_descriptor(object):
@@ -32,7 +32,7 @@ class _Pk2D_descriptor(object):
         return new_func
 
 
-def pk_from_model(cls, cosmo, model):
+def from_model(cls, cosmo, model):
     """`Pk2D` constructor returning the power spectrum associated with
     a given numerical model.
 
@@ -77,6 +77,28 @@ def pk_from_model(cls, cosmo, model):
     check(status, cosmo)
     pk2d.has_psp = True
     return pk2d
+
+
+@deprecated(from_model)
+def pk_from_model(cls, cosmo, model):
+    """`Pk2D` constructor returning the power spectrum associated with
+    a given numerical model.
+
+    Arguments:
+        cosmo (:class:`~pyccl.core.Cosmology`)
+            A Cosmology object.
+        model (:obj:`str`)
+            model to use. These models allowed:
+              - `'bbks'` (Bardeen et al. ApJ 304 (1986) 15)
+              - `'eisenstein_hu'` (Eisenstein & Hu astro-ph/9709112)
+              - `'eisenstein_hu_nowiggles'` (Eisenstein & Hu astro-ph/9709112)
+              - `'emu'` (arXiv:1508.02654).
+
+    Returns:
+        :class:`~pyccl.pk2d.Pk2D`
+            The power spectrum of the input model.
+    """
+    return from_model(cls, cosmo, model)
 
 
 def apply_halofit(self, cosmo, pk_linear=None):
