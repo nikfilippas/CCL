@@ -1,7 +1,7 @@
 from .. import ccllib as lib
 from ..core import check
 from ..background import species_types, rho_x, omega_x
-from ..pyutils import warn_api
+from ..pyutils import warn_api, deprecated
 import numpy as np
 
 
@@ -114,12 +114,12 @@ class MassDef(object):
             (self.rho_type == other.rho_type)
 
     def _concentration_init(self, c_m_relation):
-        from .concentration import Concentration, concentration_from_name
+        from .concentration import Concentration
         if isinstance(c_m_relation, Concentration):
             self.concentration = c_m_relation
         elif isinstance(c_m_relation, str):
             # Grab class
-            conc_class = concentration_from_name(c_m_relation)
+            conc_class = Concentration.from_name(c_m_relation)
             # instantiate with this mass definition
             self.concentration = conc_class(mass_def=self)
         else:
@@ -238,6 +238,24 @@ class MassDef(object):
                 R_new = c_new * R_this / c_this
                 return mass_def_other.get_mass(cosmo, R_new, a)
 
+    @classmethod
+    def from_name(cls, name):
+        """ Return mass definition subclass from name string.
+
+        Args:
+            name (string):
+                a mass definition name (e.g. '200m' for Delta=200 matter)
+
+        Returns:
+            MassDef subclass corresponding to the input name.
+        """
+        mass_defs = {m.name: m for m in cls.__subclasses__()}
+
+        if name in mass_defs:
+            return mass_defs[name]
+        else:
+            raise ValueError(f"Mass definition {name} not implemented.")
+
 
 class MassDef200m(MassDef):
     """`MassDef` class for the mass definition with Delta=200 times the matter
@@ -302,6 +320,7 @@ class MassDefVir(MassDef):
                                          c_m_relation=c_m_relation)
 
 
+@deprecated(new_function=MassDef.from_name)
 def mass_def_from_name(name):
     """ Return mass definition subclass from name string.
 

@@ -1,8 +1,8 @@
 import warnings
 from .. import ccllib as lib
-from .hmfunc import MassFunc, mass_function_from_name
-from .hbias import HaloBias, halo_bias_from_name
-from .massdef import MassDef, mass_def_from_name
+from .hmfunc import MassFunc
+from .hbias import HaloBias
+from .massdef import MassDef
 from .profiles import HaloProfile
 from .profiles_2pt import Profile2pt
 from ..core import check
@@ -61,7 +61,7 @@ class HMCalculator(object):
         if isinstance(mass_def, MassDef):
             self.mass_def = mass_def
         elif isinstance(mass_def, str):
-            self.mass_def = mass_def_from_name(mass_def)()
+            self.mass_def = MassDef.from_name(mass_def)()
         else:
             raise TypeError("mass_def must be of type `MassDef` "
                             "or a mass definition name string")
@@ -69,7 +69,7 @@ class HMCalculator(object):
         if isinstance(mass_function, MassFunc):
             self.mass_function = mass_function
         elif isinstance(mass_function, str):
-            nMclass = mass_function_from_name(mass_function)
+            nMclass = MassFunc.from_name(mass_function)
             self.mass_function = nMclass(mass_def=self.mass_def)
         else:
             raise TypeError("massfunc must be of type `MassFunc` "
@@ -78,7 +78,7 @@ class HMCalculator(object):
         if isinstance(halo_bias, HaloBias):
             self.halo_bias = halo_bias
         elif isinstance(halo_bias, str):
-            bMclass = halo_bias_from_name(halo_bias)
+            bMclass = HaloBias.from_name(halo_bias)
             self.halo_bias = bMclass(mass_def=self.mass_def)
         else:
             raise TypeError("hbias must be of type `HaloBias` "

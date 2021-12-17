@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import pyccl as ccl
+from pyccl.pyutils import CCLWarning
 
 COSMO = ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, Omega_g=0, Omega_k=0,
                       h=0.7, sigma8=0.8, n_s=0.96, Neff=0, m_nu=0.0,
@@ -120,14 +121,21 @@ def test_subclasses_smoke(scls):
 
 
 def test_massdef_from_string():
-    from pyccl.halos import MassDefVir, MassDef200m, MassDef200c, \
-        mass_def_from_name
-    assert mass_def_from_name("vir")().__eq__(MassDefVir())
-    assert mass_def_from_name("200m")().__eq__(MassDef200m())
-    assert mass_def_from_name("200c")().__eq__(MassDef200c())
+    from pyccl.halos import MassDef, MassDefVir, MassDef200m, MassDef200c
+    assert MassDef.from_name("vir")().__eq__(MassDefVir())
+    assert MassDef.from_name("200m")().__eq__(MassDef200m())
+    assert MassDef.from_name("200c")().__eq__(MassDef200c())
 
 
 def test_massdef_from_string_raises():
-    from pyccl.halos import mass_def_from_name
+    from pyccl.halos import MassDef
     with pytest.raises(ValueError):
-        mass_def_from_name("none")
+        MassDef.from_name("none")
+
+
+def test_from_name_depr():
+    from pyccl.halos import MassDef, mass_def_from_name
+    with pytest.warns(CCLWarning):
+        c200_1 = mass_def_from_name("200c")()
+    c200_2 = MassDef.from_name("200c")()
+    assert c200_1.__eq__(c200_2)

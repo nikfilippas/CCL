@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import pyccl as ccl
+from pyccl.pyutils import CCLWarning
 
 
 COSMO = ccl.Cosmology(
@@ -109,7 +110,7 @@ def test_nM_bocquet_smoke(with_hydro):
 @pytest.mark.parametrize('name', ['Press74', 'Tinker08',
                                   'Despali16', 'Angulo12'])
 def test_nM_from_string(name):
-    nM_class = ccl.halos.mass_function_from_name(name)
+    nM_class = ccl.halos.MassFunc.from_name(name)
     nM = nM_class()
     for m in MS:
         n = nM.get_mass_function(COSMO, m, 0.9)
@@ -119,7 +120,7 @@ def test_nM_from_string(name):
 
 def test_nM_from_string_raises():
     with pytest.raises(ValueError):
-        ccl.halos.mass_function_from_name('Tinker09')
+        ccl.halos.MassFunc.from_name('Tinker09')
 
 
 def test_nM_default():
@@ -169,3 +170,10 @@ def test_nM_tinker10_norm():
     zs = np.linspace(0, 1, 4)
     ns = np.array([norm(z) for z in zs])
     assert np.all(np.fabs(ns-1) < 0.005)
+
+
+def test_from_name_depr():
+    with pytest.warns(CCLWarning):
+        mf_1 = ccl.halos.mass_function_from_name("Tinker08")()
+    mf_2 = ccl.halos.MassFunc.from_name("Tinker08")()
+    assert mf_1.name == mf_2.name

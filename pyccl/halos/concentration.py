@@ -2,7 +2,7 @@ from .. import ccllib as lib
 from ..background import growth_factor, growth_rate, rho_x
 from .massdef import MassDef, mass2radius_lagrangian
 from ..power import linear_matter_power, sigmaM
-from ..pyutils import check, warn_api, deprecate_attr
+from ..pyutils import check, warn_api, deprecate_attr, deprecated
 import numpy as np
 
 
@@ -108,6 +108,22 @@ class Concentration(object):
         if np.ndim(M) == 0:
             c = c[0]
         return c
+
+    @classmethod
+    def from_name(cls, name):
+        """ Returns halo concentration subclass from name string
+
+        Args:
+            name (string): a concentration name
+
+        Returns:
+            Concentration subclass corresponding to the input name.
+        """
+        concentrations = {c.name: c for c in cls.__subclasses__()}
+        if name in concentrations:
+            return concentrations[name]
+        else:
+            raise ValueError(f"Concentration {name} not implemented.")
 
 
 class ConcentrationDiemer15(Concentration):
@@ -592,6 +608,7 @@ class ConcentrationConstant(Concentration):
             return self.c * np.ones(M.size)
 
 
+@deprecated(new_function=Concentration.from_name)
 def concentration_from_name(name):
     """ Returns halo concentration subclass from name string
 

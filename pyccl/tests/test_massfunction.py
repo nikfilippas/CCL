@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import pyccl as ccl
+from pyccl.pyutils import CCLWarning
 
 
 COSMO = ccl.Cosmology(
@@ -22,7 +23,7 @@ def test_massfunc_models_smoke(mf_type):
         Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96,
         transfer_function='bbks', matter_power_spectrum='linear',
         mass_function=mf_type)
-    hmf_cls = ccl.halos.mass_function_from_name(MF_EQUIV[mf_type])
+    hmf_cls = ccl.halos.MassFunc.from_name(MF_EQUIV[mf_type])
     hmf = hmf_cls()
     for m in MS:
         # Deprecated
@@ -41,7 +42,7 @@ def test_halo_bias_models_smoke(mf_type):
         Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96,
         transfer_function='bbks', matter_power_spectrum='linear',
         mass_function=mf_type)
-    hbf_cls = ccl.halos.halo_bias_from_name(MF_EQUIV[mf_type])
+    hbf_cls = ccl.halos.HaloBias.from_name(MF_EQUIV[mf_type])
     hbf = hbf_cls()
     for m in MS:
         # Deprecated
@@ -104,3 +105,10 @@ def test_halo_bias_smoke(m):
     b = assert_warns(ccl.CCLWarning, ccl.halo_bias, COSMO, m, a)
     assert np.all(np.isfinite(b))
     assert np.shape(b) == np.shape(m)
+
+
+def test_from_name_depr():
+    with pytest.warns(CCLWarning):
+        mf_1 = ccl.halos.mass_function_from_name("Tinker08")()
+    mf_2 = ccl.halos.MassFunc.from_name("Tinker08")()
+    assert mf_1.name == mf_2.name
