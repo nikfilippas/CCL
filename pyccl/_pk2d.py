@@ -186,9 +186,3 @@ def include_baryons(self, cosmo, model, pk_nonlin=None):
         self = pk_nonlin
 
     return cosmo.baryon_correct(model, self)
-
-
-def halomod_1h2h_correct(self, cosmo, model, pk_other):
-    """
-    """
-    return

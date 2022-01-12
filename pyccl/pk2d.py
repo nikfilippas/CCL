@@ -4,7 +4,7 @@ import numpy as np
 from .pyutils import _get_spline2d_arrays, check, warn_api, deprecated
 from ._pk2d import (
     _Pk2D_descriptor, from_model, pk_from_model, apply_halofit,
-    apply_nonlin_model, include_baryons, halomod_1h2h_correct)
+    apply_nonlin_model, include_baryons)
 
 from . import ccllib as lib
 
@@ -71,7 +71,6 @@ class Pk2D(object):
     apply_halofit = _Pk2D_descriptor(apply_halofit)
     apply_nonlin_model = _Pk2D_descriptor(apply_nonlin_model)
     include_baryons = _Pk2D_descriptor(include_baryons)
-    halomod_1h2h_correct = _Pk2D_descriptor(halomod_1h2h_correct)
 
     @warn_api(order=["pkfunc", "a_arr", "lk_arr", "pk_arr", "is_logp",
                      "extrap_order_lok", "extrap_order_hik", "cosmo"])
