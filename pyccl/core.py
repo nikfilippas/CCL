@@ -1010,7 +1010,7 @@ class Cosmology(object):
         # Correct for baryons if required
         bps = self._config_init_kwargs['baryons_power_spectrum']
         if bps in ['bcm', 'bacco', ]:
-            pk = pk.baryon_correct(self, model=bps)
+            pk = pk.include_baryons(self, model=bps)
 
         # Assign
         self._pk_nl['delta_matter:delta_matter'] = pk
