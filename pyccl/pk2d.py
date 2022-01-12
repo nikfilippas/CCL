@@ -409,6 +409,9 @@ class Pk2D(object):
 
         return new
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __mul__(self, other, strict=True):
         """Multiply two Pk2D instances.
 
@@ -439,6 +442,9 @@ class Pk2D(object):
                    extrap_order_lok=self.extrap_order_lok,
                    extrap_order_hik=self.extrap_order_hik)
         return new
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def __pow__(self, exponent):
         """Take a Pk2D instance to a power.
