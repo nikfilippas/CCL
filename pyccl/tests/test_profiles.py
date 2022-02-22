@@ -59,42 +59,42 @@ def test_profiles_equal():
 
     # different profile types
     p2 = ccl.halos.HaloProfile()
-    assert not p1.__eq__(p2)
+    assert p1 != p2
 
     # equal profiles
     p2 = p1
-    assert p1.__eq__(p2)
+    assert p1 == p2
 
     # equivalent profiles
-    cm2 = ccl.halos.ConcentrationDuffy08(mass_def=M200m)
-    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm2, lMmin_0=12.)
-    assert p1.__eq__(p2)
+    cm2 = ccl.halos.ConcentrationDuffy08(mdef=M200m)
+    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm2, lMmin_0=12.)
+    assert p1 == p2
 
     # different parameters
-    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=11.)
-    assert not p1.__eq__(p2)
+    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm, lMmin_0=11.)
+    assert p1 != p2
 
     # different mass-concentration
     cm2 = ccl.halos.ConcentrationConstant()
-    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm2, lMmin_0=12.)
-    assert not p1.__eq__(p2)
+    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm2, lMmin_0=12.)
+    assert p1 != p2
 
     # different mass-concentration mass definition
     M200c = ccl.halos.MassDef200c()
-    cm2 = ccl.halos.ConcentrationDuffy08(mass_def=M200c)
-    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm2, lMmin_0=12.)
-    assert not p1.__eq__(p2)
+    cm2 = ccl.halos.ConcentrationDuffy08(mdef=M200c)
+    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm2, lMmin_0=12.)
+    assert p1 != p2
 
     # different FFTLog
     p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=12.)
     p2.update_precision_fftlog(**{"plaw_fourier": -2.0})
-    assert not p1.__eq__(p2)
+    assert p1 != p2
 
     # something else
-    p2 = ccl.halos.HaloProfileHOD(c_m_relation=cm, lMmin_0=12.)
-    assert p1.__eq__(p2)
-    p2.hello_here = 0.
-    assert not p1.__eq__(p2)
+    p2 = ccl.halos.HaloProfileHOD(c_M_relation=cm, lMmin_0=12.)
+    assert p1 == p2
+    p2.hello_there = 0.
+    assert p1 != p2
 
 
 @pytest.mark.parametrize('prof_class',
@@ -114,6 +114,11 @@ def test_empirical_smoke(prof_class):
 
     p = prof_class(c_m_relation=c)
     smoke_assert_prof_real(p)
+
+
+def test_empirical_smoke_CIB():
+    with pytest.raises(TypeError):
+        ccl.halos.HaloProfileCIBShang12(None, nu_GHz=417)
 
 
 def test_cib_smoke():

@@ -151,18 +151,12 @@ class HaloProfile(object):
         """
         return self.precision_fftlog['plaw_projected']
 
-    def __eq__(self, prof2):
-        """ Return `True` if this profile is equivalent to another."""
-        if type(self) != type(prof2):
-            # catch different profile types
-            return False
-
+    def _prof_equiv(self, prof2):
+        """Check profile equivalence. If equivalence between two profiles
+        is not trivial, and simply checking equality of their attributes
+        does not suffice, this method has to be reloaded.
+        """
         params, params2 = self.__dict__, prof2.__dict__
-
-        if params == params2:
-            # same profiles
-            return True
-
         for key, val in params.items():
             if key == "c_m_relation":
                 cm2 = params2.get(key)
