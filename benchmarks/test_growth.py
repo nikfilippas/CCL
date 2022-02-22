@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.testing import assert_allclose
 import pytest
 
 import pyccl as ccl
@@ -97,10 +96,11 @@ def compare_growth(
 
     # Compare to benchmark data
     if high_tol:
-        assert_allclose(
-            gfac, gfac_bench, atol=1e-12, rtol=GROWTH_HIZ_TOLERANCE)
+        assert np.allclose(gfac, gfac_bench,
+                           atol=1e-12, rtol=GROWTH_HIZ_TOLERANCE)
     else:
-        assert_allclose(gfac, gfac_bench, atol=1e-12, rtol=GROWTH_TOLERANCE)
+        assert np.allclose(gfac, gfac_bench,
+                           atol=1e-12, rtol=GROWTH_TOLERANCE)
 
 
 @pytest.mark.parametrize('i', list(range(5)))
@@ -140,10 +140,11 @@ def test_growth_mg():
     cosmo1 = ccl.Cosmology(
         Omega_c=0.25, Omega_b=0.05, Omega_k=0., Neff=0., m_nu=0.,
         w0=-1., wa=0., h=0.7, A_s=2.1e-9, n_s=0.96)
-    cosmo2 = ccl.Cosmology(
-        Omega_c=0.25, Omega_b=0.05, Omega_k=0., Neff=0., m_nu=0.,
-        w0=-1., wa=0., h=0.7, A_s=2.1e-9, n_s=0.96,
-        z_mg=z_mg, df_mg=df_mg)
+    with pytest.warns(ccl.CCLDeprecationWarning):
+        cosmo2 = ccl.Cosmology(
+            Omega_c=0.25, Omega_b=0.05, Omega_k=0., Neff=0., m_nu=0.,
+            w0=-1., wa=0., h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=z_mg, df_mg=df_mg)
 
     # We have included a growth modification \delta f = K*a, with K==0.1
     # (arbitrarily). This case has an analytic solution, given by
@@ -160,5 +161,5 @@ def test_growth_mg():
     d2r = d1 * np.exp(0.1*(a-1.))
 
     # Check that ratio of calculated and analytic results is within tolerance
-    assert_allclose(d2r, d2, rtol=GROWTH_TOLERANCE)
-    assert_allclose(f2r, f2, rtol=GROWTH_TOLERANCE)
+    assert np.allclose(d2r, d2, rtol=GROWTH_TOLERANCE)
+    assert np.allclose(f2r, f2, rtol=GROWTH_TOLERANCE)

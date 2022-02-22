@@ -91,12 +91,10 @@ def test_nM_watson_smoke(mdef):
 @pytest.mark.parametrize('with_hydro', [True, False])
 def test_nM_bocquet_smoke(with_hydro):
     with pytest.raises(ValueError):
-        ccl.halos.MassFuncBocquet16(mass_def=M500m,
-                                    hydro=with_hydro)
+        ccl.halos.MassFuncBocquet16(mass_def=M500m, hydro=with_hydro)
 
     for md in [M500c, M200c, M200m]:
-        nM = ccl.halos.MassFuncBocquet16(mass_def=md,
-                                         hydro=with_hydro)
+        nM = ccl.halos.MassFuncBocquet16(mass_def=md, hydro=with_hydro)
         for m in MS:
             n = nM.get_mass_function(COSMO, m, 0.9)
             assert np.all(np.isfinite(n))
@@ -105,6 +103,13 @@ def test_nM_bocquet_smoke(with_hydro):
     md = ccl.halos.MassDef(1000, "matter")
     hmf = ccl.halos.MassFuncBocquet16(mass_def_strict=True)
     assert hmf._check_mass_def_strict(md) is True
+
+
+def test_bocquet_mass_def():
+    hmd = ccl.halos.MassDef(200, "critical")
+    hmd.rho_type = "something_else"  # bogus rho_type
+    with pytest.raises(ValueError):
+        ccl.halos.MassFuncBocquet16(mass_def=hmd)
 
 
 @pytest.mark.parametrize('name', ['Press74', 'Tinker08',
@@ -172,8 +177,8 @@ def test_nM_tinker10_norm():
     assert np.all(np.fabs(ns-1) < 0.005)
 
 
-def test_from_name_depr():
-    with pytest.warns(CCLWarning):
-        mf_1 = ccl.halos.mass_function_from_name("Tinker08")()
-    mf_2 = ccl.halos.MassFunc.from_name("Tinker08")()
-    assert mf_1.name == mf_2.name
+def test_func_deprecated():
+    with pytest.warns(ccl.CCLDeprecationWarning):
+        mf1 = ccl.halos.mass_function_from_name("Tinker08")
+    mf2 = ccl.halos.MassFunc.from_name("Tinker08")
+    assert mf1 == mf2

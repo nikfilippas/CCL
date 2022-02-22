@@ -75,9 +75,8 @@ def smoke_assert_tkk1h_real(func):
                            'p3': P3, 'p4': P4, 'cv34': PKC,
                            'norm': True}],)
 def test_tkk1h_smoke(pars):
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200,
-                                 nlM=2)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200, nlM=2)
 
     def f(k, a):
         return ccl.halos.halomod_trispectrum_1h(COSMO, hmc, k, a,
@@ -95,8 +94,8 @@ def test_tkk1h_smoke(pars):
 
 
 def test_tkk1h_tk3d():
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200)
     k_arr = KK
     a_arr = np.array([0.1, 0.4, 0.7, 1.0])
     tkk_arr = ccl.halos.halomod_trispectrum_1h(COSMO, hmc, k_arr, a_arr,
@@ -123,8 +122,7 @@ def test_tkk1h_tk3d():
                                      a_arr=a_arr,
                                      use_log=True)
     tkk_arr_2 = np.array([tk3d.eval(k_arr, a) for a in a_arr])
-    assert np.all(np.fabs((tkk_arr / tkk_arr_2 - 1)).flatten()
-                  < 1E-4)
+    assert np.allclose(tkk_arr, tkk_arr_2, rtol=1E-4)
 
     # Standard sampling
     tk3d = ccl.halos.halomod_Tk3D_1h(COSMO, hmc,
@@ -139,15 +137,12 @@ def test_tkk1h_tk3d():
                                      lk_arr=np.log(k_arr),
                                      use_log=True)
     tkk_arr_2 = np.array([tk3d.eval(k_arr, a) for a in a_arr])
-    assert np.all(np.fabs((tkk_arr / tkk_arr_2 - 1)).flatten()
-                  < 1E-4)
+    assert np.allclose(tkk_arr, tkk_arr_2, rtol=1E-4)
 
 
 def test_tkk1h_errors():
-    from pyccl.pyutils import assert_warns
-
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200)
     k_arr = KK
     a_arr = np.array([0.1, 0.4, 0.7, 1.0])
 
@@ -174,7 +169,7 @@ def test_tkk1h_errors():
                                          P1, prof34_2pt=P2, normprof=False)
 
     # Negative profile in logspace
-    assert_warns(ccl.CCLWarning, ccl.halos.halomod_Tk3D_1h,
-                 COSMO, hmc, P3, prof2=Pneg, normprof=False,
-                 lk_arr=np.log(k_arr), a_arr=a_arr,
-                 use_log=True)
+    with pytest.warns(ccl.CCLWarning):
+        ccl.halos.halomod_Tk3D_1h(COSMO, hmc, P3, prof2=Pneg, normprof=False,
+                                  lk_arr=np.log(k_arr), a_arr=a_arr,
+                                  use_log=True)

@@ -12,6 +12,9 @@ from os import environ, path
 if environ.get("CLASS_PARAM_DIR") is None:
     environ["CLASS_PARAM_DIR"] = path.dirname(path.abspath(__file__))
 
+# Caching
+from .constants import Caching
+
 from . import ccllib as lib
 from . import core, constants, background, power, halomodel, pk2d, tk3d, emulator, haloprofile, halos, massfunction, nl_pt
 
@@ -33,10 +36,10 @@ from . import baryons, cells
 def __getattr__(name):
     rename = {"bcm": "baryons", "cls": "cells"}
     if name in rename:
-        from .errors import CCLWarning
+        from .errors import CCLDeprecationWarning
         import warnings
         warnings.warn(f"Module {name} has been renamed to {rename[name]}.",
-                      CCLWarning)
+                      CCLDeprecationWarning)
         name = rename[name]
         return eval(name)
     raise AttributeError(f"No module named {name}.")
@@ -64,7 +67,7 @@ from .power import linear_power, nonlin_power, linear_matter_power, nonlin_matte
     sigmaR, sigmaV, sigma8, sigmaM, kNL
 
 # Baryons stuff
-from .baryons import bcm_model_fka, bcm_correct_pk2d, baryon_correct
+from .baryons import bcm_model_fka, bcm_correct_pk2d, _bcm_correct_pk2d, baryon_correct
 
 # Old halo mass function
 from .massfunction import massfunc, halo_bias, massfunc_m2r
@@ -99,4 +102,4 @@ from .emulator import Emulator, PowerSpectrumEmulator
 # Expose function to toggle debug mode
 from .pyutils import debug_mode, resample_array
 
-from .errors import CCLError, CCLWarning
+from .errors import CCLError, CCLWarning, CCLDeprecationWarning

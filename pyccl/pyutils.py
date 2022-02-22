@@ -2,7 +2,7 @@
 well as wrappers to automatically vectorize functions."""
 from . import ccllib as lib
 from ._types import error_types
-from .errors import CCLError, CCLWarning
+from .errors import CCLError, CCLWarning, CCLDeprecationWarning  # noqa
 import functools
 import warnings
 import numpy as np
@@ -502,23 +502,23 @@ def _check_array_params(f_arg, name=None, arr3=False):
         return f1, f2
 
 
-def assert_warns(wtype, f, *args, **kwargs):
-    """Check that a function call `f(*args, **kwargs)` raises a warning of
-    type wtype.
+# def assert_warns(wtype, f, *args, **kwargs):
+#     """Check that a function call `f(*args, **kwargs)` raises a warning of
+#     type wtype.
 
-    Returns the output of `f(*args, **kwargs)` unless there was no warning,
-    in which case an AssertionError is raised.
-    """
-    import warnings
-    # Check that f() raises a warning, but not an error.
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        res = f(*args, **kwargs)
-    assert len(w) >= 1, "Expected warning was not raised."
-    assert issubclass(w[0].category, wtype), \
-        "Warning raised was the wrong type (got %s, expected %s)" % (
-            w[0].category, wtype)
-    return res
+#     Returns the output of `f(*args, **kwargs)` unless there was no warning,
+#     in which case an AssertionError is raised.
+#     """
+#     import warnings
+#     # Check that f() raises a warning, but not an error.
+#     with warnings.catch_warnings(record=True) as w:
+#         warnings.simplefilter("always")
+#         res = f(*args, **kwargs)
+#     assert len(w) >= 1, "Expected warning was not raised."
+#     assert issubclass(w[0].category, wtype), \
+#         "Warning raised was the wrong type (got %s, expected %s)" % (
+#             w[0].category, wtype)
+#     return res
 
 
 def _get_spline1d_arrays(gsl_spline):
@@ -642,7 +642,39 @@ def warn_api(pairs=None, order=None):
                         "has to be explicitly specified to prevent "
                         "unwanted behavior. Not specifying it "
                         "will trigger an exception in the future",
-                        CCLWarning)
+                        CCLDeprecationWarning)
+
+            def cosmo_warning(args):
+                warn_cosmo = False
+                from .core import Cosmology
+                from .halos import HMCalculator, MassFunc, HaloBias
+                depr_cosmo_funcs = [HMCalculator, MassFunc, HaloBias]
+                depr_cosmo_funcs += [Class.__qualname__
+                                     for Class in MassFunc.__subclasses__()]
+                depr_cosmo_funcs += [Class.__qualname__
+                                     for Class in HaloBias.__subclasses__()]
+                this_name = func.__qualname__
+                if this_name.endswith(".__init__"):
+                    # TODO: py39 introduced `str.removesuffix` method
+                    this_name = this_name[:-len(".__init__")]
+                if this_name in depr_cosmo_funcs:
+                    # first arg is `self`, then it would be `cosmo`
+                    if len(args) > 1 and isinstance(args[1], Cosmology):
+                        new_args = list(args)  # we do this because
+                        del new_args[1]        # `args` is a tuple and
+                        args = new_args        # tuples are immutable
+                        warn_cosmo = True
+                    elif "cosmo" in kwargs:
+                        kwargs.pop("cosmo")
+                        warn_cosmo = True
+                if warn_cosmo:
+                    warnings.warn(
+                        "`cosmo` has been deprecated as the first "
+                        f"argument in {this_name}. This will return an "
+                        "exception in the future.", CCLDeprecationWarning)
+                return args
+
+            args = cosmo_warning(args)
 
             # transform decorator input
             rename = np.atleast_2d(pairs) if pairs is not None else None
@@ -672,7 +704,7 @@ def warn_api(pairs=None, order=None):
                         f"Use of argument{s} {olds} is deprecated "
                         f"in {func.__qualname__}. Pass the new name{s} "
                         f"of the argument{s} {news}, respectively.",
-                        CCLWarning)
+                        CCLDeprecationWarning)
 
             # return if we have everything we need
             if len(args) <= npos:
@@ -714,7 +746,8 @@ def warn_api(pairs=None, order=None):
             warnings.warn(
                 f"Use of argument{s} {no_kw} as positional is deprecated "
                 f"in {func.__qualname__}. Pass the name{s} of the "
-                f"keyword-only argument{s} explicitly.", CCLWarning)
+                f"keyword-only argument{s} explicitly.",
+                CCLDeprecationWarning)
 
             # raise normprof warning? (3 of 3)
             normprof_warning()
@@ -745,7 +778,7 @@ def deprecate_attr(pairs=None):
 
     >>> @deprecate_attr([('mass_def', 'mdef')])
         def __getattr__(self, name):
-            return getattr(self, name)
+            return
 
     Now, every time the attribute is called via its old name, the user will
     be warned about the renaming, and the attribute value will be returned.
@@ -768,7 +801,7 @@ def deprecate_attr(pairs=None):
 
                 warnings.warn(
                     f"Attribute {this_name} is deprecated in {class_name}. "
-                    f"Pass the new name {new_name}.", CCLWarning)
+                    f"Pass the new name {new_name}.", CCLDeprecationWarning)
 
                 this_name = new_name
 
@@ -776,9 +809,8 @@ def deprecate_attr(pairs=None):
             try:
                 attr = cls.__getattribute__(this_name)
                 return attr
-            except AttributeError:
-                return None
+            except AttributeError as err:
+                raise err
 
-            return getter(cls, this_name)
         return new_getter
     return wrapper

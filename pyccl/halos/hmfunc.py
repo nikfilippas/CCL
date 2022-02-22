@@ -56,7 +56,7 @@ class MassFunc(object):
 
     @deprecate_attr(pairs=[("mass_def", "mdef")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _default_mass_def(self):
         """ Assigns a default mass definition for this object if
@@ -145,7 +145,8 @@ class MassFunc(object):
             float or array_like: mass function \
                 :math:`dn/d\\log_{10}M` in units of Mpc^-3 (comoving).
         """
-        cosmo.compute_sigma()  # compute sigma if needed
+        # Initialize sigma(M) splines if needed
+        cosmo.compute_sigma()
 
         M_use = np.atleast_1d(M)
         logM = self._get_consistent_mass(cosmo, M_use,
@@ -223,9 +224,7 @@ class MassFuncPress74(MassFunc):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(MassFuncPress74, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -266,8 +265,7 @@ class MassFuncSheth99(MassFunc):
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  use_delta_c_fit=False):
         self.use_delta_c_fit = use_delta_c_fit
-        super(MassFuncSheth99, self).__init__(mass_def=mass_def,
-                                              mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -310,9 +308,7 @@ class MassFuncJenkins01(MassFunc):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(MassFuncJenkins01, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -347,9 +343,7 @@ class MassFuncTinker08(MassFunc):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(MassFuncTinker08, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200m()
@@ -371,11 +365,10 @@ class MassFuncTinker08(MassFunc):
         phi = np.array([1.19, 1.27, 1.34, 1.45, 1.58,
                         1.80, 1.97, 2.24, 2.44])
         ldelta = np.log10(delta)
-        extrap_kw = {"bounds_error": False, "fill_value": "extrapolate"}
-        self.pA0 = interp1d(ldelta, alpha, **extrap_kw)
-        self.pa0 = interp1d(ldelta, beta, **extrap_kw)
-        self.pb0 = interp1d(ldelta, gamma, **extrap_kw)
-        self.pc = interp1d(ldelta, phi, **extrap_kw)
+        self.pA0 = interp1d(ldelta, alpha)
+        self.pa0 = interp1d(ldelta, beta)
+        self.pb0 = interp1d(ldelta, gamma)
+        self.pc = interp1d(ldelta, phi)
 
     def _check_mass_def_strict(self, mass_def):
         if mass_def.Delta == 'fof':
@@ -407,9 +400,7 @@ class MassFuncDespali16(MassFunc):
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  ellipsoidal=False):
-        super(MassFuncDespali16, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
         self.ellipsoidal = ellipsoidal
 
     def _default_mass_def(self):
@@ -470,9 +461,7 @@ class MassFuncTinker10(MassFunc):
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  norm_all_z=False):
         self.norm_all_z = norm_all_z
-        super(MassFuncTinker10, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200m()
@@ -494,19 +483,18 @@ class MassFuncTinker10(MassFunc):
                         -0.301, -0.301, -0.319, -0.336])
 
         ldelta = np.log10(delta)
-        extrap_kw = {"bounds_error": False, "fill_value": "extrapolate"}
-        self.pA0 = interp1d(ldelta, alpha, **extrap_kw)
-        self.pa0 = interp1d(ldelta, eta, **extrap_kw)
-        self.pb0 = interp1d(ldelta, beta, **extrap_kw)
-        self.pc0 = interp1d(ldelta, gamma, **extrap_kw)
-        self.pd0 = interp1d(ldelta, phi, **extrap_kw)
+        self.pA0 = interp1d(ldelta, alpha)
+        self.pa0 = interp1d(ldelta, eta)
+        self.pb0 = interp1d(ldelta, beta)
+        self.pc0 = interp1d(ldelta, gamma)
+        self.pd0 = interp1d(ldelta, phi)
         if self.norm_all_z:
             p = np.array([-0.158, -0.195, -0.213, -0.254, -0.281,
                           -0.349, -0.367, -0.435, -0.504])
             q = np.array([0.0128, 0.0128, 0.0143, 0.0154, 0.0172,
                           0.0174, 0.0199, 0.0203, 0.0205])
-            self.pp0 = interp1d(ldelta, p, **extrap_kw)
-            self.pq0 = interp1d(ldelta, q, **extrap_kw)
+            self.pp0 = interp1d(ldelta, p)
+            self.pq0 = interp1d(ldelta, q)
 
     def _check_mass_def_strict(self, mass_def):
         if mass_def.Delta == 'fof':
@@ -553,9 +541,7 @@ class MassFuncBocquet16(MassFunc):
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  hydro=True):
         self.hydro = hydro
-        super(MassFuncBocquet16, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200m()
@@ -630,13 +616,9 @@ class MassFuncBocquet16(MassFunc):
     def _check_mass_def_strict(self, mass_def):
         if isinstance(mass_def.Delta, str):
             return True
-        # NOTE: The following lines have been commented out because
-        # currently rho_type can only be 'matter' or 'critical' and
-        # so this case cannot be covered.
         elif int(mass_def.Delta) == 200:
-            return False
-            # if mass_def.rho_type not in ['matter', 'critical']:
-            #     return True
+            if mass_def.rho_type not in ['matter', 'critical']:
+                return True
         elif int(mass_def.Delta) == 500:
             if mass_def.rho_type != 'critical':
                 return True
@@ -694,9 +676,7 @@ class MassFuncWatson13(MassFunc):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(MassFuncWatson13, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200m()
@@ -760,9 +740,7 @@ class MassFuncAngulo12(MassFunc):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(MassFuncAngulo12, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -954,8 +932,4 @@ def mass_function_from_name(name):
     Returns:
         MassFunc subclass corresponding to the input name.
     """
-    mass_functions = {c.name: c for c in MassFunc.__subclasses__()}
-    if name in mass_functions:
-        return mass_functions[name]
-    else:
-        raise ValueError(f"Mass function {name} not implemented.")
+    return MassFunc.from_name(name)

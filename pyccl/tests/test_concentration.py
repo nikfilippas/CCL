@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 import pyccl as ccl
-from pyccl.pyutils import CCLWarning
 
 
 COSMO = ccl.Cosmology(
@@ -80,8 +79,8 @@ def test_cM_from_string_raises():
         ccl.halos.Concentration.from_name('Duffy09')
 
 
-def test_from_name_depr():
-    with pytest.warns(CCLWarning):
-        c_1 = ccl.halos.concentration_from_name("Duffy08")()
-    c_2 = ccl.halos.Concentration.from_name("Duffy08")()
-    assert c_1.name == c_2.name
+def test_func_deprecated():
+    with pytest.warns(ccl.CCLDeprecationWarning):
+        c1 = ccl.halos.concentration_from_name("Duffy08")
+    c2 = ccl.halos.Concentration.from_name("Duffy08")
+    assert c1 == c2

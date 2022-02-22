@@ -32,7 +32,7 @@ class Concentration(object):
 
     @deprecate_attr(pairs=[("mass_def", "mdef")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _default_mass_def(self):
         """ Assigns a default mass definition for this object if
@@ -619,9 +619,4 @@ def concentration_from_name(name):
     Returns:
         Concentration subclass corresponding to the input name.
     """
-    concentrations = {c.name: c
-                      for c in Concentration.__subclasses__()}
-    if name in concentrations:
-        return concentrations[name]
-    else:
-        raise ValueError(f"Concentration {name} not implemented.")
+    return Concentration.from_name(name)

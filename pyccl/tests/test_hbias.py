@@ -43,7 +43,7 @@ def test_bM_SO_allgood():
 
 @pytest.mark.parametrize('name', ['Tinker10', 'Sheth99'])
 def test_bM_from_string(name):
-    bM_class = ccl.halos.HaloBias.frmo_name(name)
+    bM_class = ccl.halos.HaloBias.from_name(name)
     bM = bM_class()
     for m in MS:
         b = bM.get_halo_bias(COSMO, m, 0.9)
@@ -67,8 +67,8 @@ def test_bM_default():
     assert np.fabs(np.log10(M_in) - lM_out) < 1E-10
 
 
-def test_from_name_depr():
-    with pytest.warns(CCLWarning):
-        hb_1 = ccl.halos.halo_bias_from_name("Tinker10")()
-    hb_2 = ccl.halos.HaloBias.from_name("Tinker10")()
-    assert hb_1.name == hb_2.name
+def test_func_deprecated():
+    with pytest.warns(ccl.CCLDeprecationWarning):
+        hb1 = ccl.halos.halo_bias_from_name("Tinker10")
+    hb2 = ccl.halos.HaloBias.from_name("Tinker10")
+    assert hb1 == hb2

@@ -733,7 +733,7 @@ class HaloProfileNFW(HaloProfile):
 
     @deprecate_attr(pairs=[("c_m_relation", "cM")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _get_c_m_relation(self, cosmo, M, a, mass_def=None):
         return self.c_m_relation.get_concentration(cosmo, M, a,
@@ -911,7 +911,7 @@ class HaloProfileEinasto(HaloProfile):
 
     @deprecate_attr(pairs=[("c_m_relation", "cM")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _get_c_m_relation(self, cosmo, M, a, mass_def=None):
         return self.c_m_relation.get_concentration(cosmo, M, a,
@@ -998,7 +998,7 @@ class HaloProfileHernquist(HaloProfile):
 
     @deprecate_attr(pairs=[("c_m_relation", "cM")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _get_c_m_relation(self, cosmo, M, a, mass_def=None):
         return self.c_m_relation.get_concentration(cosmo, M, a,
@@ -1390,7 +1390,7 @@ class HaloProfileHOD(HaloProfile):
 
     @deprecate_attr(pairs=[("c_m_relation", "cM")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _get_c_m_relation(self, cosmo, M, a, mass_def=None):
         return self.c_m_relation.get_concentration(cosmo, M, a,

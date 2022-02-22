@@ -88,7 +88,7 @@ class MassDef(object):
     name = 'default'
 
     @warn_api()
-    def __init__(self, Delta, rho_type, *, c_m_relation=None):
+    def __init__(self, Delta, rho_type=None, *, c_m_relation=None):
         # Check it makes sense
         if (Delta != 'fof') and (Delta != 'vir'):
             if isinstance(Delta, str):
@@ -316,7 +316,7 @@ class MassDefVir(MassDef):
     @warn_api(pairs=[("c_m_relation", "c_m")])
     def __init__(self, *, c_m_relation='Klypin11'):
         super(MassDefVir, self).__init__('vir',
-                                         'critical',
+                                         'matter',
                                          c_m_relation=c_m_relation)
 
 
@@ -331,9 +331,4 @@ def mass_def_from_name(name):
     Returns:
         MassDef subclass corresponding to the input name.
     """
-    mass_defs = {m.name: m for m in MassDef.__subclasses__()}
-
-    if name in mass_defs:
-        return mass_defs[name]
-    else:
-        raise ValueError(f"Mass definition {name} not implemented.")
+    return MassDef.from_name(name)

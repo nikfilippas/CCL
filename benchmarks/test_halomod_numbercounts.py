@@ -22,8 +22,6 @@ def test_hmcalculator_number_counts_numcosmo():
     mdef = ccl.halos.MassDef(200, 'matter')
     hmf = ccl.halos.MassFuncTinker08(mass_def=mdef, mass_def_strict=False)
     hbf = ccl.halos.HaloBiasTinker10(mass_def=mdef, mass_def_strict=False)
-    hmf = ccl.halos.MassFuncTinker08(mass_def=mdef, mass_def_strict=False)
-    hbf = ccl.halos.HaloBiasTinker10(mass_def=mdef, mass_def_strict=False)
 
     benches = np.loadtxt("./benchmarks/data/numcosmo_cluster_counts.txt")
 

@@ -125,9 +125,7 @@ def test_hmcalculator_number_counts_scipy_dblquad():
     mmax = 1e15
 
     hmc = ccl.halos.HMCalculator(
-        mass_function=hmf,
-        halo_bias=hbf,
-        mass_def=mdef,
+        mass_function=hmf, halo_bias=hbf, mass_def=mdef,
         lM_min=np.log10(mmin),
         lM_max=np.log10(mmax),
         integration_method_M='spline')

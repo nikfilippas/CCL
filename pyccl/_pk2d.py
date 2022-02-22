@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 from . import ccllib as lib
 from .emulator import PowerSpectrumEmulator
-from .pyutils import check, CCLWarning, deprecated
+from .pyutils import check, CCLDeprecationWarning, deprecated
 
 
 class _Pk2D_descriptor(object):
@@ -17,9 +17,10 @@ class _Pk2D_descriptor(object):
 
     def __get__(self, instance, base):
         if instance is None:
-            warnings.warn("Use of the power spectrum as an argument in "
+            warnings.warn("Use of the power spectrum as an argument "
                           f"is deprecated in {self.func.__name__}. "
-                          "Use the instance method instead.", CCLWarning)
+                          "Use the instance method instead.",
+                          CCLDeprecationWarning)
             this = base
         else:
             this = instance
@@ -79,7 +80,7 @@ def from_model(cls, cosmo, model):
     return pk2d
 
 
-@deprecated(from_model)
+@deprecated(new_function=from_model)
 def pk_from_model(cls, cosmo, model):
     """`Pk2D` constructor returning the power spectrum associated with
     a given numerical model.
@@ -110,9 +111,9 @@ def apply_halofit(self, cosmo, pk_linear=None):
         cosmo (:class:`~pyccl.core.Cosmology`)
             A Cosmology object.
         pk_linear (:class:`Pk2D`)
-            a :class:`Pk2D` object containing
-            the linear power spectrum to transform. This function will
-            attempt to
+            A :class:`Pk2D` object containing the linear power spectrum
+            to transform. This argument is deprecated and will be removed
+            in a future release. Use the instance method instead.
 
     Returns:
         :class:`~pyccl.pk2d.Pk2D`
@@ -145,8 +146,9 @@ def apply_nonlin_model(self, cosmo, model, pk_linear=None):
         model (str)
             Model to use.
         pk_linear (:class:`Pk2D`)
-            A :class:`Pk2D` object containing the linear
-            power spectrum to transform.
+            A :class:`Pk2D` object containing the linear power spectrum
+            to transform. This argument is deprecated and will be removed
+            in a future release. Use the instance method instead.
 
     Returns:
         :class:`Pk2D`
@@ -173,9 +175,10 @@ def include_baryons(self, cosmo, model, pk_nonlin=None):
         model (str)
             Model to use.
         pk_nonlin (:class:`Pk2D`)
-            A :class:`Pk2D` object containing the non-linear
-            power spectrum to transform.
-
+            A :class:`Pk2D` object containing the non-linear power spectrum
+            to transform. This argument is deprecated and will be removed
+            in a future release. Use the instance method instead.
+>>>>>>> star
     Returns:
         :class:`Pk2D`
             A copy of the input power spectrum where the baryon correction

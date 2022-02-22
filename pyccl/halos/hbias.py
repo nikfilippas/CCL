@@ -42,7 +42,7 @@ class HaloBias(object):
 
     @deprecate_attr(pairs=[("mass_def", "mdef")])
     def __getattr__(self, name):
-        return getattr(self, name)
+        return
 
     def _default_mass_def(self):
         """ Assigns a default mass definition for this object if
@@ -176,7 +176,8 @@ class HaloBias(object):
         if name in bias_functions:
             return bias_functions[name]
         else:
-            raise ValueError(f"Halo bias parametrization {name} not implemented.")
+            raise ValueError(
+                f"Halo bias parametrization {name} not implemented.")
 
 
 class HaloBiasSheth99(HaloBias):
@@ -201,8 +202,7 @@ class HaloBiasSheth99(HaloBias):
                  mass_def_strict=True,
                  use_delta_c_fit=False):
         self.use_delta_c_fit = use_delta_c_fit
-        super(HaloBiasSheth99, self).__init__(mass_def=mass_def,
-                                              mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -246,8 +246,7 @@ class HaloBiasSheth01(HaloBias):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(HaloBiasSheth01, self).__init__(mass_def=mass_def,
-                                              mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -289,9 +288,7 @@ class HaloBiasBhattacharya11(HaloBias):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(HaloBiasBhattacharya11, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef('fof', 'matter')
@@ -331,9 +328,7 @@ class HaloBiasTinker10(HaloBias):
 
     @warn_api()
     def __init__(self, *, mass_def=None, mass_def_strict=True):
-        super(HaloBiasTinker10, self).__init__(
-            mass_def=mass_def,
-            mass_def_strict=mass_def_strict)
+        super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200m()
@@ -379,8 +374,4 @@ def halo_bias_from_name(name):
     Returns:
         HaloBias subclass corresponding to the input name.
     """
-    bias_functions = {c.name: c for c in HaloBias.__subclasses__()}
-    if name in bias_functions:
-        return bias_functions[name]
-    else:
-        raise ValueError(f"Halo bias parametrization {name} not implemented.")
+    return HaloBias.from_name(name)

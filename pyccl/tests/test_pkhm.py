@@ -20,8 +20,7 @@ PK2D = ccl.Pk2D(cosmo=COSMO, pkfunc=lambda k, a: a / k)
 
 
 def test_hmc_from_string_smoke():
-    hmc0 = ccl.halos.HMCalculator(mass_function=HMF,
-                                  halo_bias=HBF,
+    hmc0 = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
                                   mass_def=M200)
     # all strings
     hmc1 = ccl.halos.HMCalculator(mass_function="Tinker10",
@@ -30,12 +29,11 @@ def test_hmc_from_string_smoke():
     # no quality assurance of the following lines, because we
     # require an explicit type check, not an instance check (E721)
     assert type(hmc1.mass_function) == type(hmc0.mass_function)  # noqa
-    assert type(hmc1.halo_bias) == type(hmc0.halo_bias)        # noqa
-    assert type(hmc1.mass_def) == type(hmc0.mass_def)          # noqa
+    assert type(hmc1.halo_bias) == type(hmc0.halo_bias)          # noqa
+    assert type(hmc1.mass_def) == type(hmc0.mass_def)            # noqa
 
     # some strings
-    hmc2 = ccl.halos.HMCalculator(mass_function=HMF,
-                                  halo_bias="Tinker10",
+    hmc2 = ccl.halos.HMCalculator(mass_function=HMF, halo_bias="Tinker10",
                                   mass_def="vir")
     assert isinstance(hmc2.mass_def, ccl.halos.MassDefVir)
 
@@ -109,9 +107,8 @@ def smoke_assert_pkhm_real(func):
 
 @pytest.mark.parametrize('norm', [True, False])
 def test_pkhm_mean_profile_smoke(norm):
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200,
-                                 nlM=2)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200, nlM=2)
 
     def f(k, a):
         return ccl.halos.halomod_mean_profile_1pt(COSMO, hmc, k, a,
@@ -121,9 +118,8 @@ def test_pkhm_mean_profile_smoke(norm):
 
 @pytest.mark.parametrize('norm', [True, False])
 def test_pkhm_bias_smoke(norm):
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200,
-                                 nlM=2)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200, nlM=2)
 
     def f(k, a):
         return ccl.halos.halomod_bias_1pt(COSMO, hmc, k, a,
@@ -181,9 +177,8 @@ def test_pkhm_bias_smoke(norm):
                            'h2': True, 'itg': 'simpson',
                            'p2': P2}])
 def test_pkhm_pk_smoke(pars):
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200,
-                                 nlM=2)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200, nlM=2)
 
     def f(k, a):
         return ccl.halos.halomod_power_spectrum(COSMO, hmc, k, a, P1,
@@ -198,8 +193,8 @@ def test_pkhm_pk_smoke(pars):
 
 
 def test_pkhm_pk2d():
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200)
     k_arr = KK
     a_arr = np.linspace(0.3, 1, 10)
     pk_arr = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr,
@@ -318,27 +313,27 @@ def test_pkhm_pk2d():
 def test_pkhm_errors():
     # Wrong integration
     with pytest.raises(NotImplementedError):
-        ccl.halos.HMCalculator(mass_function=HMF,
-                               halo_bias=HBF, mass_def=M200,
+        ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                               mass_def=M200,
                                integration_method_M='Sampson')
 
     # Wrong hmf
     with pytest.raises(TypeError):
-        ccl.halos.HMCalculator(mass_function=None,
-                               halo_bias=HBF, mass_def=M200)
+        ccl.halos.HMCalculator(mass_function=None, halo_bias=HBF,
+                               mass_def=M200)
 
     # Wrong hbf
     with pytest.raises(TypeError):
-        ccl.halos.HMCalculator(mass_function=HMF,
-                               halo_bias=None, mass_def=M200)
+        ccl.halos.HMCalculator(mass_function=HMF, halo_bias=None,
+                               mass_def=M200)
 
     # Wrong MassDef
     with pytest.raises(TypeError):
-        ccl.halos.HMCalculator(mass_function=HMF,
-                               halo_bias=HBF, mass_def=None)
+        ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                               mass_def=None)
 
-    hmc = ccl.halos.HMCalculator(mass_function=HMF,
-                                 halo_bias=HBF, mass_def=M200)
+    hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
+                                 mass_def=M200)
 
     # Wrong profile
     with pytest.raises(TypeError):

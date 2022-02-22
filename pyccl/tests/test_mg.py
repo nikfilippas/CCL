@@ -21,7 +21,6 @@ def test_mu_sigma_transfer_err(tf):
 
 @pytest.mark.parametrize('mp', ['emu', 'halofit'])
 def test_mu_sigma_matter_power_err(mp):
-    from pyccl.pyutils import assert_warns
     with pytest.raises(ccl.CCLError):
         cosmo = ccl.Cosmology(
             Omega_c=0.25,
@@ -35,4 +34,20 @@ def test_mu_sigma_matter_power_err(mp):
             matter_power_spectrum=mp
         )
         # Also raises a warning, so catch that.
-        assert_warns(ccl.CCLWarning, ccl.nonlin_matter_power, cosmo, 1, 1)
+        with pytest.warns(ccl.CCLWarning):
+            ccl.nonlin_matter_power(cosmo, 1, 1)
+
+
+def test_planckmg_deprecated_consistent():
+    planckMG = {"c1": 1.1, "c2": 1.2, "lambda": 0.05}
+    with pytest.warns(ccl.CCLDeprecationWarning):
+        cosmo1 = ccl.CosmologyVanillaLCDM(c1_mg=planckMG["c1"],
+                                          c2_mg=planckMG["c2"],
+                                          lambda_mg=planckMG["lambda"])
+    cosmo1.compute_linear_power()
+    pk1 = cosmo1.get_linear_power()
+
+    cosmo2 = ccl.CosmologyVanillaLCDM(extra_parameters={"PlanckMG": planckMG})
+    cosmo2.compute_linear_power()
+    pk2 = cosmo2.get_linear_power()
+    assert pk1 == pk2

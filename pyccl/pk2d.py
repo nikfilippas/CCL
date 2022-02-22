@@ -1,3 +1,4 @@
+import sys
 import warnings
 import numpy as np
 
@@ -9,6 +10,10 @@ from ._pk2d import (
 from . import ccllib as lib
 
 from .errors import CCLWarning, CCLError
+from .pyutils import check, _get_spline2d_arrays, warn_api, deprecated
+from ._pk2d import (
+    _Pk2D_descriptor, from_model, pk_from_model, apply_halofit,
+    apply_nonlin_model, include_baryons)
 
 
 class Pk2D(object):
@@ -162,7 +167,7 @@ class Pk2D(object):
         # handle scale factor extrapolation
         if cosmo is None:
             from .core import CosmologyVanillaLCDM
-            cosmo_use = CosmologyVanillaLCDM()
+            cosmo_use = CosmologyVanillaLCDM()  # this is not used anywhere
             self.psp.extrap_linear_growth = 404  # flag no extrapolation
         else:
             cosmo_use = cosmo
@@ -226,6 +231,28 @@ class Pk2D(object):
 
     @deprecated(eval_dlPk_dlk)
     def eval_dlogpk_dlogk(self, k, a, cosmo):
+        """Evaluate logarithmic derivative
+
+        .. math::
+           \\frac{d\\log P(k,a)}{d\\log k}
+
+        Args:
+            k (float or array_like): wavenumber value(s) in units of Mpc^-1.
+            a (float): value of the scale factor
+            cosmo (:class:`~pyccl.core.Cosmology`): Cosmology object. The
+                cosmology object is needed in order to evaluate the power
+                spectrum outside the interpolation range in `a`. E.g. if you
+                want to evaluate the power spectrum at a very small a, not
+                covered by the arrays you passed when initializing this object,
+                the power spectrum will be extrapolated from the earliest
+                available value using the linear growth factor (for which a
+                cosmology is needed). If no Cosmology is passed, attempting
+                to evaluate the power spectrum outside of the scale factor
+                boundaries will raise an exception.
+
+        Returns:
+            float or array_like: value(s) of the power spectrum.
+        """
         return self.eval_dlPk_dlk(k, a, cosmo)
 
     def get_spline_arrays(self):
@@ -253,13 +280,13 @@ class Pk2D(object):
         """Return a copy of this Pk2D object."""
         if not self.has_psp:
             pk2d = Pk2D(extrap_order_lok=self.extrap_order_lok,
-                        extrap_order_hik=self.extrap.order_hik,
+                        extrap_order_hik=self.extrap_order_hik,
                         empty=True)
             return pk2d
 
-        a_arr, lk_arr, pk_arr = self.get_spline_arrays()
+        a_arr, lk_arr, pk_arr = _get_spline2d_arrays(self.psp.fka)
         pk2d = Pk2D(a_arr=a_arr, lk_arr=lk_arr, pk_arr=pk_arr,
-                    is_logp=False,
+                    is_logp=self.psp.is_log,
                     extrap_order_lok=self.psp.extrap_order_lok,
                     extrap_order_hik=self.psp.extrap_order_hik)
 
@@ -271,6 +298,40 @@ class Pk2D(object):
         if hasattr(self, 'has_psp'):
             if self.has_psp and hasattr(self, 'psp'):
                 lib.f2d_t_free(self.psp)
+
+    def __eq__(self, other):
+        """Check if two Pk2D objects are equivalent, i.e. they contain the
+        same data over the same range.
+        """
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        """Compute the hash of this ``Pk2D`` object."""
+        return hash(repr(self)) + sys.maxsize + 1
+
+    def __repr__(self):
+        """Construct a string for this ``Pk2D`` object.
+        If this object has data, the data arrays are replaced by their hash.
+        """
+        s = "pyccl.Pk2D\n"
+        s += f"  extrap_lok  =  {self.extrap_order_lok}\n"
+        s += f"  extrap_hik  =  {self.extrap_order_hik}\n"
+        if self.has_psp:
+            # print the first and last elements of the arrays
+            # also print the hashes of the arrays
+            a_arr, lk_arr, pk_arr = self.get_spline_arrays()
+            H = [hash(arr.tobytes()) + sys.maxsize + 1
+                 for arr in [a_arr, lk_arr, pk_arr]]
+            s += f"  a_arr   =  {a_arr.min():6.1f} .. {a_arr.max():6.1f}"
+            s += f"    #{H[0]:20d}\n"
+            s += f"  lk_arr  =  {lk_arr.min():6.3f} .. {lk_arr.max():6.3f}"
+            s += f"    #{H[1]:20d}\n"
+            s += f"  pk_arr  =  {pk_arr[0, 0]:6.3f} .. {pk_arr[-1, -1]:6.3f}"
+            s += f"    #{H[2]:20d}\n"
+            s += f"  is_log  =  {bool(self.psp.is_log)}"
+        else:
+            s += "empty  =  True"
+        return s
 
     def _get_binary_operator_arrays(self, other, strict=True, operation=None):
         if not isinstance(other, Pk2D):
@@ -364,18 +425,6 @@ class Pk2D(object):
                          idx_lo_k: idx_hi_k+1] = pk_arr_b_part
 
         return a_arr_a, lk_arr_a, pk_arr_a, pk_arr_b
-
-    def __eq__(self, other):
-        """Check if two Pk2D objects are equivalent, i.e. they contain the
-        same data over the same range.
-        """
-        a_arr_a, lk_arr_a, pk_arr_a = self.get_spline_arrays()
-        a_arr_b, lk_arr_b, pk_arr_b = other.get_spline_arrays()
-
-        same_a = np.array_equiv(a_arr_a, a_arr_b)
-        same_lk = np.array_equiv(lk_arr_a, lk_arr_b)
-        same_pk = np.array_equiv(pk_arr_a, pk_arr_b)
-        return same_a and same_lk and same_pk
 
     def __add__(self, other, strict=True):
         """Adds two Pk2D instances.

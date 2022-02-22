@@ -120,22 +120,20 @@ def test_subclasses_smoke(scls):
     assert np.isfinite(hmd.get_Delta(COSMO, 1.))
 
 
-def test_massdef_from_string():
-    from pyccl.halos import MassDef, MassDefVir, MassDef200m, MassDef200c
-    assert MassDef.from_name("vir")().__eq__(MassDefVir())
-    assert MassDef.from_name("200m")().__eq__(MassDef200m())
-    assert MassDef.from_name("200c")().__eq__(MassDef200c())
+@pytest.mark.parametrize('name', ['200m', '200c', '500c', 'vir'])
+def test_massdef_from_string_smoke(name):
+    hmd_class = ccl.halos.MassDef.from_name(name)
+    hmd = hmd_class()
+    assert np.isfinite(hmd.get_radius(COSMO, 1e14, 1))
 
 
 def test_massdef_from_string_raises():
-    from pyccl.halos import MassDef
     with pytest.raises(ValueError):
-        MassDef.from_name("none")
+        ccl.halos.MassDef.from_name("my_mass_def")
 
 
-def test_from_name_depr():
-    from pyccl.halos import MassDef, mass_def_from_name
-    with pytest.warns(CCLWarning):
-        c200_1 = mass_def_from_name("200c")()
-    c200_2 = MassDef.from_name("200c")()
-    assert c200_1.__eq__(c200_2)
+def test_func_deprecated():
+    with pytest.warns(ccl.CCLDeprecationWarning):
+        hmd1 = ccl.halos.mass_def_from_name("500c")
+    hmd2 = ccl.halos.MassDef.from_name("500c")
+    assert hmd1 == hmd2

@@ -2,26 +2,25 @@ import numpy as np
 import pytest
 
 import pyccl as ccl
-from pyccl import CCLError, CCLWarning
+from pyccl import CCLError, CCLWarning, CCLDeprecationWarning
 
 
 COSMO = ccl.Cosmology(
     Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96,
     transfer_function='bbks', matter_power_spectrum='halofit')
-COSMO_HM = ccl.Cosmology(
-    Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96,
-    transfer_function='bbks', matter_power_spectrum='halo_model',
-    mass_function='shethtormen')
+with pytest.warns(CCLDeprecationWarning):
+    COSMO_HM = ccl.Cosmology(
+        Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96,
+        transfer_function='bbks', matter_power_spectrum='halo_model',
+        mass_function='shethtormen')
 
 
 def test_halomod_f2d_copy():
-    from pyccl.pyutils import assert_warns
-    mdef = ccl.halos.MassDef('vir', 'matter')
+    mdef = ccl.halos.MassDef(200, 'matter')
     hmf = ccl.halos.MassFuncSheth99(mass_def=mdef,
                                     mass_def_strict=False,
                                     use_delta_c_fit=True)
-    hbf = ccl.halos.HaloBiasSheth99(mass_def=mdef,
-                                    mass_def_strict=False)
+    hbf = ccl.halos.HaloBiasSheth99(mass_def=mdef, mass_def_strict=False)
     cc = ccl.halos.ConcentrationDuffy08(mass_def=mdef)
     prf = ccl.halos.HaloProfileNFW(c_m_relation=cc)
     hmc = ccl.halos.HMCalculator(mass_function=hmf, halo_bias=hbf,
@@ -29,9 +28,8 @@ def test_halomod_f2d_copy():
     pk2d = ccl.halos.halomod_Pk2D(COSMO_HM, hmc, prf, normprof=True)
     psp_new = pk2d.psp
     # This just triggers the internal calculation
-    pk_old = assert_warns(
-        ccl.CCLWarning,
-        ccl.nonlin_matter_power, COSMO_HM, 1., 0.8)
+    with pytest.warns(CCLWarning):
+        pk_old = ccl.nonlin_matter_power(COSMO_HM, 1., 0.8)
     pk_new = pk2d.eval(1., 0.8, COSMO_HM)
     psp_old = COSMO_HM.get_nonlin_power().psp
     assert psp_new.lkmin == psp_old.lkmin
@@ -60,16 +58,15 @@ def test_nonlin_matter_power_halomod(k):
     pk = ccl.nonlin_matter_power(COSMO_HM, k, a)
 
     # New implementation
-    mdef = ccl.halos.MassDef('vir', 'matter')
+    mdef = ccl.halos.MassDef(200, 'matter')
     hmf = ccl.halos.MassFuncSheth99(mass_def=mdef,
                                     mass_def_strict=False,
                                     use_delta_c_fit=True)
-    hbf = ccl.halos.HaloBiasSheth99(mass_def=mdef,
-                                    mass_def_strict=False)
+    hbf = ccl.halos.HaloBiasSheth99(mass_def=mdef, mass_def_strict=False)
     cc = ccl.halos.ConcentrationDuffy08(mass_def=mdef)
     prf = ccl.halos.HaloProfileNFW(c_m_relation=cc)
-    hmc = ccl.halos.HMCalculator(mass_function=hmf,
-                                 halo_bias=hbf, mass_def=mdef)
+    hmc = ccl.halos.HMCalculator(mass_function=hmf, halo_bias=hbf,
+                                 mass_def=mdef)
     pkb = ccl.halos.halomod_power_spectrum(COSMO_HM, hmc, k, a,
                                            prf, normprof=True)
 
