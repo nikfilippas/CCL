@@ -15,7 +15,7 @@ from ._core import _docstring_extra_parameters
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
-from .constants import Caching
+from .constants import Caching, CCLParameters
 
 # Configuration types
 transfer_function_types = {
@@ -278,6 +278,7 @@ class Cosmology(object):
         self._build_parameters(**self._params_init_kwargs)
         self._build_config(**self._config_init_kwargs)
         self.cosmo = lib.cosmology_create(self._params, self._config)
+        CCLParameters.populate(self.cosmo)
 
         if self.cosmo.status != 0:
             raise CCLError(
