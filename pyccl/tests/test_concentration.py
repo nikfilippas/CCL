@@ -22,8 +22,8 @@ M400 = ccl.halos.MassDef(400, 'critical')
 
 def test_cM_default_mass_def():
     cM = ccl.halos.Concentration()
-    assert cM.mdef == MDEF
-    assert not cM._check_mdef(MDEF)
+    assert cM.mass_def == MDEF
+    assert not cM._check_mass_def(MDEF)
 
 
 @pytest.mark.parametrize('cM_class', CONCS)
@@ -45,7 +45,7 @@ def test_cM_duffy_smoke():
 
 
 @pytest.mark.parametrize('cM_class', CONCS[:-1])
-def test_cM_mdef_raises(cM_class):
+def test_cM_mass_def_raises(cM_class):
     # testing strings
     with pytest.raises(ValueError):
         cM_class(mass_def=MDEF)

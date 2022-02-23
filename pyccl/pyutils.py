@@ -406,7 +406,7 @@ def deprecated(new_function=None):
             s = "The function {} is deprecated.".format(func.__qualname__)
             if new_function:
                 s += " Use {} instead.".format(new_function.__qualname__)
-            warnings.warn(s, CCLWarning)
+            warnings.warn(s, CCLDeprecationWarning)
             return func(*args, **kwargs)
         return new_func
     return _depr_decorator

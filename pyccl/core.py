@@ -821,11 +821,10 @@ class Cosmology(object):
     def __hash__(self):
         """Return a hash for this ``Cosmology`` object."""
         s = ""
-        # TODO: uncomment the following lines once globals are implemented
         # global CCL parameters
-        # from . import gsl_params, spline_params
-        # s += gsl_params.items()
-        # s += spline_params.items()
+        from . import gsl_params, spline_params
+        s += str(gsl_params.items())
+        s += str(spline_params.items())
         if not isinstance(self, CosmologyCalculator):
             # we care about the init pararameters
             s += str(self._params_init_kwargs)
@@ -879,9 +878,6 @@ class Cosmology(object):
     def _repr_pretty_(self, p, cycle):
         """Alias for iPython consoles."""
         return p.text(self.__str__())
-
-    def __hash__(self):
-        return hash(repr(self))
 
     def compute_distances(self):
         """Compute the distance splines."""

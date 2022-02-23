@@ -91,8 +91,8 @@ def test_pk2d_from_model(model):
 
 
 @pytest.mark.parametrize('model', ['halofit', 'bacco', ])
-def test_pk2d_apply_model_smoke(model):
-    cosmo = ccl.CosmologyVanillaLCDM()
+def test_pk2d_apply_nonlin_model_smoke(model):
+    cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
     cosmo.compute_linear_power()
     pkl = cosmo.get_linear_power()
 
@@ -102,7 +102,7 @@ def test_pk2d_apply_model_smoke(model):
         with warnings.catch_warnings():
             # filter all warnings related to the emulator packages
             warnings.simplefilter("ignore")
-            pknl = pkl.apply_model(cosmo, model=model)
+            pknl = pkl.apply_nonlin_model(cosmo, model=model)
 
         pk0 = pkl.eval(k_arr, a, cosmo)
         pk1 = pknl.eval(k_arr, a, cosmo)
@@ -157,14 +157,6 @@ def test_pk2d_from_model_raises():
     cosmo = ccl.CosmologyVanillaLCDM()
     with pytest.raises(ValueError):
         ccl.Pk2D.from_model(cosmo, model='bbkss')
-
-
-def test_nonlin_models_smoke():
-    cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
-    pkl = cosmo.get_camb_pk_lin()
-    pk1 = pkl.apply_halofit(cosmo)
-    pk2 = pkl.apply_nonlin_model(cosmo, "halofit")
-    assert pk1 == pk2
 
 
 def test_pk2d_function():
