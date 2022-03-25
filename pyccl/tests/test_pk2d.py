@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-import pyccl as ccl
-from pyccl import CCLWarning
+from . import pyccl as ccl
+from .pyccl import CCLWarning
 import warnings
 
 

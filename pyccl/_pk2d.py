@@ -5,13 +5,12 @@ This script contains methods for ~pyccl.pk2d.Pk2D.
 import warnings
 import numpy as np
 from . import ccllib as lib
-from .emulator import PowerSpectrumEmulator
+from .base import UnlockInstance
 from .pyutils import check, CCLDeprecationWarning, deprecated
 
 
-class _Pk2D_descriptor(object):
-    """
-    """
+class _Pk2D_descriptor:
+    """Descriptor to deprecate usage of `Pk2D` methods as class methods."""
     def __init__(self, func):
         self.func = func
 
@@ -52,7 +51,8 @@ def from_model(cls, cosmo, model):
             The power spectrum of the input model.
     """
     if model in ['bacco', ]:  # other emulators go in here
-        return PowerSpectrumEmulator.get_pk_linear(cosmo, model)
+        from .emulator import PowerSpectrumEmulator
+        return PowerSpectrumEmulator.from_name(model)().get_pk_linear(cosmo)
 
     pk2d = cls(empty=True)
     status = 0
@@ -73,10 +73,12 @@ def from_model(cls, cosmo, model):
     if np.ndim(ret) == 0:
         status = ret
     else:
-        pk2d.psp, status = ret
+        with UnlockInstance(pk2d):
+            pk2d.psp, status = ret
 
     check(status, cosmo)
-    pk2d.has_psp = True
+    with UnlockInstance(pk2d):
+        pk2d.has_psp = True
     return pk2d
 
 
@@ -130,9 +132,11 @@ def apply_halofit(self, cosmo, pk_linear=None):
     if np.ndim(ret) == 0:
         status = ret
     else:
-        pk2d.psp, status = ret
+        with UnlockInstance(pk2d):
+            pk2d.psp, status = ret
     check(status, cosmo)
-    pk2d.has_psp = True
+    with UnlockInstance(pk2d):
+        pk2d.has_psp = True
     return pk2d
 
 
@@ -161,8 +165,9 @@ def apply_nonlin_model(self, cosmo, model, pk_linear=None):
     if model == "halofit":
         pk2d_new = self.apply_halofit(cosmo)
     elif model in ["bacco", ]:  # other emulator names go in here
-        from .boltzmann import PowerSpectrumEmulator as PSE
-        pk2d_new = PSE.apply_nonlin_model(cosmo, model, self)
+        from .emulator import PowerSpectrumEmulator
+        emu = PowerSpectrumEmulator.from_name(model)()
+        pk2d_new = emu.apply_nonlin_model(cosmo, self)
     return pk2d_new
 
 
@@ -178,7 +183,7 @@ def include_baryons(self, cosmo, model, pk_nonlin=None):
             A :class:`Pk2D` object containing the non-linear power spectrum
             to transform. This argument is deprecated and will be removed
             in a future release. Use the instance method instead.
->>>>>>> star
+
     Returns:
         :class:`Pk2D`
             A copy of the input power spectrum where the baryon correction

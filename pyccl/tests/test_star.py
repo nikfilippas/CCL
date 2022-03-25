@@ -2,8 +2,8 @@
 This is a catch-all unit test for the `pyccl.pyutils` module
 which contains the `warn_api` and `deprecate_attr` decorators.
 """
-import pyccl as ccl
-from pyccl.errors import CCLDeprecationWarning
+from . import pyccl as ccl
+from .pyccl.errors import CCLDeprecationWarning
 import pytest
 
 COSMO = ccl.CosmologyVanillaLCDM()

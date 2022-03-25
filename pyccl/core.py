@@ -2,7 +2,6 @@
 the cosmology and parameters objects used to instantiate a model from which one
 can compute a set of theoretical predictions.
 """
-import sys
 import warnings
 import numpy as np
 import yaml
@@ -12,10 +11,12 @@ from . import ccllib as lib
 from .errors import CCLError, CCLWarning, CCLDeprecationWarning
 from ._types import error_types
 from ._core import _docstring_extra_parameters
+from ._repr import _build_string_Cosmology
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
-from .constants import Caching, CCLParameters
+from .base import CCLObject, cache, unlock_instance
+from .parameters import CCLParameters
 
 # Configuration types
 transfer_function_types = {
@@ -70,7 +71,7 @@ emulator_neutrinos_types = {
 }
 
 
-class Cosmology(object):
+class Cosmology(CCLObject):
     """A cosmology including parameters and associated data.
 
     .. note:: Although some arguments default to `None`, they will raise a
@@ -210,6 +211,7 @@ class Cosmology(object):
             Accepted keys are detailed below.
     """
     __doc__ += _docstring_extra_parameters
+    __repr__ = _build_string_Cosmology
 
     # Go through all functions in the main package and the subpackages
     # and make every function that takes `cosmo` as its first argument
@@ -229,7 +231,7 @@ class Cosmology(object):
         neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt, \
         subs, funcs, func, name, pars  # clear unnecessary locals
 
-    @warn_api()
+    @warn_api
     def __init__(
             self, *, Omega_c=None, Omega_b=None, h=None, n_s=None,
             sigma8=None, A_s=None,
@@ -284,6 +286,22 @@ class Cosmology(object):
             raise CCLError(
                 "(%d): %s"
                 % (self.cosmo.status, self.cosmo.status_message))
+
+    def update_parameters(self, **kwargs):
+        """Update any of the ``gsl_params`` or ``spline_params`` associated
+        with this Cosmology object.
+        """
+        from pyccl import gsl_params, spline_params
+        keys = list(gsl_params.keys()) + list(spline_params.keys())
+        set_diff = list(set(kwargs.keys()) - set(keys))
+        if set_diff:
+            raise ValueError(f"Parameter(s) {set_diff} not recognized.")
+        for param, value in kwargs.items():
+            if param in gsl_params.keys():
+                attr = getattr(self.cosmo, "gsl_params")
+            else:
+                attr = getattr(self.cosmo, "spline_params")
+            setattr(attr, param, value)
 
     def write_yaml(self, filename):
         """Write a YAML representation of the parameters to file.
@@ -603,10 +621,9 @@ class Cosmology(object):
             mnu_final_list = [0.]
 
         # Check if any compulsory parameters are not set
-        compul = [Omega_c, Omega_b, Omega_k, w0, wa, h, norm_pk,
-                  n_s]
-        names = ['Omega_c', 'Omega_b', 'Omega_k', 'w0', 'wa',
-                 'h', 'norm_pk', 'n_s']
+        compul = [Omega_c, Omega_b, Omega_k, w0, wa, h, norm_pk, n_s]
+        names = ['Omega_c', 'Omega_b', 'Omega_k',
+                 'w0', 'wa', 'h', 'norm_pk', 'n_s']
         for nm, item in zip(names, compul):
             if item is None:
                 raise ValueError("Necessary parameter '%s' was not set "
@@ -727,32 +744,12 @@ class Cosmology(object):
     def __enter__(self):
         return self
 
-    def __eq__(self, cosmo2):
-        """Check if two cosmologies are equivalent.
-
-        .. note :: This method will always recognize when two cosmologies
-                   are **not** equivalent (i.e. they return different
-                   theoretical predictions). However, it will not always
-                   recognize two equivalent cosmologies.
-
-                   Limiting behavior where ``'=='`` will return ``False``
-                   even though the two cosmologies are equivalent:
-                    - Exactly one Cosmology is an instance of
-                      ``CosmologyCalculator``.
-                    - Cosmologies defined with different parameter sets,
-                      where one can be computed from the other
-                      (e.g. ``sigma8`` vs ``A_s``).
-                    - Instances of ``CosmologyCalculator`` which do not
-                      contain exactly the same linear & non-linear power
-                      spectrum entries.
-        """
-        return hash(self) == hash(cosmo2)
-
     def __exit__(self, type, value, traceback):
         """Free the C memory this object is managing when the context manager
         exits."""
         self.__del__()
 
+    @unlock_instance
     def __getstate__(self):
         # we are removing any C data before pickling so that the
         # is pure python when pickled.
@@ -762,122 +759,12 @@ class Cosmology(object):
         state.pop('_config', None)
         return state
 
+    @unlock_instance
     def __setstate__(self, state):
         self.__dict__ = state
         # we removed the C data when it was pickled, so now we unpickle
         # and rebuild the C data
         self._build_cosmo()
-
-    def _build_string(self, kw, padding=3, eq_sign="=", is_dict=False):
-        """Build a justified string containing the parameters
-        specified in the input dictionary.
-        """
-        pad = padding * " "
-        has_dict = False
-        prefix0 = f"\n{pad}"
-        # deduce justification padding
-        l_just, r_just = 0, 0
-        for key, val in kw.items():
-            if isinstance(val, dict):
-                has_dict = True
-                continue  # dicts are too long
-            l_just = max(len(str(key)), l_just)
-            r_just = max(len(str(val)), r_just)
-        l_just += 2
-        r_just += 2
-
-        # construct output string
-        string = ""
-        for num, (key, val) in enumerate(kw.items()):
-            prefix = prefix0
-            if is_dict:
-                # dictionary keys should be strings
-                key = f"'{key}'"
-                if num == 0:
-                    prefix = f"\n{pad[:-1]}" + "{"
-
-            if val is None:
-                # assign value to None
-                val = "None"
-            elif isinstance(val, str):
-                # show strings as strings
-                val = f"'{val}'"
-            elif isinstance(val, dict):
-                # go 1 level deeper for dicts
-                val = self._build_string(val, padding+3, ":",
-                                         is_dict=has_dict)
-            elif hasattr(val, "__len__"):
-                # add commas in iterables
-                val = str(list(val))
-
-            string += f"{prefix}{key:<{l_just}}{eq_sign}{val:>{r_just}} ,"
-
-        # remove final comma and close bracket
-        if is_dict:
-            return string[:-2] + " }"
-        else:
-            return string[:-2] + " )"
-
-    def __hash__(self):
-        """Return a hash for this ``Cosmology`` object."""
-        s = ""
-        # global CCL parameters
-        from . import gsl_params, spline_params
-        s += str(gsl_params.items())
-        s += str(spline_params.items())
-        if not isinstance(self, CosmologyCalculator):
-            # we care about the init pararameters
-            s += str(self._params_init_kwargs)
-            s += str(self._config_init_kwargs)
-        else:
-            # we care about the stored pks
-            if self._has_pk_lin:
-                for pspec, pk in self._pk_lin.items():
-                    s += pspec + str(hash(pk))
-            if self._has_pk_nl:
-                for pspec, pk in self._pk_nl.items():
-                    s += pspec + str(hash(pk))
-        return hash(s) + sys.maxsize + 1
-
-    def __repr__(self):
-        """Make an eval-able string.
-
-        This feature can be used like this:
-
-        >>> import pyccl
-        >>> cosmo = pyccl.Cosmology(...)
-        >>> cosmo2 = eval(repr(cosmo))
-        """
-        kw = {**self._params_init_kwargs, **self._config_init_kwargs}
-        kw["extra_parameters"] = kw.pop("extra_parameters")
-        string = self._build_string(kw, padding=3, eq_sign="=")
-        string = "pyccl.Cosmology(" + string
-        return string
-
-    def __str__(self):
-        """Like __repr__ but don't include any values
-        that equal the default values.
-        """
-        kw = {**self._params_init_kwargs, **self._config_init_kwargs}
-        kw["extra_parameters"] = kw.pop("extra_parameters")
-        if self.__class__.__qualname__ == "Cosmology":
-            # access __init__ signature from this class
-            pars = signature(self.__init__).parameters
-        else:
-            # access __init__ signature from base class
-            pars = signature(self.__class__.__base__.__init__).parameters
-        kw_defaults = {key: val.default for key, val in pars.items()}
-        kw = {key: val
-              for key, val in kw.items()
-              if not np.all(val == kw_defaults.get(key))}
-
-        string = self._build_string(kw, padding=3, eq_sign="=")
-        string = "pyccl.Cosmology(" + string
-        return string
-
-    def _repr_pretty_(self, p, cycle):
-        """Alias for iPython consoles."""
-        return p.text(self.__str__())
 
     def compute_distances(self):
         """Compute the distance splines."""
@@ -916,12 +803,12 @@ class Cosmology(object):
         status = lib.cosmology_compute_growth(self.cosmo, status)
         check(status, self)
 
-    @Caching.cache
+    @cache
     def _compute_linear_power(self):
-        """Compute the linear power spectrum."""
+        """Return the linear power spectrum."""
         if (self['N_nu_mass'] > 0 and
                 self._config_init_kwargs['transfer_function'] in
-                ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles',]):
+                ['bbks', 'eisenstein_hu', 'eisenstein_hu_nowiggles', ]):
             warnings.warn(
                 "The '%s' linear power spectrum model does not properly "
                 "account for massive neutrinos!" %
@@ -990,6 +877,7 @@ class Cosmology(object):
 
         return pk
 
+    @unlock_instance(mutate=False)
     def compute_linear_power(self):
         """Compute the linear power spectrum."""
         if self.has_linear_power:
@@ -1058,10 +946,11 @@ class Cosmology(object):
         prof = hal.HaloProfileNFW(c_m_relation=cM)
         return hal.halomod_Pk2D(self, hmc, prof, normprof=True)
 
-    def compute_nonlin_power(self):
-        """Compute the non-linear power spectrum."""
+    @cache
+    def _compute_nonlin_power(self):
+        """Return the non-linear power spectrum."""
         if self.has_nonlin_power:
-            return
+            return self._pk_nl['delta_matter:delta_matter']
 
         if self._config_init_kwargs['matter_power_spectrum'] != 'linear':
             if self._params_init_kwargs['df_mg'] is not None:
@@ -1099,7 +988,7 @@ class Cosmology(object):
 
         if mps == "camb" and self._has_pk_nl:
             # Already computed
-            return
+            return self._pk_nl['delta_matter:delta_matter']
 
         pk = None
         if mps is None:
@@ -1127,6 +1016,14 @@ class Cosmology(object):
         if bps in ['bcm', 'bacco', ]:
             pk = pk.include_baryons(self, model=bps)
 
+        return pk
+
+    @unlock_instance(mutate=False)
+    def compute_nonlin_power(self):
+        """Compute the non-linear power spectrum."""
+        if self.has_nonlin_power:
+            return
+        pk = self._compute_nonlin_power()
         # Assign
         self._pk_nl['delta_matter:delta_matter'] = pk
         if pk:
@@ -1376,7 +1273,7 @@ class CosmologyCalculator(Cosmology):
             corresponding to the "HALOFIT" transformation of
             Takahashi et al. 2012 (arXiv:1208.2701).
     """
-    @warn_api()
+    @warn_api
     def __init__(
             self, *, Omega_c=None, Omega_b=None, h=None, n_s=None,
             sigma8=None, A_s=None, Omega_k=0., Omega_g=None,

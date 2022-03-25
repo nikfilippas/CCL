@@ -2,7 +2,7 @@ import pickle
 import tempfile
 import pytest
 import numpy as np
-import pyccl as ccl
+from . import pyccl as ccl
 
 
 def test_cosmo_methods():
@@ -182,44 +182,10 @@ def test_cosmology_equal_hash():
     assert cosmo1 != cosmo2
     assert hash(cosmo1) != hash(cosmo2)
 
-    # TODO: uncomment once this is implemented
     # different CCL global parameters
-    # cosmo1 = ccl.CosmologyVanillaLCDM()
-    # ccl.gsl_params.HM_MMIN = 1e6
-    # cosmo2 = ccl.CosmologyVanillaLCDM()
-    # assert cosmo1 != cosmo2
-    # assert hash(cosmo1) != hash(cosmo2)
-
-
-def test_cosmology_equal_hash():
-    """Check the Cosmology equivalence method and hashing."""
-    # equivalent cosmologies
-    cosmo1 = ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.67,
-                           sigma8=0.81, n_s=0.96)
-    cosmo2 = ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.67,
-                           sigma8=0.81, n_s=0.96)
-    assert cosmo1 == cosmo2
-    assert hash(cosmo1) == hash(cosmo2)
-
-    # different cosmological parameters
-    cosmo2 = ccl.Cosmology(Omega_c=0.24, Omega_b=0.04, h=0.75,
-                           sigma8=0.8, n_s=0.95)
-    assert cosmo1 != cosmo2
-    assert hash(cosmo1) != hash(cosmo2)
-
-    # different power spectra
-    a = np.linspace(0.5, 1., 16)
-    k = np.logspace(-2, 1, 128)
-    pk = np.ones((a.size, k.size))
-    pk_dict_1 = {"a": a, "k": k, "delta_matter:delta_matter": pk}
-    pk_dict_2 = {"a": a, "k": k, "delta_matter:delta_matter": 2*pk}
-    # linear
-    cosmo1 = ccl.CosmologyCalculator(
-        Omega_c=0.25, Omega_b=0.05, h=0.67, sigma8=0.8, n_s=0.96,
-        pk_linear=pk_dict_1)
-    cosmo2 = ccl.CosmologyCalculator(
-        Omega_c=0.25, Omega_b=0.05, h=0.67, sigma8=0.8, n_s=0.96,
-        pk_linear=pk_dict_2)
+    cosmo1 = ccl.CosmologyVanillaLCDM()
+    ccl.gsl_params.HM_MMIN = 1e6
+    cosmo2 = ccl.CosmologyVanillaLCDM()
     assert cosmo1 != cosmo2
     assert hash(cosmo1) != hash(cosmo2)
 
@@ -268,65 +234,6 @@ def test_cosmology_p18lcdm_raises():
     with pytest.raises(ValueError):
         kw = {'Omega_c': 0.1}
         ccl.CosmologyVanillaLCDM(**kw)
-
-
-def test_cosmology_repr():
-    """Check that we can make a Cosmology object from its repr."""
-    import pyccl  # noqa: F401
-
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        cosmo = ccl.Cosmology(
-            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-            m_nu=[0.02, 0.1, 0.05], m_nu_type='list',
-            z_mg=[0.0, 1.0], df_mg=[0.01, 0.0])
-
-        cosmo2 = eval(str(cosmo))
-        assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-                ccl.comoving_radial_distance(cosmo2, 0.5))
-
-        cosmo3 = eval(repr(cosmo))
-        assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-                ccl.comoving_radial_distance(cosmo3, 0.5))
-
-    # same test with arrays to be sure
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        cosmo = ccl.Cosmology(
-            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-            m_nu=np.array([0.02, 0.1, 0.05]), m_nu_type='list',
-            z_mg=np.array([0.0, 1.0]), df_mg=np.array([0.01, 0.0]))
-
-        cosmo2 = eval(str(cosmo))
-        assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-                ccl.comoving_radial_distance(cosmo2, 0.5))
-
-        cosmo3 = eval(repr(cosmo))
-        assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-                ccl.comoving_radial_distance(cosmo3, 0.5))
-
-    # adding extra parameters
-    cosmo = ccl.Cosmology(
-        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-        extra_parameters={"camb": {"halofit_version": "mead2020",
-                                   "HMCode_logT_AGN": 7.8}})
-
-    cosmo2 = eval(str(cosmo))
-    assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-            ccl.comoving_radial_distance(cosmo2, 0.5))
-
-    cosmo3 = eval(repr(cosmo))
-    assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-            ccl.comoving_radial_distance(cosmo3, 0.5))
-
-    # testing with vanilla cosmology
-    cosmo = ccl.CosmologyVanillaLCDM()
-
-    cosmo2 = eval(str(cosmo))
-    assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-            ccl.comoving_radial_distance(cosmo2, 0.5))
-
-    cosmo3 = eval(repr(cosmo))
-    assert (ccl.comoving_radial_distance(cosmo, 0.5) ==
-            ccl.comoving_radial_distance(cosmo3, 0.5))
 
 
 def test_cosmology_context():

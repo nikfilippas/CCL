@@ -1,22 +1,17 @@
-import sys
 import warnings
 import numpy as np
 
+from . import ccllib as lib
+from .base import CCLObject, unlock_instance
+from ._repr import _build_string_Pk2D
+from .errors import CCLWarning, CCLError
 from .pyutils import _get_spline2d_arrays, check, warn_api, deprecated
 from ._pk2d import (
     _Pk2D_descriptor, from_model, pk_from_model, apply_halofit,
     apply_nonlin_model, include_baryons)
 
-from . import ccllib as lib
 
-from .errors import CCLWarning, CCLError
-from .pyutils import check, _get_spline2d_arrays, warn_api, deprecated
-from ._pk2d import (
-    _Pk2D_descriptor, from_model, pk_from_model, apply_halofit,
-    apply_nonlin_model, include_baryons)
-
-
-class Pk2D(object):
+class Pk2D(CCLObject):
     """A power spectrum class holding the information needed to reconstruct an
     arbitrary function of wavenumber and scale factor.
 
@@ -71,6 +66,7 @@ class Pk2D(object):
         empty (bool): if True, just create an empty object, to be filled
             in later
     """
+    __repr__ = _build_string_Pk2D
     from_model = classmethod(from_model)
     pk_from_model = classmethod(pk_from_model)
     apply_halofit = _Pk2D_descriptor(apply_halofit)
@@ -255,6 +251,12 @@ class Pk2D(object):
         """
         return self.eval_dlPk_dlk(k, a, cosmo)
 
+    def __call__(self, k, a, cosmo=None, derivative=False):
+        """Callable vectorized instance."""
+        out = np.array([self.eval(k, aa, cosmo, derivative=derivative)
+                        for aa in np.atleast_1d(a).astype(float)])
+        return out.squeeze()[()]
+
     def get_spline_arrays(self):
         """Get the spline data arrays.
 
@@ -279,14 +281,17 @@ class Pk2D(object):
     def copy(self):
         """Return a copy of this Pk2D object."""
         if not self.has_psp:
-            pk2d = Pk2D(extrap_order_lok=self.extrap_order_lok,
-                        extrap_order_hik=self.extrap_order_hik,
-                        empty=True)
-            return pk2d
+            return Pk2D(empty=True)
 
-        a_arr, lk_arr, pk_arr = _get_spline2d_arrays(self.psp.fka)
+        a_arr, lk_arr, pk_arr = self.get_spline_arrays()
+
+        is_logp = bool(self.psp.is_log)
+        if is_logp:
+            # log in-place
+            np.log(pk_arr, out=pk_arr)
+
         pk2d = Pk2D(a_arr=a_arr, lk_arr=lk_arr, pk_arr=pk_arr,
-                    is_logp=self.psp.is_log,
+                    is_logp=is_logp,
                     extrap_order_lok=self.psp.extrap_order_lok,
                     extrap_order_hik=self.psp.extrap_order_hik)
 
@@ -298,40 +303,6 @@ class Pk2D(object):
         if hasattr(self, 'has_psp'):
             if self.has_psp and hasattr(self, 'psp'):
                 lib.f2d_t_free(self.psp)
-
-    def __eq__(self, other):
-        """Check if two Pk2D objects are equivalent, i.e. they contain the
-        same data over the same range.
-        """
-        return hash(self) == hash(other)
-
-    def __hash__(self):
-        """Compute the hash of this ``Pk2D`` object."""
-        return hash(repr(self)) + sys.maxsize + 1
-
-    def __repr__(self):
-        """Construct a string for this ``Pk2D`` object.
-        If this object has data, the data arrays are replaced by their hash.
-        """
-        s = "pyccl.Pk2D\n"
-        s += f"  extrap_lok  =  {self.extrap_order_lok}\n"
-        s += f"  extrap_hik  =  {self.extrap_order_hik}\n"
-        if self.has_psp:
-            # print the first and last elements of the arrays
-            # also print the hashes of the arrays
-            a_arr, lk_arr, pk_arr = self.get_spline_arrays()
-            H = [hash(arr.tobytes()) + sys.maxsize + 1
-                 for arr in [a_arr, lk_arr, pk_arr]]
-            s += f"  a_arr   =  {a_arr.min():6.1f} .. {a_arr.max():6.1f}"
-            s += f"    #{H[0]:20d}\n"
-            s += f"  lk_arr  =  {lk_arr.min():6.3f} .. {lk_arr.max():6.3f}"
-            s += f"    #{H[1]:20d}\n"
-            s += f"  pk_arr  =  {pk_arr[0, 0]:6.3f} .. {pk_arr[-1, -1]:6.3f}"
-            s += f"    #{H[2]:20d}\n"
-            s += f"  is_log  =  {bool(self.psp.is_log)}"
-        else:
-            s += "empty  =  True"
-        return s
 
     def _get_binary_operator_arrays(self, other, strict=True, operation=None):
         if not isinstance(other, Pk2D):
@@ -461,6 +432,11 @@ class Pk2D(object):
     def __radd__(self, other):
         return self.__add__(other)
 
+    @unlock_instance(mutate=True)
+    def __iadd__(self, other):
+        self = self.__add__(other)
+        return self
+
     def __mul__(self, other, strict=True):
         """Multiply two Pk2D instances.
 
@@ -495,6 +471,11 @@ class Pk2D(object):
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    @unlock_instance(mutate=True)
+    def __imul__(self, other):
+        self = self.__mul__(other)
+        return self
+
     def __pow__(self, exponent):
         """Take a Pk2D instance to a power.
         """
@@ -521,7 +502,7 @@ class Pk2D(object):
         return new
 
 
-@warn_api()
+@warn_api
 def parse_pk2d(cosmo, p_of_k_a, *, is_linear=False):
     """ Return the C-level `f2d` spline associated with a
     :class:`Pk2D` object.

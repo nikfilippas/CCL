@@ -1,7 +1,7 @@
 import warnings
 import pytest
 import numpy as np
-import pyccl as ccl
+from . import pyccl as ccl
 
 
 COSMO = ccl.Cosmology(
@@ -35,8 +35,8 @@ def test_bcm_correct_smoke():
 def test_baryon_correct_smoke(model):
     # we compare each model with BCM
     extras = {"bacco": {'M_c': 14, 'eta': -0.3, 'beta': -0.22,
-                          'M1_z0_cen': 10.5, 'theta_out': 0.25,
-                          'theta_inn': -0.86, 'M_inn': 13.4},
+                        'M1_z0_cen': 10.5, 'theta_out': 0.25,
+                        'theta_inn': -0.86, 'M_inn': 13.4},
               }  # other models go in here
 
     cosmo = ccl.CosmologyVanillaLCDM(
@@ -59,7 +59,7 @@ def test_baryon_correct_smoke(model):
 
 
 def test_bcm_correct_raises():
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         ccl._bcm_correct_pk2d(COSMO, None)
 
 

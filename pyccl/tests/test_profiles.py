@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-import pyccl as ccl
+from . import pyccl as ccl
 
 
 COSMO = ccl.Cosmology(
@@ -134,8 +134,8 @@ def test_cib_smoke():
     assert p.beta == beta_old
     for n in ['alpha', 'T0', 'beta', 'gamma',
               's_z', 'Mmin', 'L0', 'sigLM']:
-        p.update_parameters(**{n: 1234.})
-        assert getattr(p, n) == 1234.
+        p.update_parameters(**{n: 1.314159})
+        assert getattr(p, n) == 1.314159
 
 
 def test_cib_raises():
@@ -410,7 +410,8 @@ def test_f2r():
     # We force p2 to compute the real-space profile
     # by FFT-ing the Fourier-space one.
     p2 = ccl.halos.HaloProfileNFW(c_m_relation=cM, fourier_analytic=True)
-    p2._real = None
+    with ccl.UnlockInstance(p2):
+        p2._real = None
     p2.update_precision_fftlog(padding_hi_fftlog=1E3)
 
     M = 1E14

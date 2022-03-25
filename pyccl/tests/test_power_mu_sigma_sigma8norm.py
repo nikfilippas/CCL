@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from unittest import mock
-import pyccl as ccl
+from . import pyccl as ccl
 import sys
 from pyccl.boltzmann import get_isitgr_pk_lin
 try:

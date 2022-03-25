@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-import pyccl as ccl
+from . import pyccl as ccl
 
 
 def kf(k):
@@ -120,9 +120,10 @@ def test_tk3d_eval(is_product):
     (a_arr, lk_arr, fka1_arr, fka2_arr, tkka_arr) = get_arrays()
     if is_product:
         tsp = ccl.Tk3D(a_arr=a_arr, lk_arr=lk_arr, pk1_arr=fka1_arr,
-                       pk2_arr=fka2_arr)
+                       pk2_arr=fka2_arr, is_logt=True)
     else:
-        tsp = ccl.Tk3D(a_arr=a_arr, lk_arr=lk_arr, tkk_arr=tkka_arr)
+        tsp = ccl.Tk3D(a_arr=a_arr, lk_arr=lk_arr, tkk_arr=tkka_arr,
+                       is_logt=True)
 
     # Test at single point
     ktest = 0.7

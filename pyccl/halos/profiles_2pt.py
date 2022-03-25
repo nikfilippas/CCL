@@ -1,10 +1,11 @@
 from .profiles import HaloProfile, HaloProfileHOD
 from ..pyutils import warn_api
 from ..errors import CCLDeprecationWarning
+from ..base import CCLHalosObject
 import warnings
 
 
-class Profile2pt(object):
+class Profile2pt(CCLHalosObject):
     """ This class implements the 1-halo 2-point correlator between
     two halo profiles.
 
@@ -26,11 +27,12 @@ class Profile2pt(object):
             of the fourier profiles.
 
     """
-    @warn_api()
+
+    @warn_api
     def __init__(self, *, r_corr=0.):
         self.r_corr = r_corr
 
-    @warn_api()
+    @warn_api
     def update_parameters(self, *, r_corr=None):
         """ Update any of the parameters associated with this 1-halo
         2-point correlator. Any parameter set to `None` won't be updated.

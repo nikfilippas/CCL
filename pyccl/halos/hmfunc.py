@@ -2,13 +2,14 @@ from .. import ccllib as lib
 from ..core import check
 from ..background import omega_x
 from ..pyutils import warn_api, deprecate_attr, deprecated
-from ..emulator import Emulator, Bounds
+from ..emulator import Emulator, EmulatorObject
+from ..base import CCLHalosObject
 from .massdef import MassDef, MassDef200m, MassDef200c
 import numpy as np
 from scipy.interpolate import interp1d
 
 
-class MassFunc(object):
+class MassFunc(CCLHalosObject):
     """ This class enables the calculation of halo mass functions.
 
     We currently assume that all analytical mass function implementations
@@ -39,7 +40,7 @@ class MassFunc(object):
     """
     name = 'default'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True):
         self.mass_def_strict = mass_def_strict
         # Check if mass definition was provided and check that it's sensible.
@@ -222,7 +223,7 @@ class MassFuncPress74(MassFunc):
     """
     name = 'Press74'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True):
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
@@ -261,7 +262,7 @@ class MassFuncSheth99(MassFunc):
     """
     name = 'Sheth99'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  use_delta_c_fit=False):
         self.use_delta_c_fit = use_delta_c_fit
@@ -306,7 +307,7 @@ class MassFuncJenkins01(MassFunc):
     """
     name = 'Jenkins01'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True):
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
@@ -341,7 +342,7 @@ class MassFuncTinker08(MassFunc):
     """
     name = 'Tinker08'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True):
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
@@ -397,7 +398,7 @@ class MassFuncDespali16(MassFunc):
     """
     name = 'Despali16'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  ellipsoidal=False):
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
@@ -457,7 +458,7 @@ class MassFuncTinker10(MassFunc):
     """
     name = 'Tinker10'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  norm_all_z=False):
         self.norm_all_z = norm_all_z
@@ -537,7 +538,7 @@ class MassFuncBocquet16(MassFunc):
     """
     name = 'Bocquet16'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  hydro=True):
         self.hydro = hydro
@@ -674,7 +675,7 @@ class MassFuncWatson13(MassFunc):
     """
     name = 'Watson13'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True):
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
@@ -738,7 +739,7 @@ class MassFuncAngulo12(MassFunc):
     """
     name = 'Angulo12'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None, mass_def_strict=True):
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
@@ -787,24 +788,27 @@ class MassFuncBocquet20(MassFunc, Emulator):
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  extrapolate=True):
         self.extrapolate = extrapolate
-        Emulator.__init__(self)  # inherit all the Emulator methods first
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200c()
 
-    def _load(self):
+    def _load_emu(self):
         from MiraTitanHMFemulator import Emulator as HMFemu
-        emu = HMFemu()
-        return emu
+        model = HMFemu()
+        # build the emulator bounds
+        bounds = model.param_limits.copy()
+        bounds["z"] = [0., 2.02]
+        bounds["M_min"] = [1e13, np.inf]
+        return EmulatorObject(model, bounds)
 
-    def _build_emu_parameters(self, cosmo=None, M=None, a=None):
+    def _build_parameters(self, cosmo=None, M=None, a=None):
         from pyccl.neutrinos import Omega_nu_h2
         # check input
         if (cosmo is not None) and (a is None):
             raise ValueError("Need value for scale factor")
 
-        self._param_emu_kwargs = {}
+        self._parameters = {}
         if cosmo is not None:
             h = cosmo["h"]
             m_nu = np.sum(cosmo["m_nu"])
@@ -813,38 +817,26 @@ class MassFuncBocquet20(MassFunc, Emulator):
             Omega_b = cosmo["Omega_b"]
             Omega_nu_h2 = Omega_nu_h2(a, m_nu=m_nu, T_CMB=T_CMB)
 
-            self._param_emu_kwargs["Ommh2"] = (
-                Omega_c + Omega_b)*h**2 + Omega_nu_h2
-            self._param_emu_kwargs["Ombh2"] = Omega_b * h**2
-            self._param_emu_kwargs["Omnuh2"] = Omega_nu_h2
-            self._param_emu_kwargs["n_s"] = cosmo["n_s"]
-            self._param_emu_kwargs["h"] = cosmo["h"]
-            self._param_emu_kwargs["sigma_8"] = cosmo["sigma8"]
-            self._param_emu_kwargs["w_0"] = cosmo["w0"]
-            self._param_emu_kwargs["w_b"] = (-cosmo["wa"] - cosmo["w0"])**0.25
+            self._parameters["Ommh2"] = (Omega_c + Omega_b)*h**2 + Omega_nu_h2
+            self._parameters["Ombh2"] = Omega_b * h**2
+            self._parameters["Omnuh2"] = Omega_nu_h2
+            self._parameters["n_s"] = cosmo["n_s"]
+            self._parameters["h"] = cosmo["h"]
+            self._parameters["sigma_8"] = cosmo["sigma8"]
+            self._parameters["w_0"] = cosmo["w0"]
+            self._parameters["w_b"] = (-cosmo["wa"] - cosmo["w0"])**0.25
 
-            self._param_emu_kwargs["z"] = 1/a - 1
+            self._parameters["z"] = 1/a - 1
             if not self.extrapolate:
-                self._param_emu_kwargs["M_min"] = np.min(M*h)
+                self._parameters["M_min"] = np.min(M*h)
 
-    def _validate_bounds(self):
-        emu = self._get_model()
-
-        if self._has_bounds():
-            B = self._get_bounds()
-        else:
-            bounds = emu.param_limits.copy()
-            # validate scale factor
-            bounds["z"] = [0., 2.02]
-            bounds["M_min"] = [1e13, np.inf]
-            B = Bounds(bounds)
-            self._set_bounds(B)
-        B.check_bounds(self._param_emu_kwargs)
-
-        # remove scale factor and mass
-        self._param_emu_kwargs.pop("z")
+    def _finalize_parameters(self, wa):
+        # Translate parameters to final emulator input
+        self._parameters["w_a"] = wa
+        self._parameters.pop("w_b")
+        self._parameters.pop("z")
         if not self.extrapolate:
-            self._param_emu_kwargs.pop("M_min")
+            self._parameters.pop("M_min")
 
     def _extrapolate_hmf(self, hmf, M, eps=1e-12):
         M_use = np.atleast_1d(M)
@@ -865,14 +857,11 @@ class MassFuncBocquet20(MassFunc, Emulator):
         return hmf
 
     def get_mass_function(self, cosmo, M, a):
-        self._build_emu_parameters(cosmo, M, a)
-        self._validate_bounds()
-        emu = self._get_model()
-
-        # replace w_b with w_a
-        params = self._param_emu_kwargs.copy()
-        params.pop("w_b")
-        params["w_a"] = cosmo["wa"]
+        # load and build parameters
+        emu = self._load_emu()
+        self._build_parameters(cosmo, M, a)
+        emu.check_bounds(self._parameters)
+        self._finalize_parameters(cosmo["wa"])
 
         def hmf_dummy(cosmo, M, a):
             # Populate the queried masses with some emulator-friendly
@@ -891,8 +880,9 @@ class MassFuncBocquet20(MassFunc, Emulator):
         if len(idx) > 0:
             # Under normal use, this block runs.
             M_emu = M_use[idx]
-            hmf[idx] = emu.predict(params, 1/a-1, M_emu,
-                                   get_errors=False)[0]
+            hmf[idx] = emu.model.predict(
+                self._parameters, 1/a-1, M_emu,
+                get_errors=False)[0]
             hmf *= cosmo["h"]**3
         else:
             # No masses inside the emulator range.

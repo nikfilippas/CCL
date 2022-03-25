@@ -549,7 +549,7 @@ def _get_spline2d_arrays(gsl_spline):
     """Get array data from a 2D GSL spline.
 
     Args:
-        gsl_spline: `SWIGObject` of gsl_spline2d
+        gsl_spline: `SWIGObject` of gsl_spline2d *
             The SWIG object of the 2D GSL spline.
 
     Returns:
@@ -573,7 +573,37 @@ def _get_spline2d_arrays(gsl_spline):
     return yarr, xarr, zarr.reshape(y_size, x_size)
 
 
-def warn_api(pairs=None, order=None):
+def _get_spline3d_arrays(gsl_spline, length):
+    """Get array data from a 3D GSL spline.
+
+    Args:
+        gsl_spline (`SWIGObject` of gsl_spline2d **):
+            The SWIG object of the 2D GSL spline.
+        length (int):
+            The length of the 3rd dimension.
+
+    Returns:
+        xarr: array_like
+            The x array of the spline.
+        yarr: array_like
+            The y array of the spline.
+        zarr: array_like
+            The z array of the spline. The shape is (yarr.size, xarr.size).
+    """
+    status = 0
+    x_size, y_size, status = lib.get_spline3d_array_sizes(gsl_spline, status)
+    check(status)
+
+    z_size = x_size*y_size*length
+    xarr, yarr, zarr, status = lib.get_spline3d_arrays(gsl_spline,
+                                                       x_size, y_size, z_size,
+                                                       length, status)
+    check(status)
+
+    return xarr, yarr, zarr.reshape((length, x_size, y_size))
+
+
+def warn_api(func=None, /, *, pairs=None, order=None):
     """ This decorator translates old API to new API for:
       - functions/methods with changed argument order;
       - functions/methods whose arguments have been renamed.
@@ -585,6 +615,12 @@ def warn_api(pairs=None, order=None):
     order : list, optional
         List of the **old** order of the arguments whose order
         has been changed, under their **new** name. The default is None.
+
+    .. note::
+
+        This wrapper assumes that
+            1. there are no positional-only arguments;
+            2. the order of the positional-or-keyword arguments is unchanged.
 
     Example
     -------
@@ -614,11 +650,7 @@ def warn_api(pairs=None, order=None):
 
     """  # noqa
 
-    def wrapper(func):
-        """ This wrapper assumes that
-        1. there are no positional-only arguments;
-        2. the order of the positional-or-keyword arguments is unchanged.
-        """
+    def _decorator(func, pairs, order):
         POK = Parameter.POSITIONAL_OR_KEYWORD
         KWO = Parameter.KEYWORD_ONLY
 
@@ -630,7 +662,7 @@ def warn_api(pairs=None, order=None):
         npos = len(pos_names)
 
         @functools.wraps(func)
-        def new_func(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             # check for normprof - we'll need that later (1 of 3)
             def normprof_warning():
                 # all the variables we need will already be in locals
@@ -753,12 +785,17 @@ def warn_api(pairs=None, order=None):
             normprof_warning()
 
             return func(**kwargs)
+        return wrapper
 
-        new_func.__name__ = func.__name__
-        new_func.__doc__ = func.__doc__
-        return new_func
+    def decorator(func):
+        return _decorator(func, pairs=pairs, order=order)
 
-    return wrapper
+    # Check if usage is with @warn_api or @warn_api()
+    if func is None:
+        # warn_api() with patentheses
+        return decorator
+    # warn_api without parentheses
+    return decorator(func)
 
 
 def deprecate_attr(pairs=None):

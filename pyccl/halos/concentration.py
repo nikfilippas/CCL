@@ -3,11 +3,12 @@ from ..background import growth_factor, growth_rate
 from .massdef import MassDef, mass2radius_lagrangian
 from ..power import linear_matter_power, sigmaM
 from ..pyutils import check, warn_api, deprecate_attr, deprecated
+from ..base import CCLHalosObject
 import numpy as np
 from scipy.optimize import root_scalar
 
 
-class Concentration(object):
+class Concentration(CCLHalosObject):
     """ This class enables the calculation of halo concentrations.
 
     Args:
@@ -17,7 +18,7 @@ class Concentration(object):
     """
     name = 'default'
 
-    @warn_api()
+    @warn_api
     def __init__(self, *, mass_def=None):
         if mass_def is not None:
             if self._check_mass_def(mass_def):
@@ -33,19 +34,6 @@ class Concentration(object):
     @deprecate_attr(pairs=[("mass_def", "mdef")])
     def __getattr__(self, name):
         return
-
-    def __eq__(self, other):
-        if id(self) == id(other):
-            return True
-        elif type(self) != type(other):
-            return False
-        else:
-            params, params2 = self.__dict__, other.__dict__
-            for key, val in params.items():
-                if val != params2.get(key):
-                    return False
-        # if this point is reached, the concentration relations are equivalent
-        return True
 
     def _default_mass_def(self):
         """ Assigns a default mass definition for this object if
