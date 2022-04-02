@@ -136,7 +136,6 @@ void get_spline2d_arrays(gsl_spline2d *spline2d,
   memcpy(zarr, spline2d->zarr, sizeof(double)*x_size*y_size);
 }
 
-
 void get_spline3d_arrays(gsl_spline2d **spline2d,
                          int x_size, double* xarr,
                          int y_size, double* yarr,

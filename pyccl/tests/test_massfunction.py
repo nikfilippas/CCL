@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from . import pyccl as ccl
-from pyccl.pyutils import CCLDeprecationWarning
 
 
 COSMO = ccl.Cosmology(
@@ -107,10 +106,3 @@ def test_halo_bias_smoke(m):
         b = ccl.halo_bias(COSMO, m, a)
     assert np.all(np.isfinite(b))
     assert np.shape(b) == np.shape(m)
-
-
-def test_from_name_depr():
-    with pytest.warns(CCLDeprecationWarning):
-        mf_1 = ccl.halos.mass_function_from_name("Tinker08")()
-    mf_2 = ccl.halos.MassFunc.from_name("Tinker08")()
-    assert mf_1.name == mf_2.name

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import pyccl as ccl
+from . import pyccl as ccl
 
 HALOPROFILE_TOLERANCE = 1E-3
 
@@ -59,7 +59,8 @@ def test_profile_Einasto():
 
     mdef = ccl.halos.MassDef(mDelta, 'matter')
     c = ccl.halos.ConcentrationConstant(c=concentration, mass_def=mdef)
-    mdef = ccl.halos.MassDef(mDelta, 'matter', c_m_relation=c)
+    mdef = ccl.halos.MassDef(mDelta, 'matter',
+                             c_m_relation=c)
     p = ccl.halos.HaloProfileEinasto(c_m_relation=c, truncated=False)
 
     prof = p.real(COSMO, r, halomass, a, mass_def=mdef)

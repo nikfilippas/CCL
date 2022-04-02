@@ -101,13 +101,13 @@ class _ClassPropertyMeta(type):
     def policy(cls, value):
         if value not in cls._policies:
             raise ValueError("Cache retention policy not recognized.")
-        if cls._policy == "lfu" != value:
+        if value == "lfu" != cls._policy:
             # Reset counter if we change policy to lfu
             # otherwise new objects are prone to being discarded immediately.
             # Now, the counter is not just used for stats,
             # it is part of the retention policy.
             for func in cls._cached_functions:
-                for item in func.cache_info.caches.values():
+                for item in func.cache_info._caches.values():
                     item.reset()
         cls._policy = value
         for func in cls._cached_functions:
@@ -121,21 +121,21 @@ class Caching(metaclass=_ClassPropertyMeta):
 
     Attributes:
         maxsize (``int``):
-            Maximum number of caches. If the dictionary is full, new caches
-            are assigned according to the set cache retention policy.
+            Maximum number of caches to store. If the dictionary is full, new
+            caches are assigned according to the set cache retention policy.
         policy (``'fifo'``, ``'lru'``, ``'lfu'``):
             Cache retention policy.
     """
     _enabled: bool = True
     _policies: list = ['fifo', 'lru', 'lfu']
-    _maxsize: int = 64
+    _maxsize: int = 128
     _policy: str = 'lru'
     _cached_functions: list = []
 
     @classmethod
     def _get_key(cls, func, *args, **kwargs):
-        """Calculate the hex hash from the combination the passed arguments
-        and keyword arguments.
+        """Calculate the hex hash from the sum of the hashes
+        of the passed arguments and keyword arguments.
         """
         # get a dictionary of default parameters
         params = func.cache_info._signature.parameters
@@ -158,8 +158,8 @@ class Caching(metaclass=_ClassPropertyMeta):
         obj = dic[key]
         if policy == "lru":
             dic.move_to_end(key)
-        elif policy == "lfu":
-            obj.increment()
+        # update stats
+        obj.increment()
         return obj
 
     @classmethod
@@ -181,7 +181,9 @@ class Caching(metaclass=_ClassPropertyMeta):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             if not cls._enabled:
-                return func(*args, **kwargs)
+                # Cache emulators even when caching is disabled.
+                if not func.__name__ == "_load_emu":
+                    return func(*args, **kwargs)
 
             key = cls._get_key(func, *args, **kwargs)
             # shorthand access
@@ -262,7 +264,7 @@ class Caching(metaclass=_ClassPropertyMeta):
 
     @classmethod
     def reset(cls):
-        cls.maxsize = 64
+        cls.maxsize = 128
         cls.policy = 'lru'
 
     @classmethod
@@ -386,8 +388,6 @@ class UnlockInstance:
         mutate (``bool``):
             If the enclosed function mutates the object, the stored
             representation is automatically deleted.
-        init (``bool``):
-            Special use for constructors: no need to unlock, but lock on exit.
     """
 
     def __init__(self, instance, mutate=True):
@@ -453,7 +453,10 @@ def unlock_instance(func=None, /, *, argv=0, mutate=True):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        with UnlockInstance(args[argv], mutate=mutate):
+        # Pick argument from list of `args` or `kwargs` as needed.
+        size = len(args)
+        arg = args[argv] if size > argv else list(kwargs.values())[argv-size]
+        with UnlockInstance(arg, mutate=mutate):
             out = func(*args, **kwargs)
         return out
     return wrapper
@@ -475,11 +478,55 @@ def _auto_store_repr(__repr__):
     return wrapper
 
 
+def _unwrap(func):
+    """Convenience function that unwraps and returns the innermost function.
+    """
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
+    return func
+
+
 class CCLObject:
     """Base for CCL objects.
 
     All CCL objects inherit ``__eq__`` and ``__hash__`` methods from here.
     We aim to homogenize equivalence checking, and to consistently use hash.
+
+    Overview
+    --------
+    ``CCLObjects`` inherit ``__hash__``, which consistently hashes the
+    representation string. They also inherit ``__eq__`` which checks for
+    hash equivalence, but does not do type checking, since subclasses might
+    simply be particular implementations of parent classes, but otherwise
+    equivalent.
+
+    In the implemented scheme, each ``CCLObject`` may have its own, specialized
+    ``__repr__`` method overloaded. Object representations have to be unique
+    for equivalent objects. If no ``__repr__`` is provided, the default from
+    ``object`` is used.
+
+    Mutation
+    --------
+    ``CCLObjects`` are by default immutable. This aims to provide a failsafe
+    mechanism, where, changing attributes has to trigger a re-computation
+    of something else inside of the instance, rather than simply doing a value
+    change.
+
+    This immutability mechanism can be safely bypassed if a subclass defines an
+    ``update_parameters`` method. ``CCLObjects`` temporarily unlock whenever
+    this method is called.
+
+    Internal State vs. Mutation
+    ---------------------------
+    Other methods that use ``setattr`` can only do that if they are decorated
+    with ``@unlock_instance`` or if the particular code block that makes the
+    change is enclosed within the ``UnlockInstance`` context manager.
+    If neither is provided, an exception is raised.
+
+    If such methods only change the instance's internal state, the decorator
+    may be called with ``@unlock_instance(mutate=False)`` (or equivalently
+    for the context manager ``UnlockInstance(..., mutate=False)``). Otherwise,
+    the instance is assumed to have mutated.
     """
     # Have all the arguments in the constructor been assigned as instance
     # attributes? (see `auto_assign`)
@@ -518,7 +565,10 @@ class CCLObject:
         cls.__init__ = unlock_instance(cls.__init__)
         if hasattr(cls, "update_parameters"):
             cls.update_parameters = \
-                unlock_instance(mutate=True)(cls.update_parameters)
+                unlock_instance(mutate=True)(_unwrap(cls.update_parameters))
+        if hasattr(cls, "_build_parameters"):
+            cls._build_parameters = \
+                unlock_instance(mutate=False)(cls._build_parameters)
 
         # In the implemented system (repr --> hash --> eq), `repr` often needs
         # to compute the hash of instance attributes which are also CCLObjects
@@ -526,6 +576,11 @@ class CCLObject:
         # To avoid having to recompute the full repr of the object every time,
         # we store it and only re-compute it after instance mutation.
         cls.__repr__ = _auto_store_repr(cls.__repr__)
+
+        # Subclasses with `_load_emu` methods are emulator implementations.
+        # Automatically cache the result, and convert it to class method.
+        if hasattr(cls, "_load_emu"):
+            cls._load_emu = classmethod(cache(maxsize=8)(cls._load_emu))
 
         super().__init_subclass__(**kwargs)
 
@@ -552,7 +607,7 @@ class CCLObject:
         # If the class does not have a constructor method,
         # assume all of its instances are equivalent
         # and build a simple string using just the class name.
-        init = self.__class__.__init__.__wrapped__
+        init = _unwrap(self.__class__.__init__)
         if init == object.__init__:
             from ._repr import _build_string_simple
             return _build_string_simple(self)

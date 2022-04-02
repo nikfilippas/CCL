@@ -57,7 +57,7 @@ class ParamStruct(CCLObject):
         """Unlock the object."""
         self.locked = (False, False)
 
-    @unlock_instance(mutate=False)
+    @unlock_instance(mutate=True)
     def reload(self):
         """Reload the object."""
         dic = CCLParameters.from_struct(self._name)
@@ -119,11 +119,7 @@ class ParamStruct(CCLObject):
 
 
 class CCLParameters:
-    """Container class with methods to manipulate ``ParamStruct`` dicts.
-
-    Parameters:
-        None (only class method functionality implemented)
-    """
+    """Container class with methods to manipulate ``ParamStruct`` dicts."""
 
     @classmethod
     def get_struct(cls, name):

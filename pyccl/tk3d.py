@@ -1,7 +1,6 @@
 from . import ccllib as lib
-
-from .pyutils import (check, _get_spline2d_arrays,
-                      _get_spline3d_arrays, warn_api)
+from .pyutils import (check, _get_spline2d_arrays, _get_spline3d_arrays,
+                      warn_api)
 from .base import CCLObject
 from ._repr import _build_string_Tk3D
 import numpy as np
@@ -51,13 +50,13 @@ class Tk3D(CCLObject):
             values of the scale factor outside those held by this array.
         lk_arr (array): an array holding values of the natural logarithm
             of the wavenumber (in units of Mpc^-1).
-        tkka_arr (array): a 3D array with shape `[na,nk,nk]`, where `na`
+        tkk_arr (array): a 3D array with shape `[na,nk,nk]`, where `na`
             and `nk` are the sizes of `a_arr` and `lk_arr` respectively.
             This array should contain the values of the trispectrum
             at the values of scale factor and wavenumber held by `a_arr`
             and `lk_arr`. The array can hold the values of the natural
             logarithm of the trispectrum, depending on the value of
-            `is_logt`. If `tkka_arr` is `None`, then it is assumed that
+            `is_logt`. If `tkk_arr` is `None`, then it is assumed that
             the trispectrum can be factorized as described above, and
             the two functions :math:`f_i(k_i,a)` are described by
             `pk1_arr` and `pk2_arr`. You are responsible for making sure
@@ -90,7 +89,7 @@ class Tk3D(CCLObject):
     """
     __repr__ = _build_string_Tk3D
 
-    @warn_api(order=["extrap_order_lok", "extrap_order_hik", "is_logt"])
+    @warn_api(reorder=["extrap_order_lok", "extrap_order_hik", "is_logt"])
     def __init__(self, *, a_arr, lk_arr, tkk_arr=None,
                  pk1_arr=None, pk2_arr=None, is_logt=True,
                  extrap_order_lok=1, extrap_order_hik=1):
@@ -198,7 +197,8 @@ class Tk3D(CCLObject):
         if self.tsp.is_product:
             a_arr, lk_arr1, pk_arr1 = _get_spline2d_arrays(self.tsp.fka_1.fka)
             _, lk_arr2, pk_arr2 = _get_spline2d_arrays(self.tsp.fka_2.fka)
-            out.append(pk_arr1, pk_arr2)
+            out.append(pk_arr1)
+            out.append(pk_arr2)
         else:
             status = 0
             a_arr, status = lib.get_array(self.tsp.a_arr, self.tsp.na, status)
@@ -211,4 +211,4 @@ class Tk3D(CCLObject):
             # exponentiate in-place
             [np.exp(tk, out=tk) for tk in out]
 
-        return a_arr, lk_arr1, lk_arr2, tkka_arr
+        return a_arr, lk_arr1, lk_arr2, out

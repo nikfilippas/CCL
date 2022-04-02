@@ -2,9 +2,9 @@ from .. import ccllib as lib
 from ..core import check
 from ..background import h_over_h0, sigma_critical
 from ..power import sigmaM
-from ..pyutils import resample_array, _fftlog_transform, \
-    warn_api, deprecate_attr
-from ..base import CCLHalosObject
+from ..pyutils import (resample_array, _fftlog_transform,
+                       warn_api, deprecate_attr)
+from ..base import CCLHalosObject, unlock_instance
 from .._repr import _build_string_HaloProfile
 from .concentration import Concentration
 from .massdef import MassDef
@@ -52,6 +52,7 @@ class HaloProfile(CCLHalosObject):
                                  'plaw_fourier': -1.5,
                                  'plaw_projected': -1.}
 
+    @unlock_instance(mutate=True)
     def update_precision_fftlog(self, **kwargs):
         """ Update any of the precision parameters used by
         FFTLog to compute Hankel transforms. The available
@@ -221,7 +222,7 @@ class HaloProfile(CCLHalosObject):
                                       " _fourier method.")
         return f_k
 
-    @warn_api(pairs=[("r", "rt")])
+    @warn_api(pairs=[("rt", "r")])
     def projected(self, cosmo, r, M, a, *, mass_def=None):
         """ Returns the 2D projected profile as a function of
         cosmology, radius, halo mass and scale factor.
@@ -253,7 +254,7 @@ class HaloProfile(CCLHalosObject):
                                                 is_cumul2d=False)
         return s_r_t
 
-    @warn_api(pairs=[("r", "rt")])
+    @warn_api(pairs=[("rt", "r")])
     def cumul2d(self, cosmo, r, M, a, *, mass_def=None):
         """ Returns the 2D cumulative surface density as a
         function of cosmology, radius, halo mass and scale
@@ -310,8 +311,8 @@ class HaloProfile(CCLHalosObject):
             float or array_like: convergence \
                 :math:`\\kappa`
         """
-        Sigma = self.projected(cosmo, r, M, a_lens,
-                               mass_def=mass_def) / a_lens**2
+        Sigma = self.projected(cosmo, r, M, a_lens, mass_def=mass_def)
+        Sigma /= a_lens**2
         Sigma_crit = sigma_critical(cosmo, a_lens=a_lens, a_source=a_source)
         return Sigma / Sigma_crit
 
@@ -671,7 +672,7 @@ class HaloProfileNFW(HaloProfile):
     """
     name = 'NFW'
 
-    @warn_api(pairs=[("c_m_relation", "c_M_relation")])
+    @warn_api(pairs=[("c_M_relation", "c_m_relation")])
     def __init__(self, *, c_m_relation,
                  fourier_analytic=True,
                  projected_analytic=False,
@@ -867,7 +868,7 @@ class HaloProfileEinasto(HaloProfile):
     """
     name = 'Einasto'
 
-    @warn_api(pairs=[("c_m_relation", "c_M_relation")])
+    @warn_api(pairs=[("c_M_relation", "c_m_relation")])
     def __init__(self, *, c_m_relation, truncated=True):
         if not isinstance(c_m_relation, Concentration):
             raise TypeError("c_m_relation must be of type `Concentration`)")
@@ -954,7 +955,7 @@ class HaloProfileHernquist(HaloProfile):
     """
     name = 'Hernquist'
 
-    @warn_api(pairs=[("c_m_relation", "c_M_relation")])
+    @warn_api(pairs=[("c_M_relation", "c_m_relation")])
     def __init__(self, *, c_m_relation, truncated=True):
         if not isinstance(c_m_relation, Concentration):
             raise TypeError("c_m_relation must be of type `Concentration`)")
@@ -1082,9 +1083,8 @@ class HaloProfilePressureGNFW(HaloProfile):
         """ Update any of the parameters associated with
         this profile. Any parameter set to `None` won't be updated.
 
-        .. note:: A change in `alpha`, `beta`, `gamma`, or `x_out`
-            will trigger a recomputation of the Fourier-space template,
-            which can be slow.
+        .. note:: A change in `alpha`, `beta`, `x_out`, or `gamma` will trigger
+            a recomputation of the Fourier-space template, which can be slow.
 
         Args:
             mass_bias (float): the mass bias parameter :math:`1-b`.
@@ -1325,7 +1325,7 @@ class HaloProfileHOD(HaloProfile):
         """
     name = 'HOD'
 
-    @warn_api(pairs=[("c_m_relation", "c_M_relation")])
+    @warn_api(pairs=[("c_M_relation", "c_m_relation")])
     def __init__(self, *, c_m_relation,
                  lMmin_0=12., lMmin_p=0., siglM_0=0.4,
                  siglM_p=0., lM0_0=7., lM0_p=0.,

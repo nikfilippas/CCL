@@ -1,8 +1,9 @@
 from . import ccllib as lib
 from .pyutils import check, deprecated
 from .pk2d import Pk2D
-from .emulator import PowerSpectrumEmulator
+from .base import unlock_instance
 import numpy as np
+import functools
 
 
 def bcm_model_fka(cosmo, k, a):
@@ -67,10 +68,14 @@ def baryon_correct(cosmo, model, pk2d):
         :class:`~pyccl.pk2d.Pk2D: a copy of the input `Pk2D` object with the
         baryon correction applied to it
     """
+    if not isinstance(pk2d, Pk2D):
+        raise TypeError("pk2d must be a Pk2D object")
+
     if model == "bcm":
         pk2d_new = pk2d.copy()
         _bcm_correct_pk2d(cosmo, pk2d_new)
     elif model in ["bacco", ]:  # other emulator names go in here
+        from .emulator import PowerSpectrumEmulator
         emu = PowerSpectrumEmulator.from_name(model)()
         pk2d_new = emu.include_baryons(cosmo, pk2d)
     else:
@@ -79,13 +84,8 @@ def baryon_correct(cosmo, model, pk2d):
     return pk2d_new
 
 
+@unlock_instance(mutate=True, argv=1)
+@functools.wraps(_bcm_correct_pk2d)
 @deprecated(new_function=baryon_correct)
 def bcm_correct_pk2d(cosmo, pk2d):
-    """Apply the BCM model correction factor to a given power spectrum.
-    This function operates directly onto the input Pk2D object.
-
-    Args:
-        cosmo (:class:`~pyccl.core.Cosmology`): Cosmological parameters.
-        pk2d (:class:`~pyccl.pk2d.Pk2D`): power spectrum.
-    """
     _bcm_correct_pk2d(cosmo, pk2d)

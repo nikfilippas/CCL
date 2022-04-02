@@ -1,8 +1,9 @@
 from .. import ccllib as lib
+from ..pyutils import check
 from ..background import growth_factor, growth_rate
 from .massdef import MassDef, mass2radius_lagrangian
 from ..power import linear_matter_power, sigmaM
-from ..pyutils import check, warn_api, deprecate_attr, deprecated
+from ..pyutils import warn_api, deprecate_attr, deprecated
 from ..base import CCLHalosObject
 import numpy as np
 from scipy.optimize import root_scalar
@@ -88,7 +89,7 @@ class Concentration(CCLHalosObject):
             M_use = M
         return M_use
 
-    @warn_api(pairs=[("mass_def_other", "mdef_other")])
+    @warn_api(pairs=[("mdef_other", "mass_def_other")])
     def get_concentration(self, cosmo, M, a, *, mass_def_other=None):
         """ Returns the concentration for input parameters.
 
@@ -141,7 +142,7 @@ class ConcentrationDiemer15(Concentration):
     """
     name = 'Diemer15'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, *, mass_def=None):
         super(ConcentrationDiemer15, self).__init__(mass_def=mass_def)
 
@@ -207,7 +208,7 @@ class ConcentrationBhattacharya13(Concentration):
     """
     name = 'Bhattacharya13'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, *, mass_def=None):
         super(ConcentrationBhattacharya13, self).__init__(mass_def=mass_def)
 
@@ -259,7 +260,7 @@ class ConcentrationPrada12(Concentration):
     """
     name = 'Prada12'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, *, mass_def=None):
         super(ConcentrationPrada12, self).__init__(mass_def=mass_def)
 
@@ -319,7 +320,7 @@ class ConcentrationKlypin11(Concentration):
     """
     name = 'Klypin11'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, *, mass_def=None):
         super(ConcentrationKlypin11, self).__init__(mass_def=mass_def)
 
@@ -350,7 +351,7 @@ class ConcentrationDuffy08(Concentration):
     """
     name = 'Duffy08'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, *, mass_def=None):
         super(ConcentrationDuffy08, self).__init__(mass_def=mass_def)
 
@@ -437,7 +438,7 @@ class ConcentrationIshiyama21(Concentration):
     """
     name = 'Ishiyama21'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, *, mass_def=None, relaxed=False, Vmax=False):
         self.relaxed = relaxed
         self.Vmax = Vmax
@@ -592,7 +593,7 @@ class ConcentrationConstant(Concentration):
     """
     name = 'Constant'
 
-    @warn_api(pairs=[("mass_def", "mdef")])
+    @warn_api(pairs=[("mdef", "mass_def")])
     def __init__(self, c=1, *, mass_def=None):
         self.c = c
         super(ConcentrationConstant, self).__init__(mass_def=mass_def)

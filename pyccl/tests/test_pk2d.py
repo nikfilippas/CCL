@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from . import pyccl as ccl
-from .pyccl import CCLWarning
 import warnings
+from . import pyccl as ccl
+from . import CCLWarning
 
 
 def pk1d(k):
@@ -73,7 +73,8 @@ def test_pk2d_smoke():
 
 
 @pytest.mark.parametrize('model', ['bbks', 'eisenstein_hu',
-                                   'eisenstein_hu_nowiggles'])
+                                   'eisenstein_hu_nowiggles',
+                                   'bacco'])
 def test_pk2d_from_model(model):
     cosmo_fixed = ccl.Cosmology(
         Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96)
@@ -92,7 +93,7 @@ def test_pk2d_from_model(model):
 
 @pytest.mark.parametrize('model', ['halofit', 'bacco', ])
 def test_pk2d_apply_nonlin_model_smoke(model):
-    cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
+    cosmo = ccl.CosmologyVanillaLCDM()
     cosmo.compute_linear_power()
     pkl = cosmo.get_linear_power()
 
@@ -102,7 +103,8 @@ def test_pk2d_apply_nonlin_model_smoke(model):
         with warnings.catch_warnings():
             # filter all warnings related to the emulator packages
             warnings.simplefilter("ignore")
-            pknl = pkl.apply_nonlin_model(cosmo, model=model)
+            pknl = ccl.Pk2D.apply_nonlin_model(
+                cosmo, model=model, pk_linear=pkl)
 
         pk0 = pkl.eval(k_arr, a, cosmo)
         pk1 = pknl.eval(k_arr, a, cosmo)
@@ -157,6 +159,14 @@ def test_pk2d_from_model_raises():
     cosmo = ccl.CosmologyVanillaLCDM()
     with pytest.raises(ValueError):
         ccl.Pk2D.from_model(cosmo, model='bbkss')
+
+
+def test_nonlin_models_smoke():
+    cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
+    pkl = cosmo.get_camb_pk_lin()
+    pk1 = pkl.apply_halofit(cosmo)
+    pk2 = pkl.apply_nonlin_model(cosmo, "halofit")
+    assert pk1 == pk2
 
 
 def test_pk2d_function():
@@ -243,12 +253,12 @@ def test_pk2d_copy():
             (pk2.extrap_order_lok, pk2.extrap_order_hik))
     assert pk1 == pk2
 
-    # empty Pk2D
-    pk1 = ccl.Pk2D(extrap_order_lok=10, extrap_order_hik=11, empty=True)
-    assert pk1 != pk2
-
     pk2 = pk1.copy()
     assert pk1 == pk2
+
+    pk0 = ccl.Pk2D(empty=True)
+    pk1 = pk0.copy()
+    assert not (pk0.has_psp or pk1.has_psp)
 
 
 def test_pk2d_cls():
@@ -353,6 +363,9 @@ def test_pk2d_add():
     # This raises an error because addition with an empty Pk2D should not work
     with pytest.raises(ValueError):
         pk2d_a + empty_pk2d
+    # This raises an error because addition of this type is undefined.
+    with pytest.raises(TypeError):
+        pk2d_a + np.ones((16, 128))
 
     pk2d_c = ccl.Pk2D(a_arr=x, lk_arr=log_y, pk_arr=zarr_b,
                       is_logp=False)

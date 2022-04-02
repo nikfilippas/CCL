@@ -4,8 +4,8 @@ import warnings
 from . import ccllib as lib
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
-from .errors import CCLError, CCLWarning
 from .emulator import PowerSpectrumEmulator, EmulatorObject
+from .errors import CCLError, CCLWarning
 
 try:
     import isitgr  # noqa: F401

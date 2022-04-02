@@ -15,7 +15,7 @@ P1 = ccl.halos.HaloProfileNFW(c_m_relation=CON, fourier_analytic=True)
 P2 = ccl.halos.HaloProfileHOD(c_m_relation=CON)
 P3 = ccl.halos.HaloProfilePressureGNFW()
 P4 = P1
-Pneg = ccl.halos.HaloProfilePressureGNFW(P0=1j)  # (1j*1j = -1)
+Pneg = ccl.halos.HaloProfilePressureGNFW(P0=-1)
 PKC = ccl.halos.Profile2pt()
 PKCH = ccl.halos.Profile2ptHOD()
 KK = np.geomspace(1E-3, 10, 32)

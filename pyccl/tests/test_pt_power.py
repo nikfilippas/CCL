@@ -1,7 +1,7 @@
 import numpy as np
 from . import pyccl as ccl
 import pytest
-from .. import ccllib as lib
+from . import ccllib as lib
 
 NZ = 128
 ZZ = np.linspace(0., 1., NZ)

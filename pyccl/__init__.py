@@ -1,4 +1,3 @@
-# CCL version
 from pkg_resources import get_distribution, DistributionNotFound
 try:
     __version__ = get_distribution(__name__).version
@@ -6,7 +5,6 @@ except DistributionNotFound:
     # package is not installed
     pass
 del get_distribution, DistributionNotFound
-
 
 # Set the environment variable for default config path
 from os import environ, path
@@ -85,8 +83,8 @@ from .baryons import (
 )
 
 from .neutrinos import (
-    Omega_nu_h2,
     Omeganuh2,
+    Omega_nu_h2,
     nu_masses,
 )
 
@@ -122,7 +120,7 @@ from .covariances import (
     sigma2_B_from_mask,
 )
 
-# Hashing, Caching & CCL base objects
+# Hashing, Caching, CCL base, Mutation locks
 from .base import (
     CCLObject,
     CCLHalosObject,
@@ -134,9 +132,6 @@ from .base import (
     unlock_instance,
 )
 
-# Emulators
-from .emulator import Emulator, PowerSpectrumEmulator
-
 # Parameters
 from .parameters import (
     CCLParameters,
@@ -145,15 +140,18 @@ from .parameters import (
     physical_constants,
 )
 
+# Emulators
+from .emulator import (
+    EmulatorObject,
+    Emulator,
+    PowerSpectrumEmulator
+)
+
 # Miscellaneous
 from .pyutils import debug_mode, resample_array
 
-
 # Deprecated & Renamed modules
-from . import (
-    baryons,
-    cells,
-)
+from . import baryons, cells
 
 
 def __getattr__(name):
@@ -190,10 +188,10 @@ from .haloprofile import (
 
 
 __all__ = (
-    'lib', 'cache', 'hash_',
-    'physical_constants', 'gsl_params', 'spline_params',
+    'lib', 'cache', 'hash_', 'CCLObject', 'CCLHalosObject',
+    'UnlockInstance', 'unlock_instance',
+    'CCLParameters', 'physical_constants', 'gsl_params', 'spline_params',
     'CCLError', 'CCLWarning', 'CCLDeprecationWarning',
-    'baryons', 'cells',  # TODO: remove after deprecation cycle
     'Cosmology', 'CosmologyVanillaLCDM', 'CosmologyCalculator',
     'growth_factor', 'growth_factor_unnorm', 'growth_rate',
     'comoving_radial_distance', 'angular_diameter_distance',
@@ -205,7 +203,7 @@ __all__ = (
     'linear_matter_power', 'nonlin_matter_power',
     'sigmaR', 'sigmaV', 'sigma8', 'sigmaM', 'kNL',
     'bcm_model_fka', 'bcm_correct_pk2d', 'baryon_correct',
-    'Omega_nu_h2', 'Omeganuh2', 'nu_masses',
+    'Omeganuh2', 'Omega_nu_h2', 'nu_masses',
     'angular_cl',
     'Tracer', 'NumberCountsTracer', 'WeakLensingTracer', 'CMBLensingTracer',
     'tSZTracer', 'CIBTracer', 'ISWTracer',
@@ -214,11 +212,12 @@ __all__ = (
     'correlation_3dRsd', 'correlation_3dRsd_avgmu', 'correlation_pi_sigma',
     'angular_cl_cov_cNG', 'angular_cl_cov_SSC',
     'sigma2_B_disc', 'sigma2_B_from_mask',
-    'CCLObject', 'CCLHalosObject', 'Hashing', 'Caching',
-    'Emulator', 'PowerSpectrumEmulator',
+    'Hashing', 'Caching',
+    'EmulatorObject', 'Emulator', 'PowerSpectrumEmulator',
     'debug_mode', 'resample_array',
     'halomodel_matter_power', 'halo_concentration',
     'onehalo_matter_power', 'twohalo_matter_power',
     'massfunc', 'halo_bias', 'massfunc_m2r', 'nfw_profile_3d',
     'einasto_profile_3d', 'hernquist_profile_3d', 'nfw_profile_2d',
+    'baryons', 'cells',
 )

@@ -11,11 +11,11 @@ from . import ccllib as lib
 from .errors import CCLError, CCLWarning, CCLDeprecationWarning
 from ._types import error_types
 from ._core import _docstring_extra_parameters
-from ._repr import _build_string_Cosmology
 from .boltzmann import get_class_pk_lin, get_camb_pk_lin, get_isitgr_pk_lin
 from .pyutils import check, warn_api
 from .pk2d import Pk2D
 from .base import CCLObject, cache, unlock_instance
+from ._repr import _build_string_Cosmology
 from .parameters import CCLParameters
 
 # Configuration types
@@ -88,10 +88,13 @@ class Cosmology(CCLObject):
               internal splines and numerical integration accuracy by setting
               the values of the attributes of
               :obj:`Cosmology.cosmo.spline_params` and
-              :obj:`Cosmology.cosmo.gsl_params`. For example, you can set
+              :obj:`Cosmology.cosmo.gsl_params` via the `update_parameters`
+              method of `Cosmology`. For example, you can set
               the generic relative accuracy for integration by executing
-              ``c = Cosmology(...); c.cosmo.gsl_params.INTEGRATION_EPSREL \
+              ``c = Cosmology(...); cosmo.update_parameters(INTEGRATION_EPSREL\
 = 1e-5``.
+              If you bypass `update_parameters` and set it directly with
+              ``setattr``, hashing the Cosmology object will be inconsistent.
               See the module level documentation of `pyccl.core` for details.
 
     Args:
@@ -209,6 +212,7 @@ class Cosmology(CCLObject):
         extra_parameters (:obj:`dict`, optional):
             Dictionary holding extra parameters.
             Accepted keys are detailed below.
+
     """
     __doc__ += _docstring_extra_parameters
     __repr__ = _build_string_Cosmology
@@ -1144,17 +1148,16 @@ class Cosmology(CCLObject):
 
 
 class CosmologyVanillaLCDM(Cosmology):
-    """A cosmology with typical flat Lambda-CDM parameters (``Omega_c=0.25``,
-    ``Omega_b = 0.05``, ``Omega_k = 0``, ``sigma8 = 0.81``, ``n_s = 0.96``,
-    ``h = 0.67``, no massive neutrinos).
+    """A cosmology with typical flat Lambda-CDM parameters (`Omega_c=0.25`,
+    `Omega_b = 0.05`, `Omega_k = 0`, `sigma8 = 0.81`, `n_s = 0.96`, `h = 0.67`,
+    no massive neutrinos).
 
     Args:
-        **kwargs (dict): keyword arguments passed to  the
-            `pyccl.core.Cosmology` constructor. It should not contain any of
-            the LambdaCDM parameters (``"Omega_c"``, `"Omega_b"``, ``"n_s"``,
-            ``"sigma8"``, ``"A_s"``, ``"h"``), since these are fixed.
+        **kwargs (dict): a dictionary of parameters passed as arguments
+            to the `Cosmology` constructor. It should not contain any of
+            the LambdaCDM parameters (`"Omega_c"`, `"Omega_b"`, `"n_s"`,
+            `"sigma8"`, `"A_s"`, `"h"`), since these are fixed.
     """
-
     def __init__(self, **kwargs):
         p = {'Omega_c': 0.25,
              'Omega_b': 0.05,

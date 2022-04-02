@@ -3,7 +3,7 @@ import pytest
 from unittest import mock
 from . import pyccl as ccl
 import sys
-from pyccl.boltzmann import get_isitgr_pk_lin
+from . import get_isitgr_pk_lin
 try:
     from importlib import reload
 except ImportError:

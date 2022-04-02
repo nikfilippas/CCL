@@ -2,18 +2,17 @@ from .. import ccllib as lib
 from ..core import check
 from ..background import omega_x
 from ..pyutils import warn_api, deprecate_attr, deprecated
-from ..emulator import Emulator, EmulatorObject
-from ..base import CCLHalosObject
 from .massdef import MassDef, MassDef200m, MassDef200c
+from ..emulator import Emulator, EmulatorObject
+from ..parameters import physical_constants
+from ..base import CCLHalosObject
 import numpy as np
 from scipy.interpolate import interp1d
 
 
 class MassFunc(CCLHalosObject):
     """ This class enables the calculation of halo mass functions.
-
-    We currently assume that all analytical mass function implementations
-    can be written as
+    We currently assume that all mass functions can be written as
 
     .. math::
         \\frac{dn}{d\\log_{10}M} = f(\\sigma_M)\\,\\frac{\\rho_M}{M}\\,
@@ -29,14 +28,17 @@ class MassFunc(CCLHalosObject):
       the ``get_mass_function`` method, via multiple inheritance with
       ``pyccl.emulator.Emulator``.
 
+    * Subclasses may have particular implementations of
+      ``_check_mass_def_strict`` to ensure consistency of the halo mass
+      definition.
+
     Args:
         mass_def (:class:`~pyccl.halos.massdef.MassDef`):
             a mass definition object that fixes
             the mass definition used by this mass function
             parametrization.
-        mass_def_strict (bool):
-            If False, consistency of the mass definition will be ignored.
-            The default is True.
+        mass_def_strict (bool): if False, consistency of the mass
+            definition will be ignored.
     """
     name = 'default'
 
@@ -131,7 +133,7 @@ class MassFunc(CCLHalosObject):
             om_matt = omega_x(cosmo, a, 'matter')
             return delta * om_this / om_matt
 
-    @warn_api(pairs=[("mass_def_other", "mdef_other")])
+    @warn_api(pairs=[("mdef_other", "mass_def_other")])
     def get_mass_function(self, cosmo, M, a, *, mass_def_other=None):
         """ Returns the mass function for input parameters.
 
@@ -163,7 +165,7 @@ class MassFunc(CCLHalosObject):
                                                    len(logM), status)
         check(status)
 
-        rho = (lib.cvar.constants.RHO_CRITICAL *
+        rho = (physical_constants.RHO_CRITICAL *
                cosmo['Omega_m'] * cosmo['h']**2)
         f = self._get_fsigma(cosmo, sigM, a, 2.302585092994046 * logM)
         mf = f * rho * dlns_dlogM / M_use
@@ -774,8 +776,8 @@ class MassFuncBocquet20(MassFunc, Emulator):
             This parametrization accepts SO masses with
             Delta = 200 critical.
         mass_def_strict (bool):
-            If False, consistency of the mass definition
-            will be ignored. The default is True.
+            This emulator only accepts SO masses with Delta = 20 critical.
+            If False, an exception will be raised.
         extrapolate (bool):
             If True, the queried mass range outside of the emulator's
             training mass range will be extrapolated in log-space,
@@ -788,10 +790,18 @@ class MassFuncBocquet20(MassFunc, Emulator):
     def __init__(self, *, mass_def=None, mass_def_strict=True,
                  extrapolate=True):
         self.extrapolate = extrapolate
+        if mass_def_strict is False:
+            # this will trigger an exception
+            mass_def_strict = True
         super().__init__(mass_def=mass_def, mass_def_strict=mass_def_strict)
 
     def _default_mass_def(self):
         self.mass_def = MassDef200c()
+
+    def _check_mass_def_strict(self, mass_def):
+        if (mass_def.Delta, mass_def.rho_type) != (200, "critical"):
+            return True
+        return False
 
     def _load_emu(self):
         from MiraTitanHMFemulator import Emulator as HMFemu
@@ -803,7 +813,7 @@ class MassFuncBocquet20(MassFunc, Emulator):
         return EmulatorObject(model, bounds)
 
     def _build_parameters(self, cosmo=None, M=None, a=None):
-        from pyccl.neutrinos import Omega_nu_h2
+        from ..neutrinos import Omega_nu_h2
         # check input
         if (cosmo is not None) and (a is None):
             raise ValueError("Need value for scale factor")
@@ -815,9 +825,11 @@ class MassFuncBocquet20(MassFunc, Emulator):
             T_CMB = cosmo["T_CMB"]
             Omega_c = cosmo["Omega_c"]
             Omega_b = cosmo["Omega_b"]
-            Omega_nu_h2 = Omega_nu_h2(a, m_nu=m_nu, T_CMB=T_CMB)
+            # Neutrinos are treated as a background quantity
+            # and are rescaled internally.
+            Omega_nu_h2 = Omega_nu_h2(1., m_nu=m_nu, T_CMB=T_CMB)
 
-            self._parameters["Ommh2"] = (Omega_c + Omega_b)*h**2 + Omega_nu_h2
+            self._parameters["Ommh2"] = (Omega_c + Omega_b)*h**2
             self._parameters["Ombh2"] = Omega_b * h**2
             self._parameters["Omnuh2"] = Omega_nu_h2
             self._parameters["n_s"] = cosmo["n_s"]
