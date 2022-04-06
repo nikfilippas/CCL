@@ -152,109 +152,6 @@ class Pk2D(CCLObject):
         check(status)
         self.has_psp = True
 
-    def eval(self, k, a, cosmo=None, *, derivative=False):
-        """Evaluate power spectrum or its logarithmic derivative:
-
-        .. math::
-           \\frac{d\\log P(k,a)}{d\\log k}
-
-        Args:
-            k (float or array_like): wavenumber value(s) in units of Mpc^-1.
-            a (float): value of the scale factor
-            cosmo (:class:`~pyccl.core.Cosmology`): Cosmology object. The
-                cosmology object is needed in order to evaluate the power
-                spectrum outside the interpolation range in `a`. E.g. if you
-                want to evaluate the power spectrum at a very small a, not
-                covered by the arrays you passed when initializing this object,
-                the power spectrum will be extrapolated from the earliest
-                available value using the linear growth factor (for which a
-                cosmology is needed). If no Cosmology is passed, attempting
-                to evaluate the power spectrum outside of the scale factor
-                boundaries will raise an exception.
-
-        Returns:
-            float or array_like: value(s) of the power spectrum.
-        """
-        # determine if logarithmic derivative is needed
-        if not derivative:
-            eval_funcs = lib.pk2d_eval_single, lib.pk2d_eval_multi
-        else:
-            eval_funcs = lib.pk2d_der_eval_single, lib.pk2d_der_eval_multi
-
-        # handle scale factor extrapolation
-        if cosmo is None:
-            from .core import CosmologyVanillaLCDM
-            cosmo_use = CosmologyVanillaLCDM()  # this is not used anywhere
-            self.psp.extrap_linear_growth = 404  # flag no extrapolation
-        else:
-            cosmo_use = cosmo
-            # make sure we have growth factors for extrapolation
-            cosmo.compute_growth()
-
-        status = 0
-        cospass = cosmo_use.cosmo
-
-        if isinstance(k, int):
-            k = float(k)
-        if isinstance(k, float):
-            f, status = eval_funcs[0](self.psp, np.log(k), a, cospass, status)
-        else:
-            k_use = np.atleast_1d(k)
-            f, status = eval_funcs[1](self.psp, np.log(k_use), a, cospass,
-                                      k_use.size, status)
-
-        # handle scale factor extrapolation
-        if cosmo is None:
-            self.psp.extrap_linear_growth = 401  # revert flag 404
-
-        try:
-            check(status, cosmo_use)
-        except CCLError as err:
-            if (cosmo is None) and ("CCL_ERROR_SPLINE_EV" in str(err)):
-                raise TypeError(
-                    "Pk2D evaluation scale factor is outside of the "
-                    "interpolation range. To extrapolate, pass a "
-                    "Cosmology.", err)
-            else:
-                raise err
-
-        return f
-
-    def eval_dlPk_dlk(self, k, a, cosmo=None):
-        """Evaluate logarithmic derivative. See ``Pk2d.eval`` for details."""
-        f = self.eval(k, a, cosmo=cosmo, derivative=True)
-        return f
-
-    @functools.wraps(eval_dlPk_dlk)
-    @deprecated(eval_dlPk_dlk)
-    def eval_dlogpk_dlogk(self, k, a, cosmo):
-        return self.eval_dlPk_dlk(k, a, cosmo)
-
-    def __call__(self, k, a, cosmo=None, *, derivative=False):
-        """Callable vectorized instance."""
-        out = np.array([self.eval(k, aa, cosmo, derivative=derivative)
-                        for aa in np.atleast_1d(a).astype(float)])
-        return out.squeeze()[()]
-
-    def copy(self):
-        """Return a copy of this Pk2D object."""
-        if not self.has_psp:
-            return Pk2D(empty=True)
-
-        a_arr, lk_arr, pk_arr = self.get_spline_arrays()
-
-        is_logp = bool(self.psp.is_log)
-        if is_logp:
-            # log in-place
-            np.log(pk_arr, out=pk_arr)
-
-        pk2d = Pk2D(a_arr=a_arr, lk_arr=lk_arr, pk_arr=pk_arr,
-                    is_logp=is_logp,
-                    extrap_order_lok=self.psp.extrap_order_lok,
-                    extrap_order_hik=self.psp.extrap_order_hik)
-
-        return pk2d
-
     @classmethod
     def from_model(cls, cosmo, model):
         """`Pk2D` constructor returning the power spectrum associated with
@@ -387,6 +284,109 @@ class Pk2D(CCLObject):
             self = pk_nonlin
         return cosmo.baryon_correct(model, self)
 
+    def eval(self, k, a, cosmo=None, *, derivative=False):
+        """Evaluate power spectrum or its logarithmic derivative:
+
+        .. math::
+           \\frac{d\\log P(k,a)}{d\\log k}
+
+        Args:
+            k (float or array_like): wavenumber value(s) in units of Mpc^-1.
+            a (float): value of the scale factor
+            cosmo (:class:`~pyccl.core.Cosmology`): Cosmology object. The
+                cosmology object is needed in order to evaluate the power
+                spectrum outside the interpolation range in `a`. E.g. if you
+                want to evaluate the power spectrum at a very small a, not
+                covered by the arrays you passed when initializing this object,
+                the power spectrum will be extrapolated from the earliest
+                available value using the linear growth factor (for which a
+                cosmology is needed). If no Cosmology is passed, attempting
+                to evaluate the power spectrum outside of the scale factor
+                boundaries will raise an exception.
+
+        Returns:
+            float or array_like: value(s) of the power spectrum.
+        """
+        # determine if logarithmic derivative is needed
+        if not derivative:
+            eval_funcs = lib.pk2d_eval_single, lib.pk2d_eval_multi
+        else:
+            eval_funcs = lib.pk2d_der_eval_single, lib.pk2d_der_eval_multi
+
+        # handle scale factor extrapolation
+        if cosmo is None:
+            from .core import CosmologyVanillaLCDM
+            cosmo_use = CosmologyVanillaLCDM()  # this is not used anywhere
+            self.psp.extrap_linear_growth = 404  # flag no extrapolation
+        else:
+            cosmo_use = cosmo
+            # make sure we have growth factors for extrapolation
+            cosmo.compute_growth()
+
+        status = 0
+        cospass = cosmo_use.cosmo
+
+        if isinstance(k, int):
+            k = float(k)
+        if isinstance(k, float):
+            f, status = eval_funcs[0](self.psp, np.log(k), a, cospass, status)
+        else:
+            k_use = np.atleast_1d(k)
+            f, status = eval_funcs[1](self.psp, np.log(k_use), a, cospass,
+                                      k_use.size, status)
+
+        # handle scale factor extrapolation
+        if cosmo is None:
+            self.psp.extrap_linear_growth = 401  # revert flag 404
+
+        try:
+            check(status, cosmo_use)
+        except CCLError as err:
+            if (cosmo is None) and ("CCL_ERROR_SPLINE_EV" in str(err)):
+                raise TypeError(
+                    "Pk2D evaluation scale factor is outside of the "
+                    "interpolation range. To extrapolate, pass a "
+                    "Cosmology.", err)
+            else:
+                raise err
+
+        return f
+
+    def eval_dlPk_dlk(self, k, a, cosmo=None):
+        """Evaluate logarithmic derivative. See ``Pk2d.eval`` for details."""
+        f = self.eval(k, a, cosmo=cosmo, derivative=True)
+        return f
+
+    @functools.wraps(eval_dlPk_dlk)
+    @deprecated(eval_dlPk_dlk)
+    def eval_dlogpk_dlogk(self, k, a, cosmo):
+        return self.eval_dlPk_dlk(k, a, cosmo)
+
+    def __call__(self, k, a, cosmo=None, *, derivative=False):
+        """Callable vectorized instance."""
+        out = np.array([self.eval(k, aa, cosmo, derivative=derivative)
+                        for aa in np.atleast_1d(a).astype(float)])
+        return out.squeeze()[()]
+
+    def copy(self):
+        """Return a copy of this Pk2D object."""
+        if not self.has_psp:
+            return Pk2D(empty=True)
+
+        a_arr, lk_arr, pk_arr = self.get_spline_arrays()
+
+        is_logp = bool(self.psp.is_log)
+        if is_logp:
+            # log in-place
+            np.log(pk_arr, out=pk_arr)
+
+        pk2d = Pk2D(a_arr=a_arr, lk_arr=lk_arr, pk_arr=pk_arr,
+                    is_logp=is_logp,
+                    extrap_order_lok=self.psp.extrap_order_lok,
+                    extrap_order_hik=self.psp.extrap_order_hik)
+
+        return pk2d
+
     def get_spline_arrays(self):
         """Get the spline data arrays.
 
@@ -414,42 +414,37 @@ class Pk2D(CCLObject):
             if self.has_psp and hasattr(self, 'psp'):
                 lib.f2d_t_free(self.psp)
 
+    def __contains__(self, other):
+        if not (self.psp.lkmin <= other.psp.lkmin
+                and self.psp.lkmax >= other.psp.lkmax
+                and self.psp.amin <= other.psp.amin
+                and self.psp.amax >= other.psp.amax):
+            return False
+        return True
+
     def _get_binary_operator_arrays(self, other):
-        if not isinstance(other, Pk2D):
-            raise TypeError("Binary operator of Pk2D objects is only defined "
-                            "for other Pk2D objects.")
         if not (self.has_psp and other.has_psp):
             raise ValueError("Pk2D object does not have data.")
-        if (self.psp.lkmin < other.psp.lkmin
-                or self.psp.lkmax > other.psp.lkmax):
-            raise ValueError("The 2nd operand has its data defined over a "
-                             "smaller k range than the 1st operand. To avoid "
-                             "extrapolation, this operation is forbidden. If "
-                             "you want to operate on the smaller support, "
-                             "try swapping the operands.")
-        if (self.psp.amin < other.psp.amin
-                or self.psp.amax > other.psp.amax):
-            raise ValueError("The 2nd operand has its data defined over a "
-                             "smaller a range than the 1st operand. To avoid "
-                             "extrapolation, this operation is forbidden. If "
-                             "you want to operate on the smaller support, "
-                             "try swapping the operands.")
+        if self not in other:
+            raise ValueError(
+                "The 2nd operand has its data defined over a smaller range "
+                "than the 1st operand. To avoid extrapolation, this operation "
+                "is forbidden. If you want to operate on the smaller support, "
+                "try swapping the operands.")
 
         a_arr_a, lk_arr_a, pk_arr_a = self.get_spline_arrays()
         a_arr_b, lk_arr_b, pk_arr_b = other.get_spline_arrays()
-        if not (a_arr_a.size == a_arr_b.size and lk_arr_a.size == lk_arr_b.size
+        if not (a_arr_a.size == a_arr_b.size
+                and lk_arr_a.size == lk_arr_b.size
                 and np.allclose(a_arr_a, a_arr_b)
                 and np.allclose(lk_arr_a, lk_arr_b)):
-            warnings.warn("The arrays of the two Pk2D objects are defined at "
-                          "different points in k and/or a. The second operand "
-                          "will be interpolated for the operation.\n"
-                          "The resulting Pk2D object will be defined for "
-                          f"{self.psp.lkmin} <= log k <= {self.psp.lkmax} and "
-                          f"{self.psp.amin} <= a <= {self.psp.amax}.",
-                          category=CCLWarning)
+            warnings.warn(
+                "Operands defined over different ranges. "
+                "The result will be interpolated and clipped to "
+                f"{self.psp.lkmin} <= log k <= {self.psp.lkmax} and "
+                f"{self.psp.amin} <= a <= {self.psp.amax}.", CCLWarning)
+            pk_arr_b = other(np.exp(lk_arr_a), a_arr_a)
 
-            pk_arr_b = np.array([other.eval(k=np.exp(lk_arr_a), a=a_,)
-                                 for a_ in a_arr_a])
         return a_arr_a, lk_arr_a, pk_arr_a, pk_arr_b
 
     def __add__(self, other):
@@ -489,6 +484,16 @@ class Pk2D(CCLObject):
         self = self.__add__(other)
         return self
 
+    def __sub__(self, other):
+        return self + (-1)*other
+
+    __rsub__ = __sub__
+
+    @unlock_instance(mutate=True)
+    def __isub__(self, other):
+        self = self.__sub__(other)
+        return self
+
     def __mul__(self, other):
         """Multiply two Pk2D instances.
 
@@ -525,17 +530,27 @@ class Pk2D(CCLObject):
         self = self.__mul__(other)
         return self
 
+    def __truediv__(self, other):
+        return self * other**(-1)
+
+    __rtruediv__ = __truediv__
+
+    @unlock_instance(mutate=True)
+    def __itruediv__(self, other):
+        self = self.__div__(other)
+        return self
+
     def __pow__(self, exponent):
         """Take a Pk2D instance to a power.
         """
         if not isinstance(exponent, (float, int)):
-            raise TypeError("Exponentiation of Pk2D is only defined for "
-                            "floats and ints.")
+            raise TypeError(
+                "Exponentiation of Pk2D is only defined for floats and ints.")
         a_arr_a, lk_arr_a, pk_arr_a = self.get_spline_arrays()
         if np.any(pk_arr_a < 0) and exponent % 1 != 0:
-            warnings.warn("Taking a non-positive Pk2D object to a non-integer "
-                          "power may lead to unexpected results",
-                          category=CCLWarning)
+            warnings.warn(
+                "Taking a non-positive Pk2D object to a non-integer "
+                "power may lead to unexpected results", CCLWarning)
 
         pk_arr_new = pk_arr_a**exponent
 
@@ -549,6 +564,13 @@ class Pk2D(CCLObject):
                    extrap_order_hik=self.extrap_order_hik)
 
         return new
+
+    __rpow__ = __pow__
+
+    @unlock_instance(mutate=True)
+    def __ipow__(self, other):
+        self = self.__pow__(other)
+        return self
 
 
 @warn_api
