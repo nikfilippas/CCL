@@ -1,203 +1,114 @@
 from . import ccllib as lib
-from .base import CCLObject, unlock_instance
-
-
-class ParamStruct(CCLObject):
-    """Dict-like structure with option to freeze keys and/or values.
-
-    Parameters:
-        dic (``dict``):
-            Dictionary of parameters and values
-        lock_params (``bool``):
-            Switch to disable new parameter creation.
-        lock_values (``bool``):
-            Switch to make the parameter values immutable.
-
-    Attributes:
-        locked (``(bool, bool)``):
-            Lock state of the object.
-        """
-    _locked_params = False
-    _locked_values = False
-
-    def __init__(self, dic, lock_params=False, lock_values=False):
-        self._locked_state_bak = (lock_params, lock_values)  # save lock state
-        self.locked = (self._locked_state_bak)
-        self._setup(dic)
-
-    def _setup(self, dic):
-        self._unlock()
-        for param, value in dic.items():
-            # use setattr from `object` to bypass restrictions from this class
-            object.__setattr__(self, param, value)
-        self._lock()
-
-    @property
-    def locked(self):
-        return self._locked_params, self._locked_values
-
-    @locked.setter
-    def locked(self, state):
-        try:
-            params, values = state
-        except TypeError:
-            raise ValueError(
-                "ParamStruct setter state must contain both lock states.")
-        else:
-            self._locked_params = params
-            self._locked_values = values
-
-    @unlock_instance(mutate=False)
-    def _lock(self):
-        """Return object to the saved lock state."""
-        self.locked = self._locked_state_bak
-
-    @unlock_instance(mutate=False)
-    def _unlock(self):
-        """Unlock the object."""
-        self.locked = (False, False)
-
-    @unlock_instance(mutate=True)
-    def reload(self):
-        """Reload the object."""
-        dic = CCLParameters.from_struct(self._name)
-        self._setup(dic)
-
-    def copy(self):
-        """Return a copy of this object."""
-        return ParamStruct(self.__dict__, *self.locked)
-
-    @unlock_instance(mutate=True)
-    def __setattr__(self, param, value):
-        if self._locked_values and param in self._public():
-            # do not allow change of value (immutable values)
-            raise NotImplementedError(
-                f"Values of {self._name} are immutable.")
-        if self._locked_params and not hasattr(self, param):
-            # do not allow insertion of parameter
-            raise KeyError(
-                f"CCL global parameter {param} does not exist.")
-        if ("SPLINE_TYPE" in param) and (value is not None):
-            # do not allow change of spline type
-            raise RuntimeError(
-                "CCL spline types are immutable.")
-        if (param == "A_SPLINE_MAX") and (value != 1.0):
-            # do not allow change of max scale factor
-            raise RuntimeError(
-                "A_SPLINE_MAX is fixed to 1.0 and is not mutable.")
-        super.__setattr__(self, param, value)
-
-    def __getitem__(self, param):
-        return getattr(self, param)
-
-    def __setitem__(self, param, value):
-        setattr(self, param, value)
-
-    def __repr__(self):
-        params = self.keys()
-        s = "<pyccl.constants.ParamStruct>\n"
-        for i, param in enumerate(params):
-            s += " {" if i == 0 else "  "
-            s += f"'{param}': {getattr(self, param)}"
-            s += "}" if i == len(params)-1 else ",\n"
-        return s
-
-    def _public(self):
-        """Access all public attributes of an instance of this class."""
-        return {param: value
-                for param, value in vars(self).items()
-                if not param.startswith("_")}
-
-    def keys(self):
-        return self._public().keys()
-
-    def values(self):
-        return self._public().values()
-
-    def items(self):
-        return self._public().items()
 
 
 class CCLParameters:
-    """Container class with methods to manipulate ``ParamStruct`` dicts."""
+    """Base for singletons holding global CCL parameters and their values.
+
+    Subclasses contain a pointer to the C-struct with the collection
+    of parameters and their values (via SWIG), as well as a Python-level
+    copy of every parameter and value. These are managed simultaneously
+    for the life of the singleton's instance.
+
+    Subclasses automatically store a backup of the initial parameter state
+    to enable ad hoc reloading.
+    """
+    _instances = {}
+
+    def __init_subclass__(cls, ctype=None, cinstance=None,
+                          freeze=False, **kwargs):
+        """Routine for subclass initialization.
+
+        Parameters:
+            ctype (``type``):
+                Pointer to the definition of the C-struct. In SWIG,
+                this is the class whose instance is a parameter collection.
+            cinstance (``instance``):
+                The instance where the default parameters are implemented.
+                ``cinstance`` should be an instance of ``ctype``.
+            freeze (``bool``):
+                Disallow mutation of the parameters.
+        """
+        cls._ctype = ctype
+        cls._cinstance = cinstance
+        cls._frozen = freeze
+        super().__init_subclass__(**kwargs)
+
+    def __new__(cls, *args, **kwargs):
+        # Convert all subclasses to singletons.
+        if cls not in CCLParameters._instances:
+            instance = super().__new__(cls, *args, **kwargs)
+            CCLParameters._instances[cls] = instance
+        return CCLParameters._instances[cls]
+
+    def __init__(self):
+        for attribute in dir(self._ctype):
+            if (not attribute.startswith("_")
+                    and attribute not in ["this", "thisown"]):
+                value = getattr(self._cinstance, attribute)
+                super.__setattr__(self, attribute, value)
+        self.__class__._params_bak = self.__dict__.copy()
+
+    def __setattr__(self, key, value):
+        if self._frozen:
+            name = self.__class__.__name__
+            raise AttributeError(f"Instances of {name} are frozen.")
+        if not hasattr(self._ctype, key):
+            raise KeyError(f"Parameter {key} does not exist.")
+        setattr(self._cinstance, key, value)
+        super.__setattr__(self, key, value)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    __setitem__ = __setattr__
+
+    def __repr__(self):
+        return repr(self.__dict__)
+
+    def reload(self):
+        """Reload the C-level default CCL parameters."""
+        for param, value in self.__class__._params_bak.items():
+            setattr(self._cinstance, param, value)
+            super.__setattr__(self, param, value)
 
     @classmethod
-    def get_struct(cls, name):
-        """Helper to lookup C-level struct via SWIG multiple levels deep."""
-        lookup = lib  # start in lib
-        names = name.split(".")
-        while len(names) > 0:
-            # go one level deeper as long as multiple levels exist
-            lookup = getattr(lookup, names.pop(0))
-        return lookup
-
-    @classmethod
-    def from_struct(cls, name, constants=False):
-        """Construct a ``ParamStruct`` dict containing CCL parameters
-        sourced from the C-layer.
+    def from_cosmo(cls, cosmo):
+        """Return a dictionary of accuracy parameters and their values.
 
         Arguments:
-            name (``str``):
-                Name of the SWIG-generated function which passes the
-                parameters defined at the C-layer struct.
-            constants (``bool``):
-                Switch to make the parameter values immutable.
-
-        Returns:
-            ``ParamStruct``:
-                Frozen dictionary of default parameters.
+            cosmo (``pyccl.ccllib.cosmology``):
+                Input cosmology via SWIG.
         """
-        params = {"_name": name}  # store the ccllib function name
-        struct = cls.get_struct(name)
-        for param in dir(struct):
-            if not param.startswith("_") and param not in ["this", "thisown"]:
-                params[param] = getattr(struct, param)
-        return ParamStruct(params, lock_params=True, lock_values=constants)
-
-    @classmethod
-    def from_cosmo(cls, cosmo, name):
-        """Retrieve the numerical parameters ``name`` from ``Cosmology.cosmo``.
-
-        Arguments
-            cosmo (``SWIG``: ``ccl_cosmology``):
-                The ``ccl_cosmology`` struct via ``SWIG``.
-            name (``'gsl_params'``, ``'spline_params'``):
-                The parameters to retrieve.
-        """
-        attr = getattr(cosmo, name)
-        from . import gsl_params, spline_params  # noqa
-        out = vars()[name].copy()
-        for param in out.keys():
-            if "SPLINE_TYPE" in param:
-                continue
-            if param == "A_SPLINE_MAX":
-                continue
-            out[param] = getattr(attr, param)
+        out = {}
+        for param_set in ["spline_params", "gsl_params"]:
+            for param in globals()[param_set].__dict__:  # access module vars
+                value = getattr(getattr(cosmo, param_set), param)
+                out[param] = value if isinstance(value, (int, float)) else None
         return out
 
-    @classmethod
-    def populate(cls, cosmo):
-        """Populate the parameters of ``Cosmology.cosmo`` with those
-        stored in this instance of pyccl's config:
-            - ``pyccl.gsl_params``
-            - ``pyccl.spline_params``
 
-        Arguments:
-            cosmo (``SWIG``: ``ccl_cosmology``):
-                The ``ccl_cosmology`` struct via ``SWIG``.
-        """
-        from . import gsl_params, spline_params
-        for param, value in gsl_params.items():
-            setattr(cosmo.gsl_params, param, value)
-        for param, value in spline_params.items():
-            if "SPLINE_TYPE" in param:
-                continue
-            if param == "A_SPLINE_MAX":
-                continue
-            setattr(cosmo.spline_params, param, value)
+class SplineParams(CCLParameters,
+                   ctype=lib.spline_params,
+                   cinstance=lib.cvar.user_spline_params):
+    """The singleton instance of this class holds the spline parameters."""
+    pass
 
 
-physical_constants = CCLParameters.from_struct("cvar.constants",
-                                               constants=True)
-gsl_params = CCLParameters.from_struct("default_gsl_params")
-spline_params = CCLParameters.from_struct("default_spline_params")
+class GSLParams(CCLParameters,
+                ctype=lib.gsl_params,
+                cinstance=lib.cvar.user_gsl_params):
+    """The singleton instance of this class holds the gsl parameters."""
+    pass
+
+
+class PhysicalConstants(CCLParameters,
+                        ctype=lib.physical_constants,
+                        cinstance=lib.cvar.constants,
+                        freeze=True):
+    """The singleton instance of this class holds the physical constants."""
+    pass
+
+
+spline_params = SplineParams()
+gsl_params = GSLParams()
+physical_constants = PhysicalConstants()
