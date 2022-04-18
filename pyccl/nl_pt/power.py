@@ -7,8 +7,6 @@ from ..background import growth_factor
 from ..base import warn_api
 from .tracers import PTTracer
 
-import fastpt as fpt
-
 
 class PTCalculator(object):
     """ This class implements a set of methods that can be
@@ -86,6 +84,7 @@ class PTCalculator(object):
         else:
             self.exp_cutoff = 1
 
+        import fastpt as fpt
         self.pt = fpt.FASTPT(self.ks, to_do=to_do,
                              low_extrap=low_extrap,
                              high_extrap=high_extrap,
@@ -520,7 +519,7 @@ def get_pt_pk2d(cosmo, ptc=None, tracer1=None, tracer2=None, *,
         status = 0
         na = lib.get_pk_spline_na(cosmo.cosmo)
         a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-        check(status)
+        check(status, cosmo=cosmo)
 
     if tracer2 is None:
         tracer2 = tracer1

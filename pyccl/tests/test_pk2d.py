@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import warnings
 from . import pyccl as ccl
-from . import CCLWarning
+from . import CCLWarning, CCLDeprecationWarning
 
 
 def pk1d(k):
@@ -44,10 +44,6 @@ def test_pk2d_init():
     with pytest.raises(ValueError):
         ccl.Pk2D(pkfunc=pk1d)
     ccl.Pk2D(pkfunc=lpk2d, cosmo=cosmo)
-
-    # Input function but no cosmo
-    with pytest.raises(ValueError):
-        ccl.Pk2D(pkfunc=lpk2d)
 
     # Input arrays have incorrect sizes
     lkarr = -4.+6*np.arange(100)/99.
@@ -419,7 +415,8 @@ def test_pk2d_descriptor():
     cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
     cosmo.compute_linear_power()
     pkl = cosmo.get_linear_power()
-    pk1 = ccl.Pk2D.apply_halofit(cosmo, pk_linear=pkl)
+    with pytest.warns(CCLDeprecationWarning):
+        pk1 = ccl.Pk2D.apply_halofit(cosmo, pk_linear=pkl)
     pk2 = pkl.apply_halofit(cosmo)
     assert np.all(pk1.get_spline_arrays()[-1] == pk2.get_spline_arrays()[-1])
 
@@ -490,3 +487,9 @@ def test_pk2d_operations():
     assert np.allclose(pk1.get_spline_arrays()[-1],
                        pk2.get_spline_arrays()[-1]**2,
                        rtol=1e-15)
+
+def test_pk2d_pkfunc_init_without_cosmo():
+    cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
+    arr1 = ccl.Pk2D(pkfunc=lpk2d, cosmo=cosmo).get_spline_arrays()[-1]
+    arr2 = ccl.Pk2D(pkfunc=lpk2d).get_spline_arrays()[-1]
+    assert np.allclose(arr1, arr2, rtol=0)

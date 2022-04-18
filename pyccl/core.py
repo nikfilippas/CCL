@@ -220,20 +220,21 @@ class Cosmology(CCLObject):
     # Go through all functions in the main package and the subpackages
     # and make every function that takes `cosmo` as its first argument
     # an attribute of this class.
-    from . import background, baryons, boltzmann, \
-        cells, correlations, covariances, neutrinos, \
-        pk2d, power, tk3d, tracers, halos, nl_pt
+    from . import (background, baryons, boltzmann, cells,
+                   correlations, covariances, neutrinos,
+                   pk2d, power, tk3d, tracers, halos, nl_pt)
     subs = [background, boltzmann, baryons, cells, correlations, covariances,
             neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt]
     funcs = [getmembers(sub, isfunction) for sub in subs]
     funcs = [func for sub in funcs for func in sub]
     for name, func in funcs:
-        pars = signature(func).parameters
-        if list(pars)[0] == "cosmo":
+        pars = list(signature(func).parameters)
+        if pars and pars[0] == "cosmo":
             vars()[name] = func
-    del background, boltzmann, baryons, cells, correlations, covariances, \
-        neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt, \
-        subs, funcs, func, name, pars  # clear unnecessary locals
+    # clear unnecessary locals
+    del (background, boltzmann, baryons, cells, correlations, covariances,
+         neutrinos, pk2d, power, tk3d, tracers, halos, nl_pt,
+         subs, funcs, func, name, pars)
 
     @warn_api
     def __init__(
@@ -295,17 +296,17 @@ class Cosmology(CCLObject):
         """Update any of the ``gsl_params`` or ``spline_params`` associated
         with this Cosmology object.
         """
-        from pyccl import gsl_params, spline_params
-        keys = list(gsl_params.keys()) + list(spline_params.keys())
-        set_diff = list(set(kwargs.keys()) - set(keys))
+        from .parameters import spline_params, gsl_params
+        set_diff = list(set(kwargs.keys()) - set(self._accuracy_params.keys()))
         if set_diff:
             raise ValueError(f"Parameter(s) {set_diff} not recognized.")
         for param, value in kwargs.items():
-            if param in gsl_params.keys():
-                attr = getattr(self.cosmo, "gsl_params")
-            else:
+            if hasattr(spline_params, param):
                 attr = getattr(self.cosmo, "spline_params")
+            elif hasattr(gsl_params, param):
+                attr = getattr(self.cosmo, "gsl_params")
             setattr(attr, param, value)
+        self._accuracy_params = CCLParameters.from_cosmo(self.cosmo)
 
     def write_yaml(self, filename):
         """Write a YAML representation of the parameters to file.

@@ -44,7 +44,7 @@ def get_camb_pk_lin(cosmo, *, nonlin=False):
     na = lib.get_pk_spline_na(cosmo.cosmo)
     status = 0
     a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-    check(status)
+    check(status, cosmo=cosmo)
     a_arr = np.sort(a_arr)
     zs = 1.0 / a_arr - 1
     zs = np.clip(zs, 0, np.inf)
@@ -257,7 +257,7 @@ def get_isitgr_pk_lin(cosmo):
     na = lib.get_pk_spline_na(cosmo.cosmo)
     status = 0
     a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-    check(status)
+    check(status, cosmo=cosmo)
     a_arr = np.sort(a_arr)
     zs = 1.0 / a_arr - 1
     zs = np.clip(zs, 0, np.inf)
@@ -483,7 +483,7 @@ def get_class_pk_lin(cosmo):
         na = lib.get_pk_spline_na(cosmo.cosmo)
         status = 0
         a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-        check(status)
+        check(status, cosmo=cosmo)
 
         # FIXME - getting the lowest CLASS k value from the python interface
         # appears to be broken - setting to 1e-5 which is close to the
@@ -527,19 +527,12 @@ def get_class_pk_lin(cosmo):
 
 class PowerSpectrumBACCO(PowerSpectrumEmulator):
     """ Suite of power spectrum emulators described in Arico et al. 2021
-    (arXiv:2104.14568).
+    (arXiv:2104.14568). This emulator is part of the BACCO project.
 
     These emulators are available:
       - linear: :arXiv:2104.14568
       - non-linear: :arXiv:2004.06245
       - baryon model: :arXiv:2011.15018
-
-    This emulator is part of the BACCO project.
-
-    Parameters:
-        config (dict):
-            Dictionary with the initial configuration of the emulator.
-            Defaults should work in all cases with minimal overhead.
     """
     name = "bacco"
 

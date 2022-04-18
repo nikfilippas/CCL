@@ -2,7 +2,10 @@
 well as wrappers to automatically vectorize functions."""
 from . import ccllib as lib
 from ._types import error_types
-from .errors import CCLError
+from .parameters import spline_params
+from .errors import CCLError, CCLWarning
+import functools
+import warnings
 import numpy as np
 try:
     from collections.abc import Iterable
@@ -24,14 +27,11 @@ extrap_types = {'none': lib.f1d_extrap_0,
 
 def check(status, cosmo=None):
     """Check the status returned by a ccllib function.
-
     Args:
         status (int or :obj:`~pyccl.core.error_types`):
             Flag or error describing the success of a function.
-        cosmo (:class:`~pyccl.core.Cosmology`, or
-               ``~pyccl.ccllib.cosmology``, optional):
-            A Cosmology object, or the C-level cosmology struct.
-            This is recognized internally.
+        cosmo (:class:`~pyccl.core.Cosmology`, optional):
+            A Cosmology object.
     """
     # Check for normal status (no action required)
     if status == 0:
@@ -39,10 +39,7 @@ def check(status, cosmo=None):
 
     # Get status message from Cosmology object, if there is one
     if cosmo is not None:
-        if isinstance(cosmo, lib.cosmology):
-            msg = cosmo.status_message
-        else:
-            msg = cosmo.cosmo.status_message
+        msg = cosmo.cosmo.status_message
     else:
         msg = ""
 
@@ -352,6 +349,69 @@ def _vectorize_fn6(fn, fn_vec, cosmo, x1, x2, returns_status=True):
     # Check result and return
     check(status, cosmo_in)
     return f
+
+
+def get_pk_spline_nk(cosmo=None):
+    """Get the number of sampling points in the wavenumber dimension.
+
+    Arguments:
+        cosmo (``~pyccl.ccllib.cosmology`` via SWIG, optional):
+            Input cosmology.
+    """
+    if cosmo is not None:
+        return lib.get_pk_spline_nk(cosmo.cosmo)
+    ndecades = np.log10(spline_params.K_MAX / spline_params.K_MIN)
+    return int(np.ceil(ndecades*spline_params.N_K))
+
+
+def get_pk_spline_na(cosmo=None):
+    """Get the number of sampling points in the scale factor dimension.
+
+    Arguments:
+        cosmo (``~pyccl.ccllib.cosmology`` via SWIG, optional):
+            Input cosmology.
+    """
+    if cosmo is not None:
+        return lib.get_pk_spline_na(cosmo.cosmo)
+    return spline_params.A_SPLINE_NA_PK + spline_params.A_SPLINE_NLOG_PK - 1
+
+
+def get_pk_spline_lk(cosmo=None):
+    """Get a log(k)-array with sampling rate defined by ``ccl.spline_params``
+    or by the spline parameters of the input ``cosmo``.
+
+    Arguments:
+        cosmo (``~pyccl.ccllib.cosmology`` via SWIG, optional):
+            Input cosmology.
+    """
+    nk = get_pk_spline_nk(cosmo=cosmo)
+    if cosmo is not None:
+        lk_arr, status = lib.get_pk_spline_lk(cosmo.cosmo, nk, 0)
+        check(status, cosmo)
+        return lk_arr
+    lk_arr, status = lib.get_pk_spline_lk_from_params(
+        lib.cvar.user_spline_params, nk, 0)
+    check(status)
+    return lk_arr
+
+
+def get_pk_spline_a(cosmo=None):
+    """Get an a-array with sampling rate defined by ``ccl.spline_params``
+    or by the spline parameters of the input ``cosmo``.
+
+    Arguments:
+        cosmo (``~pyccl.ccllib.cosmology`` via SWIG, optional):
+            Input cosmology.
+    """
+    na = get_pk_spline_na(cosmo=cosmo)
+    if cosmo is not None:
+        a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, 0)
+        check(status, cosmo)
+        return a_arr
+    a_arr, status = lib.get_pk_spline_a_from_params(
+        lib.cvar.user_spline_params, na, 0)
+    check(status)
+    return a_arr
 
 
 def resample_array(x_in, y_in, x_out,

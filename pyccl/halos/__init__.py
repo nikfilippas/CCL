@@ -7,7 +7,6 @@ from .massdef import (
     MassDef500c,
     MassDefVir,
     convert_concentration,
-    mass_def_from_name,
 )
 
 # Halo mass-concentration relations
@@ -89,7 +88,7 @@ from .profiles_cib import (
 
 __all__ = (
     'mass2radius_lagrangian', 'MassDef', 'MassDef200m', 'MassDef200c',
-    'MassDef500c', 'MassDefVir', 'convert_concentration', 'mass_def_from_name',
+    'MassDef500c', 'MassDefVir', 'convert_concentration',
     'Concentration', 'ConcentrationDiemer15', 'ConcentrationBhattacharya13',
     'ConcentrationPrada12', 'ConcentrationKlypin11', 'ConcentrationDuffy08',
     'ConcentrationIshiyama21', 'ConcentrationConstant',

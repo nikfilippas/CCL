@@ -5,7 +5,9 @@ from .massdef import MassDef, mass2radius_lagrangian
 from ..power import linear_matter_power, sigmaM
 from ..base import CCLHalosObject, deprecated, warn_api
 import numpy as np
+from scipy.interpolate import RBFInterpolator
 from scipy.optimize import root_scalar
+import functools
 
 
 class Concentration(CCLHalosObject):
@@ -22,10 +24,9 @@ class Concentration(CCLHalosObject):
     def __init__(self, *, mass_def=None):
         if mass_def is not None:
             if self._check_mass_def(mass_def):
-                raise ValueError("c(M) relation " + self.name +
-                                 " is not compatible with mass definition" +
-                                 " Delta = %s, " % (mass_def.Delta) +
-                                 " rho = " + mass_def.rho_type)
+                raise ValueError(
+                    f"Mass definition {mass_def.Delta}-{mass_def.rho_type} "
+                    f"is not compatible with c(M) {self.name} configuration.")
             self.mass_def = mass_def
         else:
             self._default_mass_def()
@@ -430,14 +431,31 @@ class ConcentrationIshiyama21(Concentration):
             If True, use the concentration found with the Vmax numerical
             method. Otherwise, use the concentration found with profile
             fitting. The default is False.
+        emu (bool):
+            If True, uses an emulator to compute the concentration.
+            Defaults to True.
     """
     name = 'Ishiyama21'
+    _emulator: RBFInterpolator = None
+
+    def __new__(cls, *args, **kwargs):
+        # Load emulator the first time an instance is constructed.
+        if cls._emulator is None:
+            import os
+            import pickle
+            dirname = os.path.dirname(__file__)
+            fname = os.path.join(dirname, "..", "data", "Ishiyama21_Ginv")
+            with open(os.path.abspath(fname), "rb") as f:
+                emulator = pickle.load(f)
+            cls._emulator = emulator
+        return super().__new__(cls)
 
     @warn_api(pairs=[("mdef", "mass_def")])
-    def __init__(self, *, mass_def=None, relaxed=False, Vmax=False):
+    def __init__(self, *, mass_def=None, relaxed=False, Vmax=False, emu=True):
         self.relaxed = relaxed
         self.Vmax = Vmax
-        super(ConcentrationIshiyama21, self).__init__(mass_def=mass_def)
+        self.emu = emu
+        super().__init__(mass_def=mass_def)
 
     def _default_mass_def(self):
         self.mass_def = MassDef(500, 'critical')
@@ -541,7 +559,7 @@ class ConcentrationIshiyama21(Concentration):
         status = 0
         dlns_dlogM, status = lib.dlnsigM_dlogM_vec(cosmo.cosmo, a, logM,
                                                    len(logM), status)
-        check(status)
+        check(status, cosmo=cosmo)
         return -3/np.log(10) * dlns_dlogM
 
     def _G(self, x, n_eff):
@@ -549,13 +567,31 @@ class ConcentrationIshiyama21(Concentration):
         G = x / fx**((5 + n_eff) / 6)
         return G
 
-    def _G_inv(self, arg, n_eff):
+    def _G_inv_num(self, arg, n_eff):
+        # Numerical calculation of the inverse of `_G`.
         roots = []
-        for arg, neff in zip(arg, n_eff):
-            func = lambda x: self._G(x, neff) - arg  # noqa: _G_inv Traceback
+        for val, neff in zip(arg, n_eff):
+            func = lambda x: self._G(x, neff) - val  # noqa: _G_inv Traceback
             rt = root_scalar(func, x0=1, x1=2).root.item()
             roots.append(rt)
         return np.asarray(roots)
+
+    def _G_inv_emu(self, arg, n_eff):
+        # Emulated calculation of the inverse of `_G`.
+        points = np.atleast_2d(np.c_[arg, n_eff])
+        return self._emulator(points)
+
+    def _G_inv(self, arg, n_eff):
+        argmin, neffmin = self._emulator._tree.mins
+        argmax, neffmax = self._emulator._tree.maxes
+        # check that the queried values are within the emulator boundaries
+        if (self.emu and
+            (np.all(argmin <= arg)
+             and np.all(arg <= argmax)
+             and np.all(neffmin <= n_eff)
+             and np.all(n_eff <= neffmax))):
+            return self._G_inv_emu(arg, n_eff)
+        return self._G_inv_num(arg, n_eff)
 
     def _concentration(self, cosmo, M, a):
         M_use = np.atleast_1d(M)
@@ -606,14 +642,7 @@ class ConcentrationConstant(Concentration):
             return self.c * np.ones(M.size)
 
 
+@functools.wraps(Concentration.from_name)
 @deprecated(new_function=Concentration.from_name)
 def concentration_from_name(name):
-    """ Returns halo concentration subclass from name string
-
-    Args:
-        name (string): a concentration name
-
-    Returns:
-        Concentration subclass corresponding to the input name.
-    """
     return Concentration.from_name(name)
