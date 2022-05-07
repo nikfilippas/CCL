@@ -11,6 +11,8 @@ def set_up(request):
 
     nztyp = request.param
     dirdat = os.path.dirname(__file__) + '/data/'
+    ccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1E-4
+    ccl.gsl_params.INTEGRATION_EPSREL = 1E-4
     with pytest.warns(ccl.CCLDeprecationWarning):
         cosmo = ccl.Cosmology(
             Omega_c=0.30, Omega_b=0.00, Omega_g=0, Omega_k=0,
@@ -18,8 +20,6 @@ def set_up(request):
             w0=-1, wa=0, T_CMB=2.7, transfer_function='bbks',
             mass_function='tinker',
             matter_power_spectrum='linear')
-    cosmo.cosmo.gsl_params.INTEGRATION_LIMBER_EPSREL = 1E-4
-    cosmo.cosmo.gsl_params.INTEGRATION_EPSREL = 1E-4
 
     # ell-arrays
     nls = 541
@@ -119,6 +119,8 @@ def set_up(request):
     bms['ii_22'] = read_bm(pre + 'b2b2' + post + 'ii.txt')
     bms['cc'] = read_bm(pre + 'log_cl_cc.txt')
     print('init and i/o time:', time.time() - t0)
+
+    ccl.gsl_params.reload()
 
     return cosmo, trc, lfacs, bms
 
@@ -221,3 +223,6 @@ def test_cls_spline(set_up, t1, t2, bm,
     el = np.sqrt((bmk[a1b1] * bmk[a2b2] + bmk[a1b2] * bmk[a2b1]) /
                  (2 * lfc['ells'] + 1.))
     assert np.all(np.fabs(cl - bmk[bm]) < 0.2 * el)
+
+
+ccl.gsl_params.reload()

@@ -10,7 +10,7 @@ M200 = ccl.halos.MassDef200m()
 HMF = ccl.halos.MassFuncTinker10(mass_def=M200)
 HBF = ccl.halos.HaloBiasTinker10(mass_def=M200)
 CON = ccl.halos.ConcentrationDuffy08(mass_def=M200)
-P1 = ccl.halos.HaloProfileNFW(c_m_relation=CON, fourier_analytic=True)
+P1 = ccl.halos.HaloProfileNFW(c_m_relation=CON)
 P2 = P1
 PKC = ccl.halos.Profile2pt()
 KK = np.geomspace(1E-3, 10, 32)
@@ -192,12 +192,55 @@ def test_pkhm_pk2d():
                   < 1E-4)
 
     # Standard sampling
-    pk2d = ccl.halos.halomod_Pk2D(COSMO, hmc, P1,
-                                  normprof=True)
-    pk_arr_2 = np.array([pk2d.eval(k_arr, a, COSMO)
-                         for a in a_arr])
-    assert np.all(np.fabs((pk_arr / pk_arr_2 - 1)).flatten()
-                  < 1E-4)
+    pk2d = ccl.halos.halomod_Pk2D(COSMO, hmc, P1, normprof=True)
+    pk_arr_2 = np.array([pk2d.eval(k_arr, a, COSMO) for a in a_arr])
+    assert np.all(np.fabs((pk_arr / pk_arr_2 - 1)).flatten() < 1E-4)
+
+    # Testing profiles which are not equivalent (but very close)
+    G1 = ccl.halos.HaloProfileHOD(c_m_relation=CON, lMmin_0=12.00000)
+    G2 = ccl.halos.HaloProfileHOD(c_m_relation=CON, lMmin_0=11.99999)
+    assert G1 != G2
+
+    # I_1_1
+    pk0 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
+                                           prof2=G1, normprof=False,
+                                           normprof2=False)
+    pk1 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
+                                           prof2=G2, normprof=False,
+                                           normprof2=False)
+    assert np.allclose(pk1, pk0, rtol=1e-4)
+
+    # Profile normalization
+    pk0 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
+                                           prof2=G1, normprof=True,
+                                           normprof2=True)
+    pk1 = ccl.halos.halomod_power_spectrum(COSMO, hmc, k_arr, a_arr, G1,
+                                           prof2=G2, normprof=True,
+                                           normprof2=True)
+    assert np.allclose(pk1, pk0, rtol=1e-4)
+
+    # I_0_2 & I_1_2
+    assert np.allclose(hmc.I_0_2(COSMO, KK, AA, P1, prof_2pt=PKC),
+                       hmc.I_0_2(COSMO, KK, AA, P1, prof2=P1, prof_2pt=PKC),
+                       rtol=0)
+    assert np.allclose(hmc.I_1_2(COSMO, KK, AA, P1, prof_2pt=PKC),
+                       hmc.I_1_2(COSMO, KK, AA, P1, prof2=P1, prof_2pt=PKC),
+                       rtol=0)
+    # I_0_22
+    I0 = hmc.I_0_22(COSMO, KK, AA, P1, prof2=P1, prof3=P1, prof4=P1,
+                    prof12_2pt=PKC, prof34_2pt=PKC)
+    assert np.allclose(hmc.I_0_22(COSMO, KK, AA,
+                                  P1, prof2=P1, prof3=P1, prof4=P1,
+                                  prof12_2pt=PKC, prof34_2pt=None),
+                       I0, rtol=0)
+    assert np.allclose(hmc.I_0_22(COSMO, KK, AA,
+                                  P1, prof2=P1, prof3=None, prof4=None,
+                                  prof12_2pt=PKC, prof34_2pt=PKC),
+                       I0, rtol=0)
+    with pytest.raises(ValueError):
+        hmc.I_0_22(COSMO, KK, AA,
+                   P1, prof2=P1, prof3=None, prof4=P1,
+                   prof12_2pt=PKC, prof34_2pt=PKC)
 
     # 1h/2h transition
     def alpha0(a):  # no smoothing
@@ -268,6 +311,10 @@ def test_pkhm_errors():
         ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
                                mass_def=None)
 
+    # Wrong mass_def
+    with pytest.raises(TypeError):
+        ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF, mass_def=None)
+
     hmc = ccl.halos.HMCalculator(mass_function=HMF, halo_bias=HBF,
                                  mass_def=M200)
 
@@ -281,6 +328,10 @@ def test_pkhm_errors():
     with pytest.raises(TypeError):
         ccl.halos.halomod_power_spectrum(COSMO, hmc, KK, AA, None,
                                          normprof=False)
+    with pytest.raises(TypeError):
+        ccl.halos.halomod_Tk3D_SSC(COSMO, hmc, P1,
+                                   prof2=P1, prof3=P1, prof4="hello",
+                                   normprof=True)
 
     # Wrong prof2
     with pytest.raises(TypeError):
@@ -328,4 +379,4 @@ def test_calculator_from_string_smoke():
     hmc2 = ccl.halos.HMCalculator(
         mass_function="Tinker10", halo_bias="Tinker10", mass_def="200m")
     for attr in ["mass_function", "halo_bias", "mass_def"]:
-        assert getattr(hmc1, attr).name == getattr(hmc2, attr).name
+        assert getattr(hmc1, attr) == getattr(hmc2, attr)
