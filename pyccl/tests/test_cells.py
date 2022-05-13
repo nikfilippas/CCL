@@ -7,7 +7,7 @@ COSMO = ccl.Cosmology(
     Omega_c=0.27, Omega_b=0.045, h=0.67, sigma8=0.8, n_s=0.96,
     transfer_function='bbks', matter_power_spectrum='linear')
 PKA = ccl.Pk2D(pkfunc=lambda k, a: np.log(a/k), cosmo=COSMO)
-ZZ = np.linspace(0., 1., 200)
+ZZ = np.linspace(0., 1., 256)
 NN = np.exp(-((ZZ-0.5)/0.1)**2)
 LENS = ccl.WeakLensingTracer(COSMO, dndz=(ZZ, NN))
 
@@ -15,7 +15,7 @@ LENS = ccl.WeakLensingTracer(COSMO, dndz=(ZZ, NN))
 @pytest.mark.parametrize('p_of_k_a', [None, PKA])
 def test_cls_smoke(p_of_k_a):
     # make a set of tracers to test with
-    z = np.linspace(0., 1., 200)
+    z = np.linspace(0., 1., 256)
     n = np.exp(-((z-0.5)/0.1)**2)
     b = np.sqrt(1. + z)
     lens1 = ccl.WeakLensingTracer(COSMO, dndz=(z, n))
