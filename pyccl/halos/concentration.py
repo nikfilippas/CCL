@@ -1,142 +1,130 @@
-from .. import ccllib as lib
-from ..pyutils import check
-from ..background import growth_factor, growth_rate
-from .massdef import MassDef, mass2radius_lagrangian
-from ..power import linear_matter_power, sigmaM
+from .massdef import MassDef, _dc_NakamuraSuto
+from ..parameters import accuracy_params
+from ..pyutils import get_broadcastable
+
 import numpy as np
 from scipy.optimize import brentq, root_scalar
-import functools
+from abc import ABC, abstractmethod, abstractproperty
 
 
-class Concentration(object):
-    """ This class enables the calculation of halo concentrations.
+class Concentration(ABC):
+    """Calculations of halo concentrations.
 
-    Args:
-        mass_def (:class:`~pyccl.halos.massdef.MassDef`): a mass definition
-            object that fixes the mass definition used by this c(M)
-            parametrization.
+    Parameters
+    ----------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
     """
-    name = 'default'
 
-    def __init__(self, mass_def=None):
-        if mass_def is not None:
-            if self._check_mdef(mass_def):
-                raise ValueError(
-                    f"Mass definition {mass_def.Delta}-{mass_def.rho_type} "
-                    f"is not compatible with c(M) {self.name} configuration.")
-            self.mdef = mass_def
-        else:
-            self._default_mdef()
+    def __init__(self, mass_def):
+        if self._check_mass_def(mass_def):
+            raise ValueError(
+                f"Mass definition {mass_def.Delta}-{mass_def.rho_type} "
+                f"is not compatible with c(M) {self.name} configuration.")
+        self.mass_def = mass_def
         self._setup()
 
-    def _default_mdef(self):
-        """ Assigns a default mass definition for this object if
-        none is passed at initialization.
+    @abstractproperty
+    def name(self):
+        """Give a name to the concentration-mass relation."""
+
+    @abstractmethod
+    def _check_mass_def(self, mass_def):
+        """Runs before ``__init__`` to flag mass definition inconsistencies.
+
+        Arguments
+        ---------
+        mass_def : :class:`~pyccl.halos.massdef.MassDef`
+            Mass definition.
+
+        Returns
+        -------
+        check : bool
+            ``True`` if the input mass definition is inconsistent with this
+            parametrization. ``False`` otherwise.
         """
-        self.mdef = MassDef('fof', 'matter')
 
     def _setup(self):
-        """ Use this function to initialize any internal attributes
-        of this object. This function is called at the very end of the
-        constructor call.
+        """Runs after ``__init__`` to initialize internal attributes."""
+
+    @abstractmethod
+    def _concentration(cosmo, M, a):
+        """Specific implementation of the concentration-mass relation.
+
+        Arguments
+        ---------
+        cosmo : :class:`~pyccl.core.Cosmology`
+            Cosmological parameters.
+        M : (1, nM) ndarray
+            Halo mass in :math:`\\mathrm{M_{\\odot}}` at every ``a``.
+        a : (na, 1) ndarray
+            Scale factor.
+
+        Returns
+        -------
+        cM : (na, nM) ndarray
+            Concentration.
         """
-        pass
 
-    def _check_mdef(self, mdef):
-        """ Return False if the input mass definition agrees with
-        the definitions for which this concentration-mass relation
-        works. True otherwise. This function gets called at the
-        start of the constructor call.
+    def get_concentration(self, cosmo, M, a, *, squeeze=True):
+        """Compute the concentration.
 
-        Args:
-            mdef (:class:`~pyccl.halos.massdef.MassDef`):
-                a mass definition object.
+        Arguments
+        ---------
+        cosmo : :class:`~pyccl.core.Cosmology`
+            Cosmological parameters.
+        M : float or (..., nM, ...) array_like
+            Halo mass in :math:`\\mathrm{M_{\\odot}}`.
+        a : float or (..., na, ...) array_like
+            Scale factor.
+        squeeze : bool
+            Squeeze extra dimensions of size (1,) in the output.
+            The default is True.
 
-        Returns:
-            bool: True if the mass definition is not compatible with
-                this parametrization. False otherwise.
+        Returns
+        -------
+        cM : float or (..., na, nM, ...) array_like
+            Concentration.
         """
-        return False
-
-    def _get_consistent_mass(self, cosmo, M, a, mdef_other):
-        """ Transform a halo mass with a given mass definition into
-        the corresponding mass definition that was used to initialize
-        this object.
-
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            M (float or array_like): halo mass in units of M_sun.
-            a (float): scale factor.
-            mdef_other (:class:`~pyccl.halos.massdef.MassDef`):
-                a mass definition object.
-
-        Returns:
-            float or array_like: mass according to this object's
-            mass definition.
-        """
-        if mdef_other is not None:
-            M_use = mdef_other.translate_mass(cosmo, M, a, self.mdef)
-        else:
-            M_use = M
-        return M_use
-
-    def get_concentration(self, cosmo, M, a, mdef_other=None):
-        """ Returns the concentration for input parameters.
-
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            M (float or array_like): halo mass in units of M_sun.
-            a (float): scale factor.
-            mdef_other (:class:`~pyccl.halos.massdef.MassDef`):
-                the mass definition object that defines M.
-
-        Returns:
-            float or array_like: concentration.
-        """
-        M_use = self._get_consistent_mass(cosmo,
-                                          np.atleast_1d(M),
-                                          a, mdef_other)
-
-        c = self._concentration(cosmo, M_use, a)
-        if np.ndim(M) == 0:
-            c = c[0]
-        return c
+        a, M = map(np.asarray, [a, M])
+        a, M = get_broadcastable(a, M)
+        shp = np.broadcast_shapes(a.shape, M.shape)
+        c = self._concentration(cosmo, M, a).reshape(shp)
+        return c.squeeze()[()] if squeeze else c
 
     @classmethod
     def from_name(cls, name):
-        """ Returns halo concentration subclass from name string
+        """Get the ``Concentration`` class from its name string.
 
-        Args:
-            name (string): a concentration name
+        Arguments
+        ---------
+        name : str
+            Name of concentration.
 
-        Returns:
+        Returns
+        -------
+        Concentration : :class:`~pyccl.halos.concentration.Concentration`
             Concentration subclass corresponding to the input name.
         """
         concentrations = {c.name: c for c in cls.__subclasses__()}
-        if name in concentrations:
-            return concentrations[name]
-        else:
-            raise ValueError(f"Concentration {name} not implemented.")
+        return concentrations[name]
 
 
 class ConcentrationDiemer15(Concentration):
-    """ Concentration-mass relation by Diemer & Kravtsov 2015
-    (arXiv:1407.4730). This parametrization is only valid for
-    S.O. masses with Delta = 200-critical.
+    """Concentration-mass relation by Diemer & Kravtsov (2015)
+    :arXiv:1407.4730. Valid only for S.O. :math:`\\Delta = 200c`
+    mass definitions.
 
-    Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`):
-            a mass definition object that fixes
-            the mass definition used by this c(M)
-            parametrization.
+    Parameters
+    ----------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
+        **Note**: can't be changed for this ``Concentration`` subclass.
     """
     name = 'Diemer15'
 
-    def __init__(self, mdef=None):
-        super(ConcentrationDiemer15, self).__init__(mdef)
-
-    def _default_mdef(self):
-        self.mdef = MassDef(200, 'critical')
+    def __init__(self, mass_def=MassDef(200, 'critical')):
+        super().__init__(mass_def=mass_def)
 
     def _setup(self):
         self.kappa = 1.0
@@ -147,120 +135,84 @@ class ConcentrationDiemer15(Concentration):
         self.alpha = 1.08
         self.beta = 1.77
 
-    def _check_mdef(self, mdef):
-        if isinstance(mdef.Delta, str):
-            return True
-        elif not ((int(mdef.Delta) == 200) and
-                  (mdef.rho_type == 'critical')):
-            return True
-        return False
+    def _check_mass_def(self, mass_def):
+        return mass_def.name != "200c"
 
     def _concentration(self, cosmo, M, a):
-        M_use = np.atleast_1d(M)
+        cosmo.compute_linear_power()
+        pk = cosmo.get_linear_power()
 
-        # Compute power spectrum slope
-        R = mass2radius_lagrangian(cosmo, M_use)
-        lk_R = np.log(2.0 * np.pi / R * self.kappa)
-        # Using central finite differences
-        lk_hi = lk_R + 0.005
-        lk_lo = lk_R - 0.005
-        dlpk = np.log(linear_matter_power(cosmo, np.exp(lk_hi), a) /
-                      linear_matter_power(cosmo, np.exp(lk_lo), a))
-        dlk = lk_hi - lk_lo
-        n = dlpk / dlk
+        R = cosmo.m2r(M, species="matter", comoving=False, squeeze=False)
+        kR = 2 * np.pi / R * self.kappa
+        # kR in strictly increasing order
+        n = pk(kR[:, ::-1], a, derivative=True, grid=False)[:, ::-1]
 
-        sig = sigmaM(cosmo, M_use, a)
-        delta_c = 1.68647
-        nu = delta_c / sig
+        σM = cosmo.sigmaM(M, a, squeeze=False)
+        δc = 1.68647
+        nu = δc / σM
 
         floor = self.phi_0 + n * self.phi_1
         nu0 = self.eta_0 + n * self.eta_1
-        c = 0.5 * floor * ((nu0 / nu)**self.alpha +
-                           (nu / nu0)**self.beta)
-        if np.ndim(M) == 0:
-            c = c[0]
-
-        return c
+        return 0.5 * floor * ((nu0 / nu)**self.alpha + (nu / nu0)**self.beta)
 
 
 class ConcentrationBhattacharya13(Concentration):
-    """ Concentration-mass relation by Bhattacharya et al. 2013
-    (arXiv:1112.5479). This parametrization is only valid for
-    S.O. masses with Delta = Delta_vir, 200-matter and 200-critical.
-    By default it will be initialized for Delta = 200-critical.
+    """Concentration-mass relation by Bhattacharya et al. (2013)
+    :arXiv:1112.5479. Valid only for S.O. masses with
+    :math:`\\Delta=200m` and :math:`\\Delta=200c`.
 
-    Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`): a mass
-            definition object that fixes
-            the mass definition used by this c(M)
-            parametrization.
+    Parameters
+    ----------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
+        The default is :math:`\\Delta=200c`.
     """
     name = 'Bhattacharya13'
 
-    def __init__(self, mdef=None):
-        super(ConcentrationBhattacharya13, self).__init__(mdef)
+    def __init__(self, mass_def=MassDef(200, 'critical')):
+        super().__init__(mass_def=mass_def)
 
-    def _default_mdef(self):
-        self.mdef = MassDef(200, 'critical')
-
-    def _check_mdef(self, mdef):
-        if mdef.Delta != 'vir':
-            if isinstance(mdef.Delta, str):
-                return True
-            elif int(mdef.Delta) != 200:
-                return True
-        return False
+    def _check_mass_def(self, mass_def):
+        return mass_def.name not in ["200m", "200c"]
 
     def _setup(self):
-        if self.mdef.Delta == 'vir':
+        if self.mass_def.name == "vir":
             self.A = 7.7
             self.B = 0.9
             self.C = -0.29
-        else:  # Now Delta has to be 200
-            if self.mdef.rho_type == 'matter':
-                self.A = 9.0
-                self.B = 1.15
-                self.C = -0.29
-            else:  # Now rho_type has to be critical
-                self.A = 5.9
-                self.B = 0.54
-                self.C = -0.35
+        elif self.mass_def.name == "200m":
+            self.A = 9.0
+            self.B = 1.15
+            self.C = -0.29
+        else:  # Now, it has to be 200c.
+            self.A = 5.9
+            self.B = 0.54
+            self.C = -0.35
 
     def _concentration(self, cosmo, M, a):
-        gz = growth_factor(cosmo, a)
-        status = 0
-        delta_c, status = lib.dc_NakamuraSuto(cosmo.cosmo, a, status)
-        sig = sigmaM(cosmo, M, a)
-        nu = delta_c / sig
+        gz = cosmo.growth_factor(a, squeeze=False)
+        δc = _dc_NakamuraSuto(cosmo, a, squeeze=False)
+        sig = cosmo.sigmaM(M, a, squeeze=False)
+        nu = δc / sig
         return self.A * gz**self.B * nu**self.C
 
-
 class ConcentrationPrada12(Concentration):
-    """ Concentration-mass relation by Prada et al. 2012
-    (arXiv:1104.5130). This parametrization is only valid for
-    S.O. masses with Delta = 200-critical.
+    """Concentration-mass relation by Prada et al. (2012)
+    :arXiv:1104.5130. Valid only for S.O. masses with :math:`\\Delta = 200c`.
 
-    Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`): a mass
-            definition object that fixes
-            the mass definition used by this c(M)
-            parametrization.
+    Parameters
+    ---------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
+        **Note**: can't be changed for this ``Concentration`` subclass.
     """
     name = 'Prada12'
 
-    def __init__(self, mdef=None):
-        super(ConcentrationPrada12, self).__init__(mdef)
+    def __init__(self, mass_def=MassDef(200, 'critical')):
+        super().__init__(mass_def=mass_def)
 
-    def _default_mdef(self):
-        self.mdef = MassDef(200, 'critical')
-
-    def _check_mdef(self, mdef):
-        if isinstance(mdef.Delta, str):
-            return True
-        elif not ((int(mdef.Delta) == 200) and
-                  (mdef.rho_type == 'critical')):
-            return True
-        return False
+    def _check_mass_def(self, mass_def):
+        return mass_def.name != "200c"
 
     def _setup(self):
         self.c0 = 3.681
@@ -271,150 +223,125 @@ class ConcentrationPrada12(Concentration):
         self.i1 = 1.646
         self.be = 7.386
         self.x1 = 0.526
-        self.cnorm = 1. / self._cmin(1.393)
-        self.inorm = 1. / self._imin(1.393)
+        self.cnorm = 1 / self._cmin(1.393)
+        self.inorm = 1 / self._imin(1.393)
+
+    def _vmin(self, x, x0, v0, v1, v2):
+        return v0 + (v1 - v0) * (np.arctan(v2 * (x - x0)) / np.pi + 0.5)
 
     def _cmin(self, x):
-        return self.c0 + (self.c1 - self.c0) * \
-            (np.arctan(self.al * (x - self.x0)) / np.pi + 0.5)
+        return self._vmin(x, x0=self.x0, v0=self.c0, v1=self.c1, v2=self.al)
 
     def _imin(self, x):
-        return self.i0 + (self.i1 - self.i0) * \
-            (np.arctan(self.be * (x - self.x1)) / np.pi + 0.5)
+        return self._vmin(x, x0=self.x1, v0=self.i0, v1=self.i1, v2=self.be)
 
     def _concentration(self, cosmo, M, a):
-        sig = sigmaM(cosmo, M, a)
-        om = cosmo.cosmo.params.Omega_m
-        ol = cosmo.cosmo.params.Omega_l
-        x = a * (ol / om)**(1. / 3.)
+        x = a * (cosmo["Omega_l"] / cosmo["Omega_m"])**(1/3)
         B0 = self._cmin(x) * self.cnorm
         B1 = self._imin(x) * self.inorm
-        sig_p = B1 * sig
+
+        sig_p = B1 * cosmo.sigmaM(M, a, squeeze=False)
         Cc = 2.881 * ((sig_p / 1.257)**1.022 + 1) * np.exp(0.060 / sig_p**2)
         return B0 * Cc
 
 
 class ConcentrationKlypin11(Concentration):
-    """ Concentration-mass relation by Klypin et al. 2011
-    (arXiv:1002.3660). This parametrization is only valid for
-    S.O. masses with Delta = Delta_vir.
+    """Concentration-mass relation by Klypin et al. (2011)
+    :arXiv:1002.3660. Only valid for S.O. masses with
+    :math:`\\Delta = \\Delta_{\\mathrm{vir}}`.
 
-    Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`): a mass
-            definition object that fixes
-            the mass definition used by this c(M)
-            parametrization.
+    Parameters
+    ---------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
+        **Note**: can't be changed for this ``Concentration`` subclass.
     """
     name = 'Klypin11'
 
-    def __init__(self, mdef=None):
-        super(ConcentrationKlypin11, self).__init__(mdef)
+    def __init__(self, mass_def=MassDef('vir', 'critical')):
+        super().__init__(mass_def=mass_def)
 
-    def _default_mdef(self):
-        self.mdef = MassDef('vir', 'critical')
-
-    def _check_mdef(self, mdef):
-        if mdef.Delta != 'vir':
-            return True
-        return False
+    def _check_mass_def(self, mass_def):
+        return mass_def.name != "vir"
 
     def _concentration(self, cosmo, M, a):
-        M_pivot_inv = cosmo.cosmo.params.h * 1E-12
-        return 9.6 * (M * M_pivot_inv)**-0.075
+        c = 9.6 * (M * cosmo["h"] * 1e-12)**-0.075
+        return np.repeat(c, repeats=a.size, axis=0)
 
 
 class ConcentrationDuffy08(Concentration):
-    """ Concentration-mass relation by Duffy et al. 2008
-    (arXiv:0804.2486). This parametrization is only valid for
-    S.O. masses with Delta = Delta_vir, 200-matter and 200-critical.
-    By default it will be initialized for Delta = 200-critical.
+    """Concentration-mass relation by Duffy et al. (2008)
+    :arXiv:0804.2486. Only valid for S.O. masses with
+    :math:`\\Delta = \\Delta_{\\mathrm{vir}}`,
+    :math:`\\Delta = 200m`,
+    or :math:`\\Delta = 200c`.
 
-    Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`): a mass
-            definition object that fixes
-            the mass definition used by this c(M)
-            parametrization.
+    Parameters
+    ---------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
     """
     name = 'Duffy08'
 
-    def __init__(self, mdef=None):
-        super(ConcentrationDuffy08, self).__init__(mdef)
+    def __init__(self, mass_def=MassDef(200, 'critical')):
+        super().__init__(mass_def=mass_def)
 
-    def _default_mdef(self):
-        self.mdef = MassDef(200, 'critical')
-
-    def _check_mdef(self, mdef):
-        if mdef.Delta != 'vir':
-            if isinstance(mdef.Delta, str):
-                return True
-            elif int(mdef.Delta) != 200:
-                return True
-        return False
+    def _check_mass_def(self, mass_def):
+        return mass_def.name not in ["vir", "200m", "200c"]
 
     def _setup(self):
-        if self.mdef.Delta == 'vir':
+        if self.mass_def.name == 'vir':
             self.A = 7.85
             self.B = -0.081
             self.C = -0.71
-        else:  # Now Delta has to be 200
-            if self.mdef.rho_type == 'matter':
-                self.A = 10.14
-                self.B = -0.081
-                self.C = -1.01
-            else:  # Now rho_type has to be critical
-                self.A = 5.71
-                self.B = -0.084
-                self.C = -0.47
+        elif self.mass_def.name == "200m":
+            self.A = 10.14
+            self.B = -0.081
+            self.C = -1.01
+        else:  # Now, it has to be 200c.
+            self.A = 5.71
+            self.B = -0.084
+            self.C = -0.47
 
     def _concentration(self, cosmo, M, a):
-        M_pivot_inv = cosmo.cosmo.params.h * 5E-13
-        return self.A * (M * M_pivot_inv)**self.B * a**(-self.C)
+        return self.A * (M * cosmo["h"] * 5e-13)**self.B * a**(-self.C)
 
 
 class ConcentrationIshiyama21(Concentration):
-    """ Concentration-mass relation by Ishiyama et al. 2021
-    (arXiv:2007.14720). This parametrization is only valid for
-    S.O. masses with Delta = Delta_vir, 200-critical and 500-critical.
-    By default it will be initialized for Delta = 500-critical.
+    """Concentration-mass relation by Ishiyama et al. (2021)
+    :arXiv:2007.14720. Only valid for S.O. masses with
+    :math:`\\Delta = \\Delta_{\\mathrm{vir}}`,
+    :math:`\\Delta = 200c`,
+    or :math:`\\Delta = 500c`.
 
-    Args:
-        mdef (:class:`~pyccl.halos.massdef.MassDef`):
-            a mass definition object that fixes the mass definition
-            used by this c(M) parametrization.
-        relaxed (bool):
-            If True, use concentration for relaxed halos. Otherwise,
-            use concentration for all halos. The default is False.
-        Vmax (bool):
-            If True, use the concentration found with the Vmax numerical
-            method. Otherwise, use the concentration found with profile
-            fitting. The default is False.
+    Parameters
+    ----------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`
+        Mass definition for this :math:`c(M)` parametrization.
+    relaxed : bool
+        If True, use concentration for relaxed halos. Otherwise,
+        use concentration for all halos. The default is False.
+    Vmax : bool
+        If True, use the concentration found with the Vmax numerical
+        method. Otherwise, use the concentration found with profile
+        fitting. The default is False.
     """
     name = 'Ishiyama21'
 
-    def __init__(self, mdef=None, relaxed=False, Vmax=False):
+    def __init__(self, mass_def=MassDef(500, 'critical'),
+                 relaxed=False, Vmax=False):
         self.relaxed = relaxed
         self.Vmax = Vmax
-        super().__init__(mass_def=mdef)
+        super().__init__(mass_def=mass_def)
 
-    def _default_mdef(self):
-        self.mdef = MassDef(500, 'critical')
-
-    def _check_mdef(self, mdef):
-        if mdef.Delta != 'vir':
-            if isinstance(mdef.Delta, str):
-                return True
-            elif mdef.rho_type != 'critical':
-                return True
-            elif mdef.Delta not in [200, 500]:
-                return True
-            elif (mdef.Delta == 500) and self.Vmax:
-                return True
-        return False
+    def _check_mass_def(self, mass_def):
+        is_500Vmax = mass_def.Delta == 500 and self.Vmax
+        return mass_def.name not in ["vir", "200c", "500c"] or is_500Vmax
 
     def _setup(self):
         if self.Vmax:  # use numerical method
             if self.relaxed:  # fit only relaxed halos
-                if self.mdef.Delta == 'vir':
+                if self.mass_def.name == 'vir':
                     self.kappa = 2.40
                     self.a0 = 2.27
                     self.a1 = 1.80
@@ -429,7 +356,7 @@ class ConcentrationIshiyama21(Concentration):
                     self.b1 = 9.24
                     self.c_alpha = 0.51
             else:  # fit all halos
-                if self.mdef.Delta == 'vir':
+                if self.mass_def.name == 'vir':
                     self.kappa = 0.76
                     self.a0 = 2.34
                     self.a1 = 1.82
@@ -445,61 +372,54 @@ class ConcentrationIshiyama21(Concentration):
                     self.c_alpha = 0.32
         else:  # use profile fitting method
             if self.relaxed:  # fit only relaxed halos
-                if self.mdef.Delta == 'vir':
+                if self.mass_def.Delta == 'vir':
                     self.kappa = 1.22
                     self.a0 = 2.52
                     self.a1 = 1.87
                     self.b0 = 2.13
                     self.b1 = 4.19
                     self.c_alpha = -0.017
-                else:  # now it's either 200c or 500c
-                    if int(self.mdef.Delta) == 200:
-                        self.kappa = 0.60
-                        self.a0 = 2.14
-                        self.a1 = 2.63
-                        self.b0 = 1.69
-                        self.b1 = 6.36
-                        self.c_alpha = 0.37
-                    else:  # now it's 500c
-                        self.kappa = 0.38
-                        self.a0 = 1.44
-                        self.a1 = 3.41
-                        self.b0 = 2.86
-                        self.b1 = 2.99
-                        self.c_alpha = 0.42
+                elif self.mass_def.name == "200c":
+                    self.kappa = 0.60
+                    self.a0 = 2.14
+                    self.a1 = 2.63
+                    self.b0 = 1.69
+                    self.b1 = 6.36
+                    self.c_alpha = 0.37
+                else:  # now it's 500c
+                    self.kappa = 0.38
+                    self.a0 = 1.44
+                    self.a1 = 3.41
+                    self.b0 = 2.86
+                    self.b1 = 2.99
+                    self.c_alpha = 0.42
             else:  # fit all halos
-                if self.mdef.Delta == 'vir':
+                if self.mass_def.name == 'vir':
                     self.kappa = 1.64
                     self.a0 = 2.67
                     self.a1 = 1.23
                     self.b0 = 3.92
                     self.b1 = 1.30
                     self.c_alpha = -0.19
-                else:  # now it's either 200c or 500c
-                    if int(self.mdef.Delta) == 200:
-                        self.kappa = 1.19
-                        self.a0 = 2.54
-                        self.a1 = 1.33
-                        self.b0 = 4.04
-                        self.b1 = 1.21
-                        self.c_alpha = 0.22
-                    else:  # now it's 500c
-                        self.kappa = 1.83
-                        self.a0 = 1.95
-                        self.a1 = 1.17
-                        self.b0 = 3.57
-                        self.b1 = 0.91
-                        self.c_alpha = 0.26
+                elif self.mass_def.name == "200c":
+                    self.kappa = 1.19
+                    self.a0 = 2.54
+                    self.a1 = 1.33
+                    self.b0 = 4.04
+                    self.b1 = 1.21
+                    self.c_alpha = 0.22
+                else:  # now it's 500c
+                    self.kappa = 1.83
+                    self.a0 = 1.95
+                    self.a1 = 1.17
+                    self.b0 = 3.57
+                    self.b1 = 0.91
+                    self.c_alpha = 0.26
 
     def _dlsigmaR(self, cosmo, M, a):
-        # kappa multiplies radius, so in log, 3*kappa multiplies mass
-        logM = 3*np.log10(self.kappa) + np.log10(M)
-
-        status = 0
-        dlns_dlogM, status = lib.dlnsigM_dlogM_vec(cosmo.cosmo, a, logM,
-                                                   len(logM), status)
-        check(status, cosmo=cosmo)
-        return -3/np.log(10) * dlns_dlogM
+        # κ multiplies radius, so in log, κ^3 multiplies mass
+        dlnsigM_dlogM = cosmo.dlnsigM_dlogM(M*self.kappa**3, a, squeeze=False)
+        return -3/np.log(10) * dlnsigM_dlogM
 
     def _G(self, x, n_eff):
         fx = np.log(1 + x) - x / (1 + x)
@@ -508,65 +428,57 @@ class ConcentrationIshiyama21(Concentration):
 
     def _G_inv(self, arg, n_eff):
         # Numerical calculation of the inverse of `_G`.
-        roots = []
-        for val, neff in zip(arg, n_eff):
+        shp = arg.shape
+        out = np.empty(np.product(shp))
+        arg, n_eff = map(np.ndarray.flatten, [arg, n_eff])
+
+        # TODO: We can replace the root finding with a spline for speed.
+        for i, (val, neff) in enumerate(zip(arg, n_eff)):
             func = lambda x: self._G(x, neff) - val  # noqa: _G_inv Traceback
+            EPS, NIT = accuracy_params.EPSREL, accuracy_params.N_ITERATION_ROOT
             try:
-                rt = brentq(func, a=0.05, b=200)
+                out[i] = brentq(func, a=0.05, b=200, rtol=EPS, maxiter=NIT)
             except ValueError:
-                # No root in [0.05, 200] (rare, but it may happen).
-                rt = root_scalar(func, x0=1, x1=2).root.item()
-            roots.append(rt)
-        return np.asarray(roots)
+                # No root in [0.05, 200] (rare, but it may happen)
+                res = root_scalar(func, x0=1, x1=2, xtol=EPS, maxiter=NIT)
+                out[i] = res.root.item()
+
+        return out.reshape(shp).squeeze()[()]
 
     def _concentration(self, cosmo, M, a):
-        M_use = np.atleast_1d(M)
-
-        nu = 1.686 / sigmaM(cosmo, M_use, a)
-        n_eff = -2 * self._dlsigmaR(cosmo, M_use, a) - 3
-        alpha_eff = growth_rate(cosmo, a)
+        nu = 1.686 / cosmo.sigmaM(M, a, squeeze=False)
+        n_eff = -2 * self._dlsigmaR(cosmo, M, a) - 3
+        α_eff = cosmo.growth_rate(a, squeeze=False)
 
         A = self.a0 * (1 + self.a1 * (n_eff + 3))
         B = self.b0 * (1 + self.b1 * (n_eff + 3))
-        C = 1 - self.c_alpha * (1 - alpha_eff)
+        C = 1 - self.c_alpha * (1 - α_eff)
         arg = A / nu * (1 + nu**2 / B)
         G = self._G_inv(arg, n_eff)
-        c = C * G
-
-        if np.ndim(M) == 0:
-            c = c[0]
-        return c
-
+        return C * G
 
 class ConcentrationConstant(Concentration):
-    """ Constant contentration-mass relation.
+    """Constant contentration-mass relation.
 
-    Args:
-        c (float): constant concentration value.
-        mdef (:class:`~pyccl.halos.massdef.MassDef`): a mass
-            definition object that fixes
-            the mass definition used by this c(M)
-            parametrization. In this case it's arbitrary.
+    .. note::
+
+        The mass definition for this concentration is arbitrary, and is
+        internally set to ``None``.
+
+    Parameters
+    ---------
+    c : float
+        Value of the constant concentration.
     """
     name = 'Constant'
 
-    def __init__(self, c=1, mdef=None):
+    def __init__(self, c=1, mass_def=None):
+        # Keep the `mass_def` parameter for consistency.
+        super().__init__(mass_def=mass_def)
         self.c = c
-        super(ConcentrationConstant, self).__init__(mdef)
 
-    def _default_mdef(self):
-        self.mdef = MassDef(200, 'critical')
-
-    def _check_mdef(self, mdef):
+    def _check_mass_def(self, mass_def):
         return False
 
     def _concentration(self, cosmo, M, a):
-        if np.ndim(M) == 0:
-            return self.c
-        else:
-            return self.c * np.ones(M.size)
-
-
-@functools.wraps(Concentration.from_name)
-def concentration_from_name(name):
-    return Concentration.from_name(name)
+        return np.full((a.size, M.size), self.c)

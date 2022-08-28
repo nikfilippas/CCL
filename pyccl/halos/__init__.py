@@ -1,6 +1,16 @@
+# modules
+from . import (
+    concentration,
+    halo_model,
+    hbias,
+    hmfunc,
+    massdef,
+    profiles_2pt,
+    profiles,
+)
+
 # Halo mass definitions
 from .massdef import (
-    mass2radius_lagrangian,
     MassDef,
     MassDef200m,
     MassDef200c,
@@ -19,7 +29,6 @@ from .concentration import (
     ConcentrationDuffy08,
     ConcentrationIshiyama21,
     ConcentrationConstant,
-    concentration_from_name,
 )
 
 # Halo mass functions
@@ -34,7 +43,6 @@ from .hmfunc import (
     MassFuncAngulo12,
     MassFuncDespali16,
     MassFuncBocquet16,
-    mass_function_from_name,
 )
 
 # Halo bias functions
@@ -44,12 +52,12 @@ from .hbias import (
     HaloBiasSheth01,
     HaloBiasTinker10,
     HaloBiasBhattacharya11,
-    halo_bias_from_name,
 )
 
 # Halo profiles
 from .profiles import (
     HaloProfile,
+    HaloProfileNumberCounts,
     HaloProfileGaussian,
     HaloProfilePowerLaw,
     HaloProfileNFW,
@@ -57,12 +65,14 @@ from .profiles import (
     HaloProfileHernquist,
     HaloProfilePressureGNFW,
     HaloProfileHOD,
+    HaloProfileCIBShang12,
 )
 
 # Halo profile 2-point cumulants
 from .profiles_2pt import (
     Profile2pt,
     Profile2ptHOD,
+    Profile2ptCIB,
 )
 
 # Halo model power spectrum
@@ -76,12 +86,6 @@ from .halo_model import (
     halomod_Tk3D_1h,
     halomod_Tk3D_SSC,
     halomod_Tk3D_SSC_linear_bias,
-)
-
-# CIB profiles
-from .profiles_cib import (
-    HaloProfileCIBShang12,
-    Profile2ptCIB,
 )
 
 

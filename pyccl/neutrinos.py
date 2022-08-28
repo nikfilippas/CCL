@@ -1,88 +1,170 @@
+from .parameters import spline_params as sparams
+from .parameters import physical_constants as const
+from .interpolate import Interpolator1D
+from .integrate import IntegratorSamples
+
 import numpy as np
-from . import ccllib as lib
-from .core import check
-from .parameters import physical_constants
-
-neutrino_mass_splits = {
-    'normal': lib.nu_normal,
-    'inverted': lib.nu_inverted,
-    'equal': lib.nu_equal,
-    'sum': lib.nu_sum,
-    'single': lib.nu_single,
-}
+from enum import Enum
+import warnings
 
 
-def Omeganuh2(a, m_nu, T_CMB=None):
+class _NeutrinoMassSplits(Enum):
+    NORMAL = 'normal'
+    INVERTED = 'inverted'
+    EQUAL = 'equal'
+    SUM = 'sum'
+    SINGLE = 'single'
+
+
+# This is where the neutrino phase-space integral spline is stored.
+_nu_spline = None
+
+
+def _compute_nu_phasespace_spline():
+    """Get the spline of the result of the phase-space integral
+    for massive neutrinos.
+    """
+    global _nu_spline
+    if _nu_spline is not None:
+        return
+
+    mnut = np.linspace(np.log(sparams.NU_MNUT_MIN),
+                       np.log(sparams.NU_MNUT_MAX),
+                       sparams.NU_MNUT_N)
+
+    x_arr = np.linspace(sparams.NU_MOM_MIN,
+                        sparams.NU_MOM_MAX,
+                        sparams.NU_MOM_N)
+
+    def nu_integrand(x, r):
+        x, r = x[None, :], r[:, None]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return np.sqrt(x*x + r*r) / (np.exp(x) + 1.) + x*x
+
+    integrator = IntegratorSamples("simpson")
+    integral = integrator(nu_integrand(x_arr, np.exp(mnut)), x=x_arr)
+    _nu_spline = Interpolator1D(mnut, integral/integral[0],
+                                extrap_orders=[0, 0])
+
+
+def _nu_phasespace_integral(mnuOT):
+    """Get the value of the phase-space integral at mnuOT
+    (the dimensionless mass/temperature of a single massive neutrino).
+    """
+    idx_lo = mnuOT < sparams.NU_MNUT_MIN
+    idx_hi = mnuOT > sparams.NU_MNUT_MAX
+    _compute_nu_phasespace_spline()
+    out = np.asarray(7/8 * _nu_spline(np.log(mnuOT)))
+    out[idx_lo], out[idx_hi] = 7/8, 0.2776566337 * mnuOT[idx_hi]
+    return out
+
+
+def Omeganuh2(a, m_nu, T_CMB, T_ncdm, *, squeeze=True):
     """Calculate :math:`\\Omega_\\nu\\,h^2` at a given scale factor given
     the neutrino masses.
 
-    Args:
-        a (float or array-like): Scale factor, normalized to 1 today.
-        m_nu (float or array-like): Neutrino mass(es) (in eV)
-        T_CMB (float, optional): Temperature of the CMB (K). Default: 2.725.
+    Arguments
+    ---------
+    a : float or (..., na, ...) array-like
+        Scale factor(s), normalized to 1 today.
+    m_nu : float or sequence
+        Neutrino masses in :math:`\\mathrm{eV}`.
+    T_CMB : float
+        Temperature of the Cosmic Microwave Background.
+    T_ncdm : float
+        Non-CDM temperature in units of photon temperature.
+    squeeze : bool
+        Squeeze extra dimensions of size (1,) in the output.
+        The default is True.
 
-    Returns:
-        float or array_like: :math:`\\Omega_\\nu\\,h^2` at a given
-        scale factor given the neutrino masses
+    Returns
+    -------
+    float or (..., na, ...) array_like:
+        :math:`\\Omega_\\nu\\,h^2` of the neutrino masses at ``a``.
     """
-    status = 0
-    scalar = True if np.ndim(a) == 0 else False
-
-    if T_CMB is None:
-        T_CMB = physical_constants.T_CMB
-
-    # Convert to array if it's not already an array
-    if not isinstance(a, np.ndarray):
-        a = np.array([a, ]).flatten()
-    if not isinstance(m_nu, np.ndarray):
-        m_nu = np.array([m_nu, ]).flatten()
-
+    a = np.asarray(a)
+    m_nu = np.atleast_1d(m_nu)
     N_nu_mass = len(m_nu)
 
-    # Call function
-    OmNuh2, status = lib.Omeganuh2_vec(N_nu_mass, T_CMB,
-                                       a, m_nu, a.size, status)
+    # Tnu_eff is used in the massive case because CLASS uses an effective
+    # temperature of non-ΛCDM components to match to mnu / Omeganu = 93.14 eV.
+    T_nu = T_CMB * (4/11)**(1/3)
+    Tnu_eff = T_CMB * T_ncdm
 
-    # Check status and return
-    check(status)
-    if scalar:
-        return OmNuh2[0]
-    return OmNuh2
+    # Define the prefix using the effective temperature
+    # (to get mnu / Omega = 93.14 eV) for the massive case.
+    prefix_massive = const.NU_CONST * Tnu_eff**4
+
+    OmNuh2 = 0.
+    for i in range(N_nu_mass):
+        # Check whether this species is effectively massless.
+        # In this case, invoke the analytic massless limit.
+        if m_nu[i] < 0.00017:
+            prefix_massless = const.NU_CONST * T_nu**4
+            OmNuh2 += 7/8 * N_nu_mass * prefix_massless / a**4
+        else:
+            # For massive neutrinos, return the density normalized to get Nuh2
+            # at a = 0: mass over T (mass (eV) / ((kb eV/s/K) Tnu_eff (K))).
+            mnuOT = (m_nu[i] / (Tnu_eff/a)
+                     * (const.EV_IN_J/const.KBOLTZ))
+            OmNuh2 += prefix_massive * _nu_phasespace_integral(mnuOT) / a**4
+
+    return OmNuh2.squeeze()[()] if squeeze else OmNuh2
 
 
-def nu_masses(OmNuh2, mass_split, T_CMB=None):
+def nu_masses(OmNuh2, mass_split):
     """Returns the neutrinos mass(es) for a given OmNuh2, according to the
     splitting convention specified by the user.
 
-    Args:
-        OmNuh2 (float): Neutrino energy density at z=0 times h^2
-        mass_split (str): indicates how the masses should be split up
-            Should be one of 'normal', 'inverted', 'equal' or 'sum'.
-        T_CMB (float, optional): Temperature of the CMB (K). Default: 2.725.
+    Arguments
+    ---------
+    OmNuh2 : float or array_like
+        Neutrino energy density at z=0 times h^2.
+    mass_split : {'normal', 'iverted', 'equal', 'sum'}
+        Indicates how the masses should be split up.
 
-    Returns:
-        float or array-like: Neutrino mass(es) corresponding to this Omeganuh2
+    Returns
+    -------
+    nu_masses : float or array-like
+        Neutrino mass(es) corresponding to this ``OmeNuh2``.
     """
-    status = 0
+    sumnu = 93.14 * OmNuh2
 
-    if T_CMB is None:
-        T_CMB = physical_constants.T_CMB
+    # Now split the sum up into three masses depending on the label given.
+    split = _NeutrinoMassSplits
 
-    if mass_split not in neutrino_mass_splits.keys():
+    if split(mass_split) in [split.SUM, split.SINGLE]:
+        return sumnu
+
+    if split(mass_split) == split.EQUAL:
+        return np.full(3, sumnu/3.)
+
+    # See CCL note for how we get these expressions for the
+    # neutrino masses in normal and inverted hierarchy.
+    if split(mass_split) == split.NORMAL:
+        ΔM12 = const.DELTAM12_sq
+        ΔM13p = const.DELTAM13_sq_pos
+        sqrt = np.sqrt(-6*ΔM12 + 12*ΔM13p + 4*sumnu**2)
+        mnu = np.array([
+            2/3*sumnu - 1/6*sqrt - 0.25*ΔM12/(2/3*sumnu - 1/6*sqrt),
+            2/3*sumnu - 1/6*sqrt + 0.25*ΔM12/(2/3*sumnu - 1/6*sqrt),
+            -1/3*sumnu + 1/3*sqrt])
+
+    if split(mass_split) == split.INVERTED:
+        ΔM12 = const.DELTAM12_sq
+        ΔM13n = const.DELTAM13_sq_neg
+        sqrt = np.sqrt(-6*ΔM12 + 12*ΔM13n + 4*sumnu**2)
+        mnu = np.array([
+            2/3*sumnu - 1/6*sqrt - 0.25*ΔM12/(2/3*sumnu - 1/6*sqrt),
+            2/3*sumnu - 1/6*sqrt + 0.25*ΔM12/(2/3*sumnu - 1/6*sqrt),
+            -1/3*sumnu + 1/3*sqrt])
+
+    if (mnu < 0).any():
+        # Sum is below the physical limit.
+        if sumnu < 1e-14:
+            return np.zeros(3)
         raise ValueError(
-            "'%s' is not a valid species type. "
-            "Available options are: %s"
-            % (mass_split, neutrino_mass_splits.keys()))
-
-    # Call function
-    if mass_split in ['normal', 'inverted', 'equal']:
-        mnu, status = lib.nu_masses_vec(
-            OmNuh2, neutrino_mass_splits[mass_split], T_CMB, 3, status)
-    elif mass_split in ['sum', 'single']:
-        mnu, status = lib.nu_masses_vec(
-            OmNuh2, neutrino_mass_splits[mass_split], T_CMB, 1, status)
-        mnu = mnu[0]
-
-    # Check status and return
-    check(status)
+            "Sum of neutrino masses for this `OmegaNu` is incompatible "
+            "with the requested mass hierarchy.")
     return mnu

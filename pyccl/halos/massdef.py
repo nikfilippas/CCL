@@ -1,312 +1,368 @@
-from .. import ccllib as lib
-from ..core import check
-from ..background import species_types, rho_x, omega_x
+from ..interpolate import Interpolator2D
+from ..parameters import accuracy_params
+from ..pyutils import get_broadcastable
 import numpy as np
+from scipy.optimize import newton
 
 
-def mass2radius_lagrangian(cosmo, M):
-    """ Returns Lagrangian radius for a halo of mass M.
-    The lagrangian radius is defined as that enclosing
-    the mass of the halo assuming a homogeneous Universe.
+def _dc_NakamuraSuto(cosmo, a, *, squeeze=True):
+    """Compute the peak threshold :math:`\\delta_c(z)` assuming ΛCDM.
 
-    Args:
-        cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-        M (float or array_like): halo mass in units of M_sun.
+    Cosmology dependence of the critical linear density according to the
+    spherical-collapse model. Fitting function from Nakamura & Suto (1997).
 
-    Returns:
-        float or array_like: lagrangian radius in comoving Mpc.
+    Arguments
+    ---------
+    cosmo : :class:`~pyccl.core.Cosmology`
+        Cosmological parameters.c
+    a : float or (..., na, ...) array_like
+        Scale factor(s).
+    squeeze : bool
+        Squeeze extra dimensions of size (1,) in the output.
+        The default is True.
+
+    Returns
+    -------
+    δ_c : float or (..., na, ...) array_like
+        Peak theshold at ``a``.
     """
-    M_use = np.atleast_1d(M)
-    R = (M_use / (4.18879020479 * rho_x(cosmo, 1, 'matter')))**(1./3.)
-    if np.ndim(M) == 0:
-        R = R[0]
-    return R
+    a = np.asarray(a)
+    Om_mz = cosmo.omega_x(a, "matter", squeeze=False)
+    dc0 = (3/20) * (12*np.pi)**(2/3)
+    out = dc0 * (1 + 0.012299 * np.log10(Om_mz))
+    return out.squeeze()[()] if squeeze else out
 
 
-def convert_concentration(cosmo, c_old, Delta_old, Delta_new):
-    """ Computes the concentration parameter for a different mass definition.
-    This is done assuming an NFW profile. The output concentration `c_new` is
-    found by solving the equation:
+def _Dv_BryanNorman(cosmo, a, *, squeeze=True):
+    """Compute the virial collapse density contrast w.r.t. matter density,
+    assuming ΛCDM.
+
+    Cosmology dependence of the critical linear density according to the
+    spherical-collapse model. Fitting function from Bryan & Norman (1997).
+    :arXiv:`astro-ph/9710107`.
+
+    Arguments
+    ---------
+    cosmo : :class:`~pyccl.core.Cosmology`
+        Cosmological parameters.c
+    a : float or (..., na, ...) array_like
+        Scale factor(s).
+    squeeze : bool
+        Squeeze extra dimensions of size (1,) in the output.
+        The default is True.
+
+    Returns
+    -------
+    Δ_vir : float or (..., na, ...) array_like
+        Virial collapse density contrast w.r.t. matter density.
+    """
+    a = np.asarray(a)
+    Om_mz = cosmo.omega_x(a, "matter", squeeze=False)
+    x = Om_mz - 1
+    Dv0 = 18 * np.pi * np.pi
+    out = (Dv0 + 82*x - 39*x**2) / Om_mz
+    return out.squeeze()[()] if squeeze else out
+
+
+def convert_concentration(c_old, Delta_old, Delta_new, *, squeeze=True):
+    """Compute the concentration parameter for a different mass definition.
+    This is done assuming an NFW profile. The output concentration ``c_new``
+    is found by solving the equation:
 
     .. math::
+
         f(c_{\\rm old}) \\Delta_{\\rm old} = f(c_{\\rm new}) \\Delta_{\\rm new}
 
     where
 
     .. math::
+
         f(x) = \\frac{x^3}{\\log(1+x) - x/(1+x)}.
 
-    Args:
-        cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-        c_old (float or array_like): concentration to translate from.
-        Delta_old (float): Delta parameter associated to the input
-            concentration. See description of the MassDef class.
-        Delta_new (float): Delta parameter associated to the output
-            concentration.
+    .. note::
 
-    Returns:
-        float or array_like: concentration parameter for the new
-        mass definition.
+        Vectorization for this function is specialized. It assumes that
+        ``c_old`` has shape (na, nM) and ``Delta_old``, ``Delta_new`` both have
+        shape (na,), so that the Δ-conversion only depends on scale factor.
+        Every mass is only translated for its scale factor. The output has the
+        same shape as the input, and all concentrations are translated with
+        :math:`\\frac{\\Delta_{\\mathrm{old}}}{\\Delta_{\\mathrm{new}}}`.
+
+    Arguments
+    ---------
+    c_old : float or (..., na, nM, ...) array_like
+        Concentration values to translate.
+    Delta_old, Delta_new : float or (na,) array_like
+        Overdensity (:math:`\\Delta`) parameters associated with the
+        halo mass definition of the old and new concentrations, respectively.
+        See :class:`~pyccl.halos.massdef.MassDef` for details.
+    squeeze : bool
+        Squeeze extra dimensions of size (1,) in the output.
+        The default is True.
+
+    Returns
+    -------
+    c_new : float or ``np.shape(c_old)`` array_like
+        Translated concentration to the new mass definition.
     """
-    status = 0
-    c_old_use = np.atleast_1d(c_old)
-    c_new, status = lib.convert_concentration_vec(cosmo.cosmo,
-                                                  Delta_old, c_old_use,
-                                                  Delta_new, c_old_use.size,
-                                                  status)
-    if np.isscalar(c_old):
-        c_new = c_new[0]
+    c_old = np.asarray(c_old, dtype=float)
+    c_use = c_old.ravel()  # `ravel` returns a view - 10x faster than `flatten`
 
-    check(status, cosmo=cosmo)
-    return c_new
+    # Δ_fac repeats itself every nM elements in the flattened c_use array.
+    Δ_fac = np.asarray(Delta_old / Delta_new)
+    Δ_use = np.repeat(Δ_fac, c_use.size/Δ_fac.size)
+
+    # If Δ_new == Δ_old, then c_new == c_old.
+    idx = Δ_use != 1
+    c_new = c_use.copy()
+
+    _compute_concentration_conversion()
+    # Evaluate the spline at zip(c_use, Δ_use).
+    c_new[idx] = np.exp(_cM_spline(c_use[idx], Δ_use[idx], grid=False))
+    c_new = c_new.reshape(c_old.shape)
+    return c_new.squeeze()[()] if squeeze else c_new
 
 
-class MassDef(object):
+# This is where the c(M) Δ-conversion spline is stored.
+_cM_spline = None
+
+
+def _compute_concentration_conversion():
+    """Compute the c(M) Δ-conversion spline."""
+    global _cM_spline
+    if _cM_spline is not None:
+        return
+
+    c_old = np.geomspace(0.01, 30, 128)
+    Δ_fac = np.geomspace(0.01, 20, 64)
+
+    # Initial guess: Δ_old / Δ_new. || Second guess: 10x larger.
+    x0 = np.ones_like(c_old)
+    x1 = 10 * x0
+    nfw = lambda x: x**3 / (np.log(x+1) - x / (x+1))                     # noqa
+    func = lambda c_new, Δ_fac: nfw(c_new) - nfw(c_old) * Δ_fac          # noqa
+
+    res = np.array([
+        newton(func, x0=x0, x1=x1, args=(Δ,),
+               maxiter=accuracy_params.N_ITERATION_ROOT,
+               rtol=accuracy_params.EPSREL)
+        for Δ in Δ_fac])
+
+    _cM_spline = Interpolator2D(c_old, Δ_fac, np.log(res).T,
+                                extrap_orders=[1, 1, 1, 1])
+
+
+class MassDef:
     """Halo mass definition. Halo masses are defined in terms of an overdensity
     parameter :math:`\\Delta` and an associated density :math:`X` (either the
     matter density or the critical density):
 
     .. math::
-        M = \\frac{4 \\pi}{3} \\Delta\\,\\rho_X\\, R^3
+
+        M = \\frac{4 \\pi}{3} \\Delta\\,\\rho_X\\, R^3,
 
     where :math:`R` is the halo radius. This object also holds methods to
     translate between :math:`R` and :math:`M`, and to translate masses between
     different definitions if a concentration-mass relation is provided.
 
-    Args:
-        Delta (float): overdensity parameter. Pass 'vir' if using virial
-            overdensity.
-        rho_type (string): either 'critical' or 'matter'.
-        c_m_relation (function, optional): concentration-mass relation.
-            Provided as a `Concentration` object, or a string corresponding
-            to one of the supported concentration-mass relations.
-            If `None`, no c(M) relation will be attached to this mass
-            definition (and hence one can't translate into other definitions).
+    Parameters
+    ----------
+    Delta : float or {'fof', 'vir'}
+        Spherical overdensity (S.O.) parameter. ``'fof'`` for friends-of-
+        friends masses and ``'vir'`` for Virial masses.
+    rho_type : {'critical', 'matter'}
+        Associated reference mean density.
+    concentration : None, str, :obj:`~pyccl.halos.concentration.Concentration`
+        Concentration-mass relation. Provided either as a name string,
+        or as a ``Concentration`` object. If ``None``, the mass definition
+        object is unable to be translated to another mass definition.
     """
-    name = 'default'
 
-    def __init__(self, Delta, rho_type, c_m_relation=None):
-        # Check it makes sense
-        if (Delta != 'fof') and (Delta != 'vir'):
-            if isinstance(Delta, str):
-                raise ValueError("Unknown Delta type " + Delta)
-            if Delta <= 0:
-                raise ValueError("Delta must be a positive number")
-        self.Delta = Delta
-        # Can only be matter or critical
+    def __init__(self, Delta, rho_type, concentration=None):
+        if Delta not in ["fof", "vir"]:
+            if not isinstance(Delta, (int, float)) or Delta <= 0:
+                raise ValueError(f"Can't parse Delta = {Delta}.")
         if rho_type not in ['matter', 'critical']:
-            raise ValueError("rho_type must be either \'matter\' "
-                             "or \'critical\'")
+            raise ValueError("rho_type must be either 'matter' or 'critical'.")
+
+        self.Delta = Delta
         self.rho_type = rho_type
-        self.species = species_types[rho_type]
-        # c(M) relation
-        if c_m_relation is None:
-            self.concentration = None
-        else:
-            self._concentration_init(c_m_relation)
+        self._initialize_concentration(concentration)
+
+    @property
+    def name(self):
+        """Give a name to this mass definition."""
+        if isinstance(self.Delta, (int, float)):
+            return f"{self.Delta}{self.rho_type[0]}"
+        return f"{self.Delta}"
 
     def __eq__(self, other):
-        """ Allows you to compare two mass definitions
+        return (self.Delta, self.rho_type) == (other.Delta, other.rho_type)
+
+    def _initialize_concentration(self, concentration):
+        # Associate a concentration to this mass definition.
+        if concentration is None:
+            self.concentration = None
+            return
+
+        from .concentration import Concentration
+        if isinstance(concentration, Concentration):
+            self.concentration = concentration
+            return
+
+        if isinstance(concentration, str):
+            cM = Concentration.from_name(concentration)
+            self.concentration = cM(mass_def=self)
+            return
+
+        raise ValueError("concentration must be `None`, "
+                         "a string, or a `Concentration` object.")
+
+    def get_Delta(self, cosmo, a, *, squeeze=True):
+        """Compute the overdensity parameter for this mass definition.
+
+        Arguments
+        ---------
+        cosmo : :class:`~pyccl.core.Cosmology`
+            Cosmological parameters.c
+        a : float or (..., na, ...) array_like
+            Scale factor(s).
+        squeeze : bool
+            Squeeze extra dimensions of size (1,) in the output.
+            The default is True.
+
+        Returns
+        -------
+        Delta : float or (..., na, ...) array_like
+            Overdensity parameter at ``a``.
         """
-        return (self.Delta == other.Delta) and \
-            (self.rho_type == other.rho_type)
-
-    def _concentration_init(self, c_m_relation):
-        from .concentration import Concentration, concentration_from_name
-        if isinstance(c_m_relation, Concentration):
-            self.concentration = c_m_relation
-        elif isinstance(c_m_relation, str):
-            # Grab class
-            conc_class = concentration_from_name(c_m_relation)
-            # instantiate with this mass definition
-            self.concentration = conc_class(mdef=self)
-        else:
-            raise ValueError("c_m_relation must be `None`, "
-                             " a string or a `Concentration` object")
-
-    def get_Delta(self, cosmo, a):
-        """ Gets overdensity parameter associated to this mass
-        definition.
-
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            a (float): scale factor
-
-        Returns:
-            float : value of the overdensity parameter.
-        """
+        if self.Delta == 'fof':
+            raise ValueError("FoF masses have no associated overdensity, "
+                             "and can't be translated into other masses.")
         if self.Delta == 'vir':
-            status = 0
-            D, status = lib.Dv_BryanNorman(cosmo.cosmo, a, status)
-            return D
-        elif self.Delta == 'fof':
-            raise ValueError("FoF masses don't have an associated overdensity."
-                             "Nor can they be translated into other masses")
-        else:
-            return self.Delta
+            return _Dv_BryanNorman(cosmo, a, squeeze=squeeze)
+        out = self.Delta * np.ones_like(a)
+        return out.squeeze()[()] if squeeze else out
 
-    def get_mass(self, cosmo, R, a):
-        """ Translates a halo radius into a mass
-
-        .. math::
-            M = \\frac{4 \\pi}{3} \\Delta\\,\\rho_X\\, R^3
-
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            R (float or array_like): halo radius in units of Mpc (physical, not
-                comoving).
-            a (float): scale factor.
-
-        Returns:
-            float or array_like: halo mass in units of M_sun.
+    def get_radius(self, cosmo, M, a, *, squeeze=True):
         """
-        R_use = np.atleast_1d(R)
-        Delta = self.get_Delta(cosmo, a)
-        M = 4.18879020479 * rho_x(cosmo, a, self.rho_type) * Delta * R_use**3
-        if np.ndim(R) == 0:
-            M = M[0]
-        return M
+        Arguments
+        ---------
+        cosmo : :class:`~pyccl.core.Cosmology`
+            Cosmological parameters.
+        M : float or (..., nM, ...) array_like
+            Halo mass in :math:`\\mathrm{M}_{\\odot}`.
+        a : float or (..., na, ...) array_like
+            Scale factor(s).
+        squeeze : bool, optional
+            Squeeze extra dimensions of size (1,) in the output.
+            The default is True.
 
-    def get_radius(self, cosmo, M, a):
-        """ Translates a halo mass into a radius
-
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            M (float or array_like): halo mass in units of M_sun.
-            a (float): scale factor.
-
-        Returns:
-            float or array_like: halo radius in units of Mpc (physical, not
-                comoving).
+        Returns
+        -------
+        R : float or (..., na, nM, ...) ndarray
+            Halo radius in physical :math:`\\mathrm{Mpc}`.
         """
-        M_use = np.atleast_1d(M)
-        Delta = self.get_Delta(cosmo, a)
-        R = (M_use / (4.18879020479 * Delta *
-                      rho_x(cosmo, a, self.rho_type)))**(1./3.)
-        if np.ndim(M) == 0:
-            R = R[0]
-        return R
+        return cosmo.m2r(M, a,
+                         Delta=self.get_Delta(cosmo, a, squeeze=False),
+                         species=self.rho_type,
+                         comoving=False,
+                         Delta_vectorized=False,
+                         squeeze=squeeze)
 
-    def _get_concentration(self, cosmo, M, a):
-        """ Returns concentration for this mass definition.
+    def translate_mass(self, cosmo, M, a, mass_def_other, *, squeeze=True):
+        """Translate halo mass in this definition into another definition.
 
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            M (float or array_like): halo mass in units of M_sun.
-            a (float): scale factor.
+        Arguments
+        ---------
+        cosmo : :class:`~pyccl.core.Cosmology`
+            Cosmological parameters.
+        M : float or (..., nM, ...) array_like
+            Halo mass in :math:`\\mathrm{M}_{\\odot}`.
+        a : float or (..., na, ...) array_like
+            Scale factor(s).
+        mass_def_other : :class:`~pyccl.halos.massdef.MassDef`
+            Mass definition to translate to.
+        squeeze : bool, optional
+            Squeeze extra dimensions of size (1,) in the output.
+            The default is True.
 
-        Returns:
-            float or array_like: halo concentration.
+        Returns
+        -------
+        M_translated : float or (..., na, nM, ...) array_like
+            Halo masses in new definition.
         """
         if self.concentration is None:
-            raise RuntimeError("This mass definition doesn't have "
-                               "an associated c(M) relation")
-        else:
-            return self.concentration.get_concentration(cosmo, M, a)
+            raise ValueError("Mass definition has no associated c(M).")
 
-    def translate_mass(self, cosmo, M, a, m_def_other):
-        """ Translate halo mass in this definition into another definition
-
-        Args:
-            cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-            M (float or array_like): halo mass in units of M_sun.
-            a (float): scale factor.
-            m_def_other (:obj:`MassDef`): another mass definition.
-
-        Returns:
-            float or array_like: halo masses in new definition.
-        """
-        if self == m_def_other:
+        a, M = map(np.atleast_1d, [a, M])
+        a, M = get_broadcastable(a, M)
+        if self == mass_def_other:
+            shp = np.broadcast_shapes(a.shape, M.shape)
+            M = np.broadcast_to(M, shp)
             return M
-        else:
-            if self.concentration is None:
-                raise RuntimeError("This mass definition doesn't have "
-                                   "an associated c(M) relation")
-            else:
-                om_this = omega_x(cosmo, a, self.rho_type)
-                D_this = self.get_Delta(cosmo, a) * om_this
-                c_this = self._get_concentration(cosmo, M, a)
-                R_this = self.get_radius(cosmo, M, a)
-                om_new = omega_x(cosmo, a, m_def_other.rho_type)
-                D_new = m_def_other.get_Delta(cosmo, a) * om_new
-                c_new = convert_concentration(cosmo, c_this, D_this, D_new)
-                R_new = c_new * R_this / c_this
-                return m_def_other.get_mass(cosmo, R_new, a)
+
+        kw = {"squeeze": False}  # never squeeze internal function output
+
+        Ω_old = cosmo.omega_x(a, self.rho_type, **kw)
+        ρ_old = cosmo.rho_x(a, self.rho_type, **kw)
+        Δ_old = self.get_Delta(cosmo, a, **kw) * Ω_old
+        c_old = self.concentration.get_concentration(cosmo, M, a, **kw)
+        R_old = (3 * M / (4 * np.pi * Δ_old * ρ_old))**(1/3)
+
+        Ω_new = cosmo.omega_x(a, mass_def_other.rho_type, **kw)
+        ρ_new = cosmo.rho_x(a, mass_def_other.rho_type, **kw)
+        Δ_new = mass_def_other.get_Delta(cosmo, a, **kw) * Ω_new
+        c_new = convert_concentration(c_old, Δ_old, Δ_new, **kw)
+        R_new = R_old * c_new / c_old
+        M_new = (4 * np.pi / 3) * Δ_new * ρ_new * R_new**3
+
+        return M_new.squeeze()[()] if squeeze else M_new
 
     @classmethod
     def from_name(cls, name):
-        """ Return mass definition subclass from name string.
+        """Return a mass definition from name string.
 
-        Args:
-            name (string):
-                a mass definition name (e.g. '200m' for Delta=200 matter)
+        Arguments
+        ---------
+        name : string
+            A mass definition name (e.g. ``'200m'`` for :math:`\\Delta=200_m`).
 
-        Returns:
-            MassDef subclass corresponding to the input name.
+        Returns
+        -------
+        mass_def : :obj:`~pyccl.halos.massdef.MassDef`
+            Mass definition corresponding to the input name.
         """
-        mass_defs = {m.name: m for m in cls.__subclasses__()}
+        if name == "fof":
+            return MassDef("fof", "matter")
+        if name == "vir":
+            return MassDef("vir", "critical")
 
-        if name in mass_defs:
-            return mass_defs[name]
-        else:
-            raise ValueError(f"Mass definition {name} not implemented.")
-
-
-class MassDef200m(MassDef):
-    """`MassDef` class for the mass definition with Delta=200 times the matter
-    density.
-
-    Args:
-        c_m (string): concentration-mass relation.
-    """
-    name = '200m'
-
-    def __init__(self, c_m='Duffy08'):
-        super(MassDef200m, self).__init__(200,
-                                          'matter',
-                                          c_m_relation=c_m)
+        parser = {"m": "matter", "c": "critical"}
+        Δ, ρ = name[:-1], name[-1]
+        return MassDef(int(Δ), parser[ρ])
 
 
-class MassDef200c(MassDef):
-    """`MassDef` class for the mass definition with Delta=200 times
-    the critical density.
-
-    Args:
-        c_m (string): concentration-mass relation.
-    """
-    name = '200c'
-
-    def __init__(self, c_m='Duffy08'):
-        super(MassDef200c, self).__init__(200,
-                                          'critical',
-                                          c_m_relation=c_m)
+def MassDef200m():
+    """:math:`\\Delta = 200m` mass definition."""
+    return MassDef(200, "matter", concentration="Duffy08")
 
 
-class MassDef500c(MassDef):
-    """`MassDef` class for the mass definition
-    with Delta=500 times the critical density.
-
-    Args:
-        c_m (string): concentration-mass relation.
-    """
-    name = '500c'
-
-    def __init__(self, c_m='Ishiyama21'):
-        super(MassDef500c, self).__init__(500,
-                                          'critical',
-                                          c_m_relation=c_m)
+def MassDef200c():
+    """:math:`\\Delta = 200c` mass definition."""
+    return MassDef(200, "critical", concentration="Duffy08")
 
 
-class MassDefVir(MassDef):
-    """`MassDef` class for the mass definition with Delta=Delta_vir times the
-    critical density.
+def MassDef500c():
+    """:math:`\\Delta = 500m` mass definition."""
+    return MassDef(500, "critical", concentration="Ishiyama21")
 
-    Args:
-        c_m (string): concentration-mass relation.
-    """
-    name = 'vir'
 
-    def __init__(self, c_m='Klypin11'):
-        super(MassDefVir, self).__init__('vir',
-                                         'critical',
-                                         c_m_relation=c_m)
+def MassDefVir():
+    """:math:`\\Delta = \\mathrm{vir}` mass definition."""
+    return MassDef("vir", "critical", concentration="Klypin11")
+
+
+def MassDefFoF():
+    """:math:`\\Delta = \\mathrm{FoF}` mass definition."""
+    return MassDef("fof", "matter")

@@ -1,78 +1,106 @@
-# flake8: noqa E402
-from pkg_resources import get_distribution, DistributionNotFound
-try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    # package is not installed
-    pass
-del get_distribution, DistributionNotFound
-
-# Set the environment variable for default config path
-from os import environ, path
-if environ.get("CLASS_PARAM_DIR") is None:
-    environ["CLASS_PARAM_DIR"] = path.dirname(path.abspath(__file__))
-del environ, path
-
-# SWIG-generated
-from . import ccllib as lib
-
-# Errors
-from .errors import (
-    CCLError,
-    CCLWarning,
-    CCLDeprecationWarning,
+# Load modules
+from . import (
+    background,
+    bbks,
+    bcm,
+    boltzmann,
+    core,
+    eh,
+    errors,
+    numerical,
+    musigma,
+    neutrinos,
+    parameters,
+    pk2d,
+    power,
+    pspec,
+    pyutils,
+    tk3d,
+    halos,
 )
 
-# Constants and accuracy parameters
-from .parameters import (
-    CCLParameters,
-    gsl_params,
-    spline_params,
-    physical_constants,
-)
-
-# Core data structures
 from .core import (
     Cosmology,
     CosmologyVanillaLCDM,
     CosmologyCalculator,
 )
 
-# Background cosmology functions and growth functions
+
+from .parameters import (
+    physical_constants,
+    accuracy_params,
+    spline_params,
+)
+
+
+from .interpolate import (
+    linlog_spacing,
+    loglin_spacing,
+    Interpolator1D,
+    Interpolator2D,
+    Interpolator3D,
+)
+
+
+from .integrate import (
+    IntegratorSamples,
+    IntegratorFunction
+)
+
+
 from .background import (
+    compute_distances,
+    h_over_h0,
+    comoving_radial_distance,
+    scale_factor_of_chi,
+    sinn,
+    comoving_angular_distance,
+    transverse_comoving_distance,
+    angular_diameter_distance,
+    luminosity_distance,
+    distance_modulus,
+    hubble_distance,
+    comoving_volume,
+    lookback_time,
+    age_of_universe,
+    omega_x,
+    rho_x,
+    compute_growth,
     growth_factor,
     growth_factor_unnorm,
     growth_rate,
-    comoving_radial_distance,
-    angular_diameter_distance,
-    comoving_angular_distance,
-    luminosity_distance,
-    distance_modulus,
-    h_over_h0,
-    scale_factor_of_chi,
-    omega_x,
-    rho_x,
     sigma_critical,
 )
 
-# Boltzmann solvers
-from .boltzmann import (
-    get_camb_pk_lin,
-    get_isitgr_pk_lin,
-    get_class_pk_lin,
-)
 
-# Generalized power spectra
 from .pk2d import (
     Pk2D,
     parse_pk2d,
 )
 
-# Generalized connected trispectra
 from .tk3d import Tk3D
 
-# Power spectrum calculations, sigma8 and kNL
+
+# Power spectra.
+from .bbks import PowerSpectrumBBKS
+from .bcm import PowerSpectrumBCM
+from .boltzmann import (
+    PowerSpectrumCAMB,
+    PowerSpectrumISITGR,
+    PowerSpectrumCLASS,
+)
+from .eh import (
+    EisensteinHuWiggles,
+    EisensteinHuNoWiggles,
+)
+from .emu import PowerSpectrumCosmicEmu
+
+
 from .power import (
+    compute_linear_power,
+    compute_nonlin_power,
+    get_linear_power,
+    get_nonlin_power,
     linear_power,
     nonlin_power,
     linear_matter_power,
@@ -80,24 +108,32 @@ from .power import (
     sigmaR,
     sigmaV,
     sigma8,
-    sigmaM,
+    sigma2B,
     kNL,
+    r2m,
+    m2r,
+    compute_sigma,
+    sigmaM,
+    dlnsigM_dlogM,
 )
 
-# Baryons & Neutrinos
-from .bcm import (
-    bcm_model_fka,
-    bcm_correct_pk2d,
-)
 
 from .neutrinos import (
     Omeganuh2,
     nu_masses,
 )
 
-# Cells & Tracers
-from .cls import angular_cl
-from .tracers import (
+
+from .musigma import (
+    mu_MG,
+    Sigma_MG,
+)
+
+
+from .tracers import(
+    get_density_kernel,
+    get_lensing_kernel,
+    get_kappa_kernel,
     Tracer,
     NumberCountsTracer,
     WeakLensingTracer,
@@ -105,82 +141,15 @@ from .tracers import (
     tSZTracer,
     CIBTracer,
     ISWTracer,
-    get_density_kernel,
-    get_kappa_kernel,
-    get_lensing_kernel,
-)
-
-# Correlations & Covariances
-from .correlations import (
-    correlation,
-    correlation_3d,
-    correlation_multipole,
-    correlation_3dRsd,
-    correlation_3dRsd_avgmu,
-    correlation_pi_sigma,
-)
-
-from .covariances import (
-    angular_cl_cov_cNG,
-    angular_cl_cov_SSC,
-    sigma2_B_disc,
-    sigma2_B_from_mask,
 )
 
 
-# Miscellaneous
-from .pyutils import debug_mode, resample_array
-
-
-# Deprecated & Renamed modules
-from .halomodel import (
-    halomodel_matter_power,
-    halo_concentration,
-    onehalo_matter_power,
-    twohalo_matter_power,
-)
-
-from .massfunction import (
-    massfunc,
-    halo_bias,
-    massfunc_m2r,
-)
-
-from .haloprofile import (
-    nfw_profile_3d,
-    einasto_profile_3d,
-    hernquist_profile_3d,
-    nfw_profile_2d,
+from .errors import (
+    CCLWarning,
+    CCLDeprecationWarning,
+    CCLError,
 )
 
 
-__all__ = (
-    'lib',
-    'CCLParameters', 'spline_params', 'gsl_params', 'physical_constants',
-    'CCLError', 'CCLWarning', 'CCLDeprecationWarning',
-    'Cosmology', 'CosmologyVanillaLCDM', 'CosmologyCalculator',
-    'growth_factor', 'growth_factor_unnorm', 'growth_rate',
-    'comoving_radial_distance', 'angular_diameter_distance',
-    'comoving_angular_distance', 'luminosity_distance', 'distance_modulus',
-    'h_over_h0', 'scale_factor_of_chi', 'omega_x', 'rho_x', 'sigma_critical',
-    'get_camb_pk_lin', 'get_isitgr_pk_lin', 'get_class_pk_lin',
-    'Pk2D', 'parse_pk2d', 'Tk3D',
-    'linear_power', 'nonlin_power',
-    'linear_matter_power', 'nonlin_matter_power',
-    'sigmaR', 'sigmaV', 'sigma8', 'sigmaM', 'kNL',
-    'bcm_model_fka', 'bcm_correct_pk2d',
-    'Omeganuh2', 'nu_masses',
-    'angular_cl',
-    'Tracer', 'NumberCountsTracer', 'WeakLensingTracer', 'CMBLensingTracer',
-    'tSZTracer', 'CIBTracer', 'ISWTracer',
-    'get_density_kernel', 'get_kappa_kernel', 'get_lensing_kernel',
-    'correlation', 'correlation_3d', 'correlation_multipole',
-    'correlation_3dRsd', 'correlation_3dRsd_avgmu', 'correlation_pi_sigma',
-    'angular_cl_cov_cNG', 'angular_cl_cov_SSC',
-    'sigma2_B_disc', 'sigma2_B_from_mask',
-    'debug_mode', 'resample_array',
-    'halomodel_matter_power', 'halo_concentration',
-    'onehalo_matter_power', 'twohalo_matter_power',
-    'massfunc', 'halo_bias', 'massfunc_m2r', 'nfw_profile_3d',
-    'einasto_profile_3d', 'hernquist_profile_3d', 'nfw_profile_2d',
-)
+# Sub-packages.
+from . import halos
