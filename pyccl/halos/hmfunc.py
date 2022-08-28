@@ -207,6 +207,22 @@ class MassFunc(CCLHalosObject):
         else:
             raise ValueError(f"Mass function {name} not implemented.")
 
+    @classmethod
+    def from_name(cls, name):
+        """ Returns mass function subclass from name string
+
+        Args:
+            name (string): a mass function name
+
+        Returns:
+            MassFunc subclass corresponding to the input name.
+        """
+        mass_functions = {c.name: c for c in cls.__subclasses__()}
+        if name in mass_functions:
+            return mass_functions[name]
+        else:
+            raise ValueError(f"Mass function {name} not implemented.")
+
 
 class MassFuncPress74(MassFunc):
     """ Implements mass function described in 1974ApJ...187..425P.
@@ -918,7 +934,7 @@ class MassFuncBocquet20(MassFunc, Emulator):
         return hmf
 
 
-@functools.wraps(MassFunc.from_name)
 @deprecated(new_function=MassFunc.from_name)
+@functools.wraps(MassFunc.from_name)
 def mass_function_from_name(name):
     return MassFunc.from_name(name)

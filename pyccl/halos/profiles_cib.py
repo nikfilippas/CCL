@@ -192,10 +192,13 @@ class HaloProfileCIBShang12(HaloProfile):
         return Lumcen
 
     def _Lumsat(self, M, a):
+        if not np.max(M) > self.Mmin:
+            return np.zeros_like(M)
+
         res = np.zeros_like(M)
         M_use = M[M >= self.Mmin, None]
         logM = np.log10(M_use)
-        LOGM_MIN = 10
+        LOGM_MIN = np.log10(self.Mmin)
         nm = max(2, 10*int(np.max(logM) - LOGM_MIN))
         msub = np.linspace(LOGM_MIN, np.max(logM), nm+1)[None, :]
 

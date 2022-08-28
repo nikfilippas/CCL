@@ -174,6 +174,23 @@ class HaloBias(CCLHalosObject):
             raise ValueError(
                 f"Halo bias parametrization {name} not implemented.")
 
+    @classmethod
+    def from_name(cls, name):
+        """Returns halo bias subclass from name string
+
+        Args:
+            name (string): a halo bias name
+
+        Returns:
+            HaloBias subclass corresponding to the input name.
+        """
+        bias_functions = {c.name: c for c in HaloBias.__subclasses__()}
+        if name in bias_functions:
+            return bias_functions[name]
+        else:
+            raise ValueError(
+                f"Halo bias parametrization {name} not implemented")
+
 
 class HaloBiasSheth99(HaloBias):
     """ Implements halo bias described in 1999MNRAS.308..119S

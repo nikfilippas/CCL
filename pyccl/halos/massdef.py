@@ -240,10 +240,6 @@ class MassDef(CCLHalosObject):
     def from_name(cls, name):
         """ Return mass definition subclass from name string.
 
-        Args:
-            name (string):
-                a mass definition name (e.g. '200m' for Delta=200 matter)
-
         Returns:
             MassDef subclass corresponding to the input name.
         """
@@ -268,9 +264,6 @@ def MassDef200m(c_m_relation='Duffy08'):
 def MassDef200c(c_m_relation='Duffy08'):
     """`MassDef` class for the mass definition with Delta=200 times the critical
     density.
-
-    Args:
-        c_m_relation (string): concentration-mass relation.
     """
     return MassDef(200, 'critical', c_m_relation=c_m_relation)
 

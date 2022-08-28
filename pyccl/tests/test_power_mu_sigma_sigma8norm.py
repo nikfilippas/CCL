@@ -36,9 +36,9 @@ def test_power_mu_sigma_sigma8norm(tf):
         assert np.allclose(pk_rat, gfac)
 
     with mock.patch.dict(sys.modules, {'isitgr': None}):
-        with pytest.raises(ImportError):
+        with pytest.raises(ModuleNotFoundError):
             get_isitgr_pk_lin(cosmo)
-    # Importing ccl without isitgr is fine.  No ImportError triggered.
+    # Importing ccl without isitgr is fine.  No ModuleNotFoundError triggered.
     with mock.patch.dict(sys.modules, {'isitgr': None}):
         reload(ccl.boltzmann)
 

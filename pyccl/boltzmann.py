@@ -11,8 +11,9 @@ from .parameters import physical_constants
 
 try:
     import isitgr  # noqa: F401
-except ImportError:
+except ModuleNotFoundError:
     pass  # prevent nans from isitgr
+
 
 
 @warn_api

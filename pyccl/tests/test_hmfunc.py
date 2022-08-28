@@ -109,6 +109,7 @@ def test_nM_bocquet_smoke(with_hydro):
 def test_nM_from_string(name):
     nM_class = ccl.halos.MassFunc.from_name(name)
     nM = nM_class()
+    assert nM_class == ccl.halos.mass_function_from_name(name)
     for m in MS:
         n = nM.get_mass_function(COSMO, m, 0.9)
         assert np.all(np.isfinite(n))
@@ -118,6 +119,17 @@ def test_nM_from_string(name):
 def test_nM_from_string_raises():
     with pytest.raises(ValueError):
         ccl.halos.MassFunc.from_name('Tinker09')
+
+
+def test_nM_default():
+    nM = ccl.halos.MassFunc(COSMO)
+    with pytest.raises(NotImplementedError):
+        nM._get_fsigma(COSMO, 1., 1., 8)
+
+    M_in = 1E12
+    lM_out = nM._get_consistent_mass(COSMO,
+                                     M_in, 1., nM.mdef)
+    assert np.fabs(np.log10(M_in) - lM_out) < 1E-10
 
 
 @pytest.mark.parametrize('mf', [ccl.halos.MassFuncTinker08,

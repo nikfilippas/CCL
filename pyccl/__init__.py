@@ -1,3 +1,4 @@
+# flake8: noqa E402
 from pkg_resources import get_distribution, DistributionNotFound
 try:
     __version__ = get_distribution(__name__).version
@@ -20,6 +21,14 @@ from .errors import (
     CCLError,
     CCLWarning,
     CCLDeprecationWarning,
+)
+
+# Constants and accuracy parameters
+from .parameters import (
+    CCLParameters,
+    gsl_params,
+    spline_params,
+    physical_constants,
 )
 
 # Core data structures
@@ -131,14 +140,6 @@ from .base import (
     unlock_instance,
 )
 
-# Parameters
-from .parameters import (
-    CCLParameters,
-    gsl_params,
-    spline_params,
-    physical_constants,
-)
-
 # Emulators
 from .emulator import (
     EmulatorObject,
@@ -164,7 +165,7 @@ def __getattr__(name):
         return eval(name)
     raise AttributeError(f"No module named {name}.")
 
-
+# Deprecated & Renamed modules
 from .halomodel import (
     halomodel_matter_power,
     halo_concentration,
@@ -190,6 +191,8 @@ __all__ = (
     'lib', 'Caching', 'cache', 'hash_', 'CCLObject', 'CCLHalosObject',
     'UnlockInstance', 'unlock_instance',
     'CCLParameters', 'physical_constants', 'gsl_params', 'spline_params',
+    'lib',
+    'CCLParameters', 'spline_params', 'gsl_params', 'physical_constants',
     'CCLError', 'CCLWarning', 'CCLDeprecationWarning',
     'Cosmology', 'CosmologyVanillaLCDM', 'CosmologyCalculator',
     'growth_factor', 'growth_factor_unnorm', 'growth_rate',
@@ -203,6 +206,8 @@ __all__ = (
     'sigmaR', 'sigmaV', 'sigma8', 'sigmaM', 'kNL',
     'bcm_model_fka', 'bcm_correct_pk2d', 'baryon_correct',
     'Omeganuh2', 'Omega_nu_h2', 'nu_masses',
+    'bcm_model_fka', 'bcm_correct_pk2d',
+    'Omeganuh2', 'nu_masses',
     'angular_cl',
     'Tracer', 'NumberCountsTracer', 'WeakLensingTracer', 'CMBLensingTracer',
     'tSZTracer', 'CIBTracer', 'ISWTracer',
