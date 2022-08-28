@@ -1,0 +1,17 @@
+WIP to move the entire CCL codebase to pure Python.
+Current benchmarks show same accuracy and 1x-10x faster code.
+Test install with `python setup.py install --user`.
+
+Left to be done:
+- correlations
+- covariances
+- FFTLog (there is fftw in Python, also hankl, one I've implemented myself via quad_qawfe)
+but the only profile that uses FFTLog is Einasto.
+- some bugfixes in angular cells
+- bugfix in lensing kernel integral
+- HALOFIT
+- CosmicEMU
+
+Other notes:
+- Check usage of Cauchy repeated integration formula for double FFTLog.
+
