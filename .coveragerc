@@ -1,4 +1,0 @@
-[report]
-omit =
-    *ccllib.py
-    pyccl/tests/*
