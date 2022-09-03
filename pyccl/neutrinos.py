@@ -8,7 +8,10 @@ from enum import Enum
 import warnings
 
 
-class _NeutrinoMassSplits(Enum):
+__all__ = ("NeutrinoMassSplits", "Omeganuh2", "nu_masses")
+
+
+class NeutrinoMassSplits(Enum):
     NORMAL = 'normal'
     INVERTED = 'inverted'
     EQUAL = 'equal'
@@ -119,20 +122,20 @@ def nu_masses(OmNuh2, mass_split):
 
     Arguments
     ---------
-    OmNuh2 : float or array_like
+    OmNuh2 : float or (nΩ,) array_like
         Neutrino energy density at z=0 times h^2.
-    mass_split : {'normal', 'iverted', 'equal', 'sum'}
+    mass_split : {'normal', 'iverted', 'equal', 'sum', 'single'}
         Indicates how the masses should be split up.
 
     Returns
     -------
-    nu_masses : float or array-like
+    nu_masses : float or (N, nΩ) ndarray
         Neutrino mass(es) corresponding to this ``OmeNuh2``.
     """
     sumnu = 93.14 * OmNuh2
 
     # Now split the sum up into three masses depending on the label given.
-    split = _NeutrinoMassSplits
+    split = NeutrinoMassSplits
 
     if split(mass_split) in [split.SUM, split.SINGLE]:
         return sumnu

@@ -3,6 +3,10 @@ import numpy as np
 from scipy import interpolate
 
 
+__all__ = ("linlog_spacing", "loglin_spacing",
+           "Interpolator1D", "Interpolator2D", "Interpolator3D")
+
+
 def linlog_spacing(xmin, logstart, xmax, num_lin, num_log, dtype=float):
     """Create an array spaced first linearly, then logarithmically.
 

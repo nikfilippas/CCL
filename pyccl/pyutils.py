@@ -4,13 +4,18 @@ import numpy as np
 def expand_dim(arr, ndim, pos) -> np.ndarray:
     """Expand array an arbitrary number of dimensions.
 
+    .. note::
+
+        Similar to ``numpy.expand_dims``, with enhanced functionality.
+
     Arguments
     ---------
     arr : :class:`numpy.ndarray`
         Input array.
     ndim : int
         Total number of output dimensions.
-    pos : Dimension where the array will be placed.
+    pos : int
+        Dimension where the array will be placed.
 
     Returns
     -------
@@ -24,8 +29,7 @@ def expand_dim(arr, ndim, pos) -> np.ndarray:
 def get_expanded(*arrs) -> list:
     """Orthogonalize the input arrays, in the input order."""
     ndim = len(arrs)
-    arrs = [expand_dim(arr, ndim, pos) for pos, arr in enumerate(arrs)]
-    return arrs
+    return [expand_dim(arr, ndim, pos) for pos, arr in enumerate(arrs)]
 
 
 def get_broadcastable(*arrs) -> list:
@@ -36,6 +40,9 @@ def get_broadcastable(*arrs) -> list:
 
     Examples
     --------
+
+    In the examples following, the variable ``shape`` refers to
+    the combined broadcast shape of the output arrays.
 
     If all arrays are of size 0 or 1, they are not reshaped:
 

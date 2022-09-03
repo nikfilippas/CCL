@@ -1,7 +1,12 @@
 from .interpolate import Interpolator2D
 from .errors import CCLWarning
+
 import numpy as np
 import warnings
+import copy
+
+
+__all__ = ("_DefaultPowerSpectrum", "Pk2D", "parse_pk2d")
 
 
 _DefaultPowerSpectrum = 'delta_matter:delta_matter'
@@ -76,11 +81,32 @@ class Pk2D:
                 extrap_orders=[1, 1, extrap_order_lok, extrap_order_hik])
 
     @property
+    def amin(self):
+        """Minimum interpolated scale factor."""
+        return self.psp._xmin
+
+    @property
+    def amax(self):
+        """Maximum interpolated scale factor."""
+        return self.psp._xmax
+
+    @property
+    def kmin(self):
+        """Minimum interpolated wavenumber."""
+        return np.exp(self.psp._ymin)
+
+    def kmax(self):
+        """Maximum interpolated wavenumber."""
+        return np.exp(self.psp._ymax)
+
+    @property
     def extrap_order_lok(self):
+        """Polynomial order for Taylor extrapolation below ``kmin``."""
         return self.psp.extrap_orders[2] if self.psp else None
 
     @property
     def extrap_order_hik(self):
+        """Polynomial order for Taylor extrapolation above ``kmax``."""
         return self.psp.extrap_orders[3] if self.psp else None
 
     def __contains__(self, other):
@@ -119,11 +145,7 @@ class Pk2D:
 
     def copy(self):
         """Return a copy of this ``Pk2D`` object."""
-        import copy
-        dic = copy.deepcopy(self.__dict__)
-        out = Pk2D.__new__(Pk2D)
-        out.__dict__ = dic
-        return out
+        return copy.copy(self)
 
     def get_spline_arrays(self):
         """Get the spline data arrays.
@@ -255,9 +277,9 @@ class Pk2D:
         cosmo : :class:`~pyccl.core.Cosmology`
             A Cosmology object.
         model : :obj:`str`
-            Models are listed in :obj:`~pyccl.power._TransferFunctions`,
-            :obj:`~pyccl.power._MatterPowerSpectra`, and
-            :obj:`~pyccl.power._BaryonPowerSpectra`.
+            Models are listed in :obj:`~pyccl.TransferFunctions`,
+            :obj:`~pyccl.power.MatterPowerSpectra`, and
+            :obj:`~pyccl.power.BaryonPowerSpectra`.
         """
         from .pspec import PowerSpectrum
         return PowerSpectrum.from_model(model)(cosmo).get_power_spectrum()

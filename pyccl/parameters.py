@@ -2,6 +2,9 @@ from numpy import pi, log, log10, ceil, linspace
 from inspect import isfunction
 
 
+__all__ = ("physical_constants", "accuracy_params", "spline_params")
+
+
 class CCLParameters:
     """Base for classes that gold global CCL parameters and their values.
 
@@ -17,8 +20,8 @@ class CCLParameters:
 
     def __init__(self):
         # Instances use a copy of the parameters in the class dictionary.
-        self_dict = {p: v for p, v in self.__class__.__dict__.items() if
-                          not p.startswith("_") and not isfunction(v)}
+        self_dict = {p: v for p, v in self.__class__.__dict__.items()
+                     if not p.startswith("_") and not isfunction(v)}
         self.__dict__.update(self_dict)
 
     def __setattr__(self, param, value):
@@ -100,6 +103,8 @@ class _PhysicalConstants(CCLParameters, freeze=True):
     # Neutrino constant required in Omeganuh2.
     NU_CONST = (8*pi**5 * (KBOLTZ/HPLANCK)**3 * (KBOLTZ/15/CLIGHT**3)
                 * (8*pi*GNEWT/3) * (MPC_TO_METER**2/CLIGHT**2/1e10))
+    # Linear density contrast of spherical collapse.
+    DELTA_C = (3/20) * (12*pi)**(2/3)
 
     # ~~ OTHER CONSTANTS ~~ #
     # Neutrino mass splitting differences.
@@ -224,18 +229,18 @@ spline_params = _SplineParams()
 
 class _FFTLogParams:
     """Objects of this class store the FFTLog accuracy parameters."""
-    padding_lo_fftlog = 0.1  # Anti-aliasing: multiply the lower boundary.
-    padding_hi_fftlog = 10.  #                multiply the upper boundary.
+    padding_lo_fftlog = 0.1   # | Anti-aliasing: multiply the lower boundary.
+    padding_hi_fftlog = 10.   # |                multiply the upper boundary.
 
-    n_per_decade = 100       # Samples per decade for the Hankel transforms.
-    extrapol = "linx_lny"    # Extrapolation type.
+    n_per_decade = 100        # Samples per decade for the Hankel transforms.
+    extrapol = "linx_lny"     # Extrapolation type.
 
-    padding_lo_extra = 0.1   # Padding for the intermediate step of a double
-    padding_hi_extra = 10.   # double transform. Doesn't have to be as precise.
-    large_padding_2D = False # If True, high precision intermediate transform.
+    padding_lo_extra = 0.1    # Padding for the intermediate step of a double
+    padding_hi_extra = 10.    # transform. Doesn't have to be as precise.
+    large_padding_2D = False  # If True, high precision intermediate transform.
 
-    plaw_fourier = -1.5      # Real <--> Fourier transforms.
-    plaw_projected = -1.0    # 2D projected & cumulative density profiles.
+    plaw_fourier = -1.5       # Real <--> Fourier transforms.
+    plaw_projected = -1.0     # 2D projected & cumulative density profiles.
 
     def __getitem__(self, name):
         return getattr(self, name)

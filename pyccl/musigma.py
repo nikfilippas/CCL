@@ -4,6 +4,9 @@ from .pyutils import get_broadcastable
 import numpy as np
 
 
+__all__ = ("mu_MG", "Sigma_MG")
+
+
 def _musigma(cosmo, k, a, *, c_mg=None):
     """Helper for the μ(k, a) and Σ(k, a) parametrizations."""
     # This function can be extended to include other
@@ -49,7 +52,7 @@ def mu_MG(cosmo, k, a, *, squeeze=True):
         Modification to Poisson equation under modified gravity.
     """
     out = _musigma(cosmo, k, a, c_mg=cosmo["c1_mg"])
-    return  out.squeeze()[()] if squeeze else out
+    return out.squeeze()[()] if squeeze else out
 
 
 def Sigma_MG(cosmo, k, a, *, squeeze=True):
@@ -74,4 +77,4 @@ def Sigma_MG(cosmo, k, a, *, squeeze=True):
         Modification to Poisson equation under modified gravity.
     """
     out = _musigma(cosmo, k, a, c_mg=cosmo["c2_mg"])
-    return  out.squeeze()[()] if squeeze else out
+    return out.squeeze()[()] if squeeze else out

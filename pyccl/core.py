@@ -1,6 +1,6 @@
 from .parameters import physical_constants as const
-from .neutrinos import _NeutrinoMassSplits, Omeganuh2
-from .pspec import _TransferFunctions, _MatterPowerSpectra, _BaryonPowerSpectra
+from .neutrinos import NeutrinoMassSplits, Omeganuh2
+from .pspec import TransferFunctions, MatterPowerSpectra, BaryonPowerSpectra
 from .pk2d import _DefaultPowerSpectrum, Pk2D
 from .interpolate import Interpolator1D
 from .errors import CCLError
@@ -8,6 +8,9 @@ from .errors import CCLError
 import numpy as np
 import warnings
 import copy
+
+
+__all__ = ("Cosmology", "CosmologyVanillaLCDM", "CosmologyCalculator")
 
 
 class CosmologyParams:
@@ -117,6 +120,7 @@ def _methods_of_cosmology(cls=None, *, modules=[]):
 
 _modules = ["background", "boltzmann", "cells", "musigma", "power", "pspec"]
 
+
 @_methods_of_cosmology(modules=_modules)
 class Cosmology:
     """
@@ -131,7 +135,7 @@ class Cosmology:
                  w0=-1., wa=0.,
                  mu_0=0., sigma_0=0., c1_mg=1., c2_mg=1., lambda_mg=0.,
                  transfer_function="camb",
-                 matter_power_spectrum="halofit",
+                 matter_power_spectrum="hmcode",
                  baryons_power_spectrum="nobaryons",
                  extra_parameters={}):
 
@@ -141,13 +145,13 @@ class Cosmology:
         self._pkl, self._pknl = {}, {}
 
         self._fill_config(
-            transfer_function=_TransferFunctions(transfer_function),
-            matter_power_spectrum=_MatterPowerSpectra(matter_power_spectrum),
-            baryons_power_spectrum=_BaryonPowerSpectra(baryons_power_spectrum),
+            transfer_function=TransferFunctions(transfer_function),
+            matter_power_spectrum=MatterPowerSpectra(matter_power_spectrum),
+            baryons_power_spectrum=BaryonPowerSpectra(baryons_power_spectrum),
             extra_parameters=extra_parameters)
 
-        TRF, trf = _TransferFunctions, transfer_function
-        MPS, mps = _MatterPowerSpectra, matter_power_spectrum
+        TRF, trf = TransferFunctions, transfer_function
+        MPS, mps = MatterPowerSpectra, matter_power_spectrum
         if MPS(mps) == MPS.CAMB and TRF(trf) != TRF.CAMB:
             raise CCLError(
                 "To compute the non-linear matter power spectrum with CAMB "
@@ -212,7 +216,7 @@ class Cosmology:
         if m_nu < 1e-15:
             return [0., 0., 0.]
 
-        split = _NeutrinoMassSplits
+        split = NeutrinoMassSplits
         ΔM = [const.DELTAM12_sq, const.DELTAM13_sq_pos, const.DELTAM13_sq_neg]
         if split(m_nu_type) == split.NORMAL:
             if m_nu < np.sqrt(ΔM[0]) + np.sqrt(ΔM[1]):
@@ -356,6 +360,10 @@ class Cosmology:
         """TODO"""
         # TODO
         return "TODO"
+
+    def copy(self):
+        """Return a copy of this object."""
+        return copy.copy(self)
 
 
 def CosmologyVanillaLCDM(**kwargs):

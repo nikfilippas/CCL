@@ -11,10 +11,19 @@ import warnings
 from enum import Enum
 
 
+__all__ = ("Species", "h_over_h0", "comoving_radial_distance",
+           "scale_factor_of_chi", "sinn", "comoving_angular_distance",
+           "angular_diameter_distance", "luminosity_distance",
+           "distance_modulus", "hubble_distance", "comoving_volume_element",
+           "comoving_volume", "lookback_time", "age_of_universe",
+           "omega_x", "rho_x", "growth_factor", "growth_factor_unnorm",
+           "growth_rate", "sigma_critical")
+
+
 _eps = 1e-8  # ε used to truncate distances
 
 
-class _Species(Enum):
+class Species(Enum):
     CRITICAL = 'critical'
     MATTER = 'matter'
     DARK_ENERGY = 'dark_energy'
@@ -31,12 +40,12 @@ def _h_over_h0(cosmo, a):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
 
     Returns
     -------
-    Ez : float or (..., na, ...) ndarray
+    Ez : float or (na,) ndarray
     """
     a = np.asarray(a)
     Omega_nu_mass = 0
@@ -520,70 +529,69 @@ def age_of_universe(cosmo, a, *, squeeze=True):
 
 
 def omega_x(cosmo, a, species, *, squeeze=True):
-    """Density fraction of a given species at a particular scale factor.
+    r"""Density fraction of a given species at a particular scale factor.
 
     .. math::
 
-        \\Omega_x(a) = \\frac{\\rho_x(a)}{\\rho_{\\mathrm{crit}(a)}}
+        \Omega_x(a) = \frac{\rho_x(a)}{\rho_{\rm crit}(a)}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor, normalized to 1 today.
     species : str
-        Species type. Should be one of
-
-        - 'matter': cold dark matter, massive neutrinos, and baryons
-        - 'dark_energy': cosmological constant or otherwise
-        - 'radiation': relativistic species besides massless neutrinos
-        - 'curvature': curvature density
-        - 'neutrinos_rel': relativistic neutrinos
-        - 'neutrinos_massive': massive neutrinos
+        Species type. Should be one of:
+            - 'matter': cold dark matter, massive neutrinos, and baryons
+            - 'dark_energy': cosmological constant or otherwise
+            - 'radiation': relativistic species besides massless neutrinos
+            - 'curvature': curvature density
+            - 'neutrinos_rel': relativistic neutrinos
+            - 'neutrinos_massive': massive neutrinos
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
         The default is True.
 
     Returns
     -------
-    Omega_x : float or (..., na, ...) ndarray
+    Omega_x : float or (na,) ndarray
         Density fraction of a given species at ``a``.
     """
     a = np.asarray(a)
     Omega_nu_mass = 0
-    if (_Species(species) in [_Species.MATTER, _Species.NEUTRINOS_MASSIVE]
+    if (Species(species) in [Species.MATTER, Species.NEUTRINOS_MASSIVE]
             and cosmo["N_nu_mass"] > 1e-12):
         Omega_nu_mass = Omeganuh2(a=a,
-                               m_nu=cosmo["m_nu"],
-                               T_CMB=cosmo["T_CMB"],
-                               T_ncdm=cosmo["T_ncdm"],
-                               squeeze=False) / cosmo["h"]**2
+                                  m_nu=cosmo["m_nu"],
+                                  T_CMB=cosmo["T_CMB"],
+                                  T_ncdm=cosmo["T_ncdm"],
+                                  squeeze=False) / cosmo["h"]**2
 
-    if _Species(species) != _Species.CRITICAL:
+    if Species(species) != Species.CRITICAL:
         hnorm = _h_over_h0(cosmo, a)
 
-    if _Species(species) == _Species.CRITICAL:
+    if Species(species) == Species.CRITICAL:
         out = np.ones_like(a)
 
-    elif _Species(species) == _Species.MATTER:
+    elif Species(species) == Species.MATTER:
         out = (((cosmo["Omega_c"] + cosmo["Omega_b"]) / a**3
                 + Omega_nu_mass) / hnorm**2)
 
-    elif _Species(species) == _Species.DARK_ENERGY:
+    elif Species(species) == Species.DARK_ENERGY:
         out = (cosmo["Omega_l"] * a**(-3*(1 + cosmo["w0"] + cosmo["wa"]))
                * np.exp(3 * cosmo["wa"] * (a-1)) / hnorm**2)
 
-    elif _Species(species) == _Species.RADIATION:
+    elif Species(species) == Species.RADIATION:
         out = cosmo["Omega_g"] / a**4 / hnorm**2
 
-    elif _Species(species) == _Species.CURVATURE:
+    elif Species(species) == Species.CURVATURE:
         out = cosmo["Omega_k"] / a**2 / hnorm**2
 
-    elif _Species(species) == _Species.NEUTRINOS_REL:
+    elif Species(species) == Species.NEUTRINOS_REL:
         out = cosmo["Omega_nu_rel"] / a**4 / hnorm**2
 
-    elif _Species(species) == _Species.NEUTRINOS_MASSIVE:
+    elif Species(species) == Species.NEUTRINOS_MASSIVE:
         out = Omega_nu_mass / hnorm**2
 
     return out.squeeze()[()] if squeeze else out

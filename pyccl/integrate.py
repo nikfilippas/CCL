@@ -6,6 +6,9 @@ from scipy import integrate
 from enum import Enum
 
 
+__all__ = ("IntegratorSamples", "IntegratorFunction")
+
+
 class _IntegrationMethodsSamples(Enum):
     TRAPEZOID = "trapezoid"
     SIMPSON = "simpson"
@@ -21,7 +24,15 @@ class _IntegrationMethodsFunction(Enum):
 
 
 class IntegratorSamples:
-    """Generic class to handle 1-D integration methods."""
+    """Generic class to handle 1-D integration methods.
+
+    Parameters
+    ----------
+    method : {'trapezoid', 'simpson', 'symmetrical', 'spline'}
+        Integration method.
+    sym_method : {'trapezoid', 'simpson'}
+        Integration method for symmetrical grid.
+    """
 
     def __init__(self, method, sym_method=None):
         IM = _IntegrationMethodsSamples
@@ -72,7 +83,17 @@ class IntegratorSamples:
 
 
 class IntegratorFunction:
-    """Generic class to handle function integration methods."""
+    """Generic class to handle function integration methods.
+
+    Parameters
+    ----------
+    mathod : {'spline', 'adaptive_quadrature', \
+              'fixed_quadrature', 'fourier_transform'}
+        Integration method.
+    accuracy : int or float
+        - ``int``: Number of points for spline integration.
+        - ``float``: Relative error (ε) for quadrature integration.
+    """
 
     def __init__(self, method, accuracy=None):
         IM = _IntegrationMethodsFunction
@@ -109,7 +130,7 @@ class IntegratorFunction:
         return integrate.fixed_quad(func, a, b,
                                     n=acc.N_ITERATION, args=args)[0]
 
-    def _fourier_transform(accuracy=acc.EPSREL):
+    def _fourier_transform(self, accuracy=acc.EPSREL):
         def fourier_transform(func, a, b, wvar):
             return np.array([
                 integrate.quad(func, a, b, weight="sin", wvar=w,

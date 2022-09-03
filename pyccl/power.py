@@ -1,5 +1,5 @@
-from .pspec import (PowerSpectrum, _TransferFunctions,
-                    _MatterPowerSpectra, _BaryonPowerSpectra)
+from .pspec import (PowerSpectrum, TransferFunctions,
+                    MatterPowerSpectra, BaryonPowerSpectra)
 from .pk2d import _DefaultPowerSpectrum, Pk2D, parse_pk2d
 from .interpolate import Interpolator2D
 from .integrate import IntegratorFunction
@@ -13,6 +13,12 @@ from scipy.special import jv
 import warnings
 
 
+__all__ = ("get_linear_power", "get_nonlin_power", "linear_power",
+           "dlnPk_dlnk", "nonlin_power",
+           "sigmaR", "sigmaV", "sigma8", "sigma2B", "kNL", "r2m", "m2r",
+           "sigmaM", "dlnsigM_dlogM")
+
+
 def compute_linear_power(cosmo):
     """Compute the linear power spectrum."""
     if cosmo.has_linear_power:
@@ -20,8 +26,8 @@ def compute_linear_power(cosmo):
 
     cosmo.compute_growth()
 
-    TRF, trf = _TransferFunctions, cosmo.config.transfer_function
-    MPS, mps = _MatterPowerSpectra, cosmo.config.matter_power_spectrum
+    TRF, trf = TransferFunctions, cosmo.config.transfer_function
+    MPS, mps = MatterPowerSpectra, cosmo.config.matter_power_spectrum
     model = PowerSpectrum.from_model(trf.value)(cosmo)
     extras = cosmo.get_extra_parameters(trf.value)
 
@@ -53,8 +59,8 @@ def compute_nonlin_power(cosmo):
     if cosmo.has_nonlin_power:
         return
 
-    MPS, mps = _MatterPowerSpectra, cosmo.config.matter_power_spectrum
-    BPS, bps = _BaryonPowerSpectra, cosmo.config.baryons_power_spectrum
+    MPS, mps = MatterPowerSpectra, cosmo.config.matter_power_spectrum
+    BPS, bps = BaryonPowerSpectra, cosmo.config.baryons_power_spectrum
 
     is_MG = (cosmo["mu_0"], cosmo["sigma_0"]) != (0, 0)
     if is_MG and MPS(mps) != MPS.LINEAR:
@@ -73,8 +79,8 @@ def compute_nonlin_power(cosmo):
     if MPS(mps) == MPS.HALOFIT:
         pkl = cosmo.get_linear_power()
         pk = pkl.apply_model(cosmo, "halofit")
-    elif MPS(mps) == MPS.EMU:
-        pk = Pk2D.from_model(cosmo, model="emu")
+    elif MPS(mps) in [MPS.HMCODE, MPS.EMU]:
+        pk = Pk2D.from_model(cosmo, model=mps.value)
     elif MPS(mps) == MPS.LINEAR:
         pk = cosmo.get_linear_power().copy()
 
@@ -325,7 +331,7 @@ def sigmaR(cosmo, R, a=1, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
         pka = pk(k, a, squeeze=False)
         return pka * k**3 * _w_tophat(k*R)**2
 
-    out =  _integrate_sigma(cosmo, sigmaR_integrand)
+    out = _integrate_sigma(cosmo, sigmaR_integrand)
     return out.squeeze()[()] if squeeze else out
 
 
@@ -389,9 +395,10 @@ def sigma8(cosmo, p_of_k_a=_DefaultPowerSpectrum):
         If a string is passed, a non-linear power spectrum under that name
         must be stored in ``cosmo`` (e.g.`'delta_matter:delta_matter'`).
     """
+    if cosmo["sigma8"] is not None:
+        return cosmo["sigma8"]
     out = sigmaR(cosmo, 8/cosmo["h"], 1., p_of_k_a=p_of_k_a)
-    if cosmo["sigma8"] is None:
-        cosmo.params.sigma8 = out
+    cosmo.params.sigma8 = out
     return out
 
 
@@ -418,35 +425,34 @@ def sigma2B(cosmo, R, a, p_of_k_a, *, squeeze=True):
 
 
 def kNL(cosmo, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
-    """Scale for the non-linear cut.
+    r"""Scale for the non-linear cut.
 
-    `k_{\\mathrm{NL}}` is calculated based on Lagrangian perturbation
+    `k_{\rm NL}` is calculated based on Lagrangian perturbation
     theory, as the inverse of the variance of the displacement field,
 
     .. math::
 
-        k_\\mathrm{NL} = \\frac{1}{\\sigma_{\\eta}}
-        = \\left( \\frac{1}{6\\pi^2}
-                 \\int P_\\mathrm{L}(k) \\mathrm{d}k \\right)^{-1/2}.
+        k_{\rm NL} = \frac{1}{\sigma_\eta}
+        = \left( \frac{1}{6\pi^2} \int P_{\rm L}(k) \mathrm{d}k \right)^{-1/2}.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or array_like
+    a : float or (na,) array_like
         Scale factor, normalized to 1 today.
-    p_of_k_a : :class:`~pyccl.pk2d.Pk2D` or str
+    p_of_k_a : :class:`~pyccl.pk2d.Pk2D` or str, optional
         3-D power spectrum to integrate.
         If a string is passed, a non-linear power spectrum under that name
         must be stored in ``cosmo`` (e.g.`'delta_matter:delta_matter'`).
-    squeeze : bool
+    squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
         The default is True.
 
     Returns
     -------
-    kNL : float or array-like
-        Scale of non-linear cut-off (:math:`\\mathrm{Mpc}^{-1}`).
+    kNL : float or (na,) ndarray
+        Scale of non-linear cut-off (:math:`\rm Mpc^{-1}`).
     """
     pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
     integrator = IntegratorFunction("fixed_quadrature", acc.EPSREL_KNL)
@@ -457,33 +463,33 @@ def kNL(cosmo, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
 
 def r2m(cosmo, R, a=1, Delta=1, species="matter", comoving=True, *,
         Delta_vectorized=True, squeeze=True):
-    """Generic function to convert radius to mass via density.
+    r"""Generic function to convert radius to mass via density.
 
     .. math::
 
-        M = \\frac{4\\pi}{3}\\,\\Delta\\,\\rho_\\mathrm{x}(a)\\,R^3
+        M = \frac{4\pi}{3} \, \Delta \, \rho_{\rm x}(a) \, R^3
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    R : float or (..., nR, ...) array_like
-        Radius in :math:`\\mathrm{Mpc}`.
-    a : float or (..., na, ...) array_like
+    R : float or (nR) array_like
+        Radius in :math:`\rm Mpc`.
+    a : float or (na) array_like
         Scale factor(s). The default is 1.
-    Delta : float or (..., nDelta, ...) array_like, optional
-        Overdensity parameter :math:`\\Delta`.
+    Delta : float or (nDelta,) array_like, optional
+        Overdensity parameter :math:`\Delta`.
         The default is 1.
     species : str, optional
         Species of which the density is calculated.
-        :class:`~pyccl.background._Species` lists all available species.
+        :class:`~pyccl.Species` lists all available species.
         The default is 'matter'.
     comoving : bool, optional
         Comoving or physical coordinates. The default is comoving.
     Delta_vectorized : bool, optional
         Whether to treat ``Delta`` as an extra, vectorized dimension.
         Otherwise, ``Delta`` lies parallel to the dimension of ``a``,
-        and the return shape is (..., na, nR, ...).
+        and the return shape is (na, nR).
         The default is True.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -491,8 +497,8 @@ def r2m(cosmo, R, a=1, Delta=1, species="matter", comoving=True, *,
 
     Returns
     -------
-    mass : float or (..., na, nR, nDelta, ...) ndarray
-        Halo mass in :math:`\\mathrm{M}_{\\odot}`.
+    mass : float or (na, nR, nDelta) ndarray
+        Halo mass in :math:`\rm M_\odot`.
     """
     # Axes are [a, R, Delta].
     a, R, Delta = map(np.asarray, [a, R, Delta])
@@ -508,36 +514,36 @@ def r2m(cosmo, R, a=1, Delta=1, species="matter", comoving=True, *,
 
 def m2r(cosmo, M, a=1, Delta=1, species="matter", comoving=True, *,
         Delta_vectorized=True, squeeze=True):
-    """Generic function to convert mass to radius via density.
+    r"""Generic function to convert mass to radius via density.
 
     .. math::
 
-        R = \\left(
-            \\frac{3 M}{4\\pi\\,\\Delta\\,\\rho_{\\mathrm{x}}(a)}
-            \\right)
-            ^{\\frac{1}{3}}
+        R = \left(
+            \frac{3 M}{4\pi \, \Delta \, \rho_{\rm x}(a)}
+            \right)
+            ^{\frac{1}{3}}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    M : float or (..., nM, ...) array_like
-        Halo mass in :math:`\\mathrm{M}_{\\odot}`.
-    a : float or (..., na, ...) array_like
+    M : float or (nM) array_like
+        Halo mass in :math:`\rm M_\odot`.
+    a : float or (na,) array_like
         Scale factor(s). The default is 1.
-    Delta : float or (..., nDelta, ...) array_like, optional
-        Overdensity parameter :math:`\\Delta`.
+    Delta : float or (nDelta,) array_like, optional
+        Overdensity parameter :math:`\Delta`.
         The default is 1.
     species : str, optional
         Species of which the density is calculated.
-        :class:`~pyccl.background._Species` lists all available species.
+        :class:`~pyccl.Species` lists all available species.
         The default is 'matter'.
     comoving : bool, optional
         Comoving or physical coordinates. The default is comoving.
     Delta_vectorized : bool, optional
         Whether to treat ``Delta`` as an extra, vectorized dimension.
         Otherwise, ``Delta`` lies parallel to the dimension of ``a``,
-        and the return shape is (..., na, nM, ...).
+        and the return shape is (na, nM).
         The default is True.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -545,8 +551,8 @@ def m2r(cosmo, M, a=1, Delta=1, species="matter", comoving=True, *,
 
     Returns
     -------
-    radius : float or (..., na, nM, nDelta, ...) ndarray
-        Radius in :math:`\\mathrm{Mpc}`.
+    radius : float or (na, nM, nDelta) ndarray
+        Radius in :math:`\rm Mpc`.
     """
     # Axes are [a, M, Delta].
     a, M, Delta = map(np.asarray, [a, M, Delta])

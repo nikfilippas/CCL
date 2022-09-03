@@ -1,6 +1,9 @@
 import warnings
 
 
+__all__ = ("CCLError", "CCLWarning", "CCLDeprecationWarning")
+
+
 class CCLError(RuntimeError):
     """A CCL-specific RuntimeError"""
     def __repr__(self):
