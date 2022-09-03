@@ -1,10 +1,17 @@
-from .massdef import MassDef, _dc_NakamuraSuto
-from ..parameters import accuracy_params
+from .massdef import MassDef, dc_NakamuraSuto
+from ..parameters import physical_constants as const
+from ..parameters import accuracy_params as acc
 from ..pyutils import get_broadcastable
 
 import numpy as np
 from scipy.optimize import brentq, root_scalar
 from abc import ABC, abstractmethod, abstractproperty
+
+
+__all__ = ("Concentration", "ConcentrationDiemer15",
+           "ConcentrationBhattacharya13", "ConcentrationPrada12",
+           "ConcentrationKlypin11", "ConcentrationDuffy08",
+           "ConcentrationIshiyama21", "ConcentrationConstant")
 
 
 class Concentration(ABC):
@@ -148,8 +155,7 @@ class ConcentrationDiemer15(Concentration):
         n = pk(kR[:, ::-1], a, derivative=True, grid=False)[:, ::-1]
 
         σM = cosmo.sigmaM(M, a, squeeze=False)
-        δc = 1.68647
-        nu = δc / σM
+        nu = const.DELTA_C / σM
 
         floor = self.phi_0 + n * self.phi_1
         nu0 = self.eta_0 + n * self.eta_1
@@ -191,10 +197,11 @@ class ConcentrationBhattacharya13(Concentration):
 
     def _concentration(self, cosmo, M, a):
         gz = cosmo.growth_factor(a, squeeze=False)
-        δc = _dc_NakamuraSuto(cosmo, a, squeeze=False)
+        δc = dc_NakamuraSuto(cosmo, a, squeeze=False)
         sig = cosmo.sigmaM(M, a, squeeze=False)
         nu = δc / sig
         return self.A * gz**self.B * nu**self.C
+
 
 class ConcentrationPrada12(Concentration):
     """Concentration-mass relation by Prada et al. (2012)
@@ -435,7 +442,7 @@ class ConcentrationIshiyama21(Concentration):
         # TODO: We can replace the root finding with a spline for speed.
         for i, (val, neff) in enumerate(zip(arg, n_eff)):
             func = lambda x: self._G(x, neff) - val  # noqa: _G_inv Traceback
-            EPS, NIT = accuracy_params.EPSREL, accuracy_params.N_ITERATION_ROOT
+            EPS, NIT = acc.EPSREL, acc.N_ITERATION_ROOT
             try:
                 out[i] = brentq(func, a=0.05, b=200, rtol=EPS, maxiter=NIT)
             except ValueError:
@@ -446,7 +453,7 @@ class ConcentrationIshiyama21(Concentration):
         return out.reshape(shp).squeeze()[()]
 
     def _concentration(self, cosmo, M, a):
-        nu = 1.686 / cosmo.sigmaM(M, a, squeeze=False)
+        nu = const.DELTA_C / cosmo.sigmaM(M, a, squeeze=False)
         n_eff = -2 * self._dlsigmaR(cosmo, M, a) - 3
         α_eff = cosmo.growth_rate(a, squeeze=False)
 
@@ -456,6 +463,7 @@ class ConcentrationIshiyama21(Concentration):
         arg = A / nu * (1 + nu**2 / B)
         G = self._G_inv(arg, n_eff)
         return C * G
+
 
 class ConcentrationConstant(Concentration):
     """Constant contentration-mass relation.

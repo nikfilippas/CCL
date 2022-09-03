@@ -1,5 +1,4 @@
 from .profiles import HaloProfileNFW
-from .profiles_2pt import Profile2pt
 from ..pk2d import Pk2D
 from ..tk3d import Tk3D
 from ..parameters import spline_params as sparams
@@ -16,13 +15,11 @@ __all__ = ("halomod_trispectrum_1h", "halomod_Tk3D_1h",
 
 def _tkk_hm(cosmo, hmc, *, k=None, a=None,
             prof, prof2=None, prof3=None, prof4=None,
-            prof12_2pt=Profile2pt(), prof34_2pt=None,
             extrap_order_lok=1, extrap_order_hik=1,
             tk3d_out=False, use_log=True, squeeze=True):
-    """ Computes the halo model 1-halo trispectrum for four different
-    quantities defined by their respective halo profiles. The 1-halo
-    trispectrum for four profiles :math:`u_{1,2}`, :math:`v_{1,2}` is
-    calculated as:
+    """Halo model 1-halo trispectrum for four different quantities defined
+    by their respective halo profiles. The 1-halo trispectrum for four profiles
+    :math:`u_{1,2}`, :math:`v_{1,2}` is calculated as:
 
     .. math::
 
@@ -54,9 +51,6 @@ def _tkk_hm(cosmo, hmc, *, k=None, a=None,
         If ``prof2 is None``, ``prof`` will be used.
         If ``prof3 is None``, ``prof`` will be used.
         If ``prof4 is None``, ``prof2`` will be used.
-    prof12_2pt, prof34_2pt : :class:`~pyccl.halos.profiles_2pt.Profile2pt`
-        The two-point moment of ``prof`` and ``prof2``.
-        If ``prof34_2pt is None``, ``prof12_2pt`` will be used.
     extrap_order_lok, extrap_order_hik : {0, 1, 2}
         Extrapolation order for low and high ``k``, respectively.
         Provided when ``pk2d_out is True``. The defaults are 1 and 1.
@@ -105,9 +99,7 @@ def _tkk_hm(cosmo, hmc, *, k=None, a=None,
     norm = norm1 * norm2 * norm3 * norm4
 
     # I_0_22
-    tk1h = hmc.I_0_22(cosmo, k, a,
-                      prof=prof, prof2=prof2, prof3=prof3, prof4=prof4,
-                      prof12_2pt=prof12_2pt, prof34_2pt=prof34_2pt)
+    tk1h = hmc.I_0_22(cosmo, k, a, prof, prof2, prof3, prof4)
     tk1h *= norm
 
     # Return trispectrum array.
@@ -138,10 +130,6 @@ halomod_Tk3D_1h.__doc__ = _tkk_hm.__doc__
 
 def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, prof,
                                  bias1=1, bias2=1, bias3=1, bias4=1,
-                                 is_number_counts1=False,
-                                 is_number_counts2=False,
-                                 is_number_counts3=False,
-                                 is_number_counts4=False,
                                  p_of_k_a=None, lk_arr=None,
                                  a_arr=None, extrap_order_lok=1,
                                  extrap_order_hik=1, use_log=False):
@@ -179,7 +167,7 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, prof,
         Scale factor.
         The default is defined via the spline parameters of ``cosmo``.
     lk_arr : float or (nk,) array_like, optional
-        Log of comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
+        Log of comoving wavenumber in :math:`\rm Mpc^{-1}`.
         The default is defined via the spline parameters of ``cosmo``.
     extrap_order_lok, extrap_order_hik : {0, 1}
         Extrapolation order for low and high ``k``, respectively.
@@ -217,9 +205,8 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, prof,
             cosmo.compute_nonlin_power()
             pkf = cosmo.get_nonlin_power()
 
-    prof_2pt = Profile2pt()
     norm = hmc.profile_norm(cosmo, a, prof)**2
-    i12 = hmc.I_1_2(cosmo, k, a, prof, prof, prof_2pt)
+    i12 = hmc.I_1_2(cosmo, k, a, prof, prof)
 
     pk = pkf(k, a, squeeze=False)
     dpk = pkf(k, a, derivative=True, squeeze=False)
@@ -229,7 +216,7 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, prof,
     # Counter terms for clustering: -(bA + bB) * PAB.
     if any([locals()[f"is_number_counts{i}"] for i in range(4)]):
         b1 = b2 = b3 = b4 = 0
-        i02 = hmc.I_0_2(cosmo, k, a, prof, prof, prof_2pt) * norm
+        i02 = hmc.I_0_2(cosmo, k, a, prof, prof) * norm
         P_12 = P_34 = pk + i02
 
         if is_number_counts1:
@@ -262,12 +249,9 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, prof,
                 extrap_order_hik=extrap_order_hik)
 
 
-def halomod_Tk3D_SSC(cosmo, hmc,
-                     prof, prof2=None, prof3=None, prof4=None,
-                     prof12_2pt=Profile2pt(), prof34_2pt=None,
+def halomod_Tk3D_SSC(cosmo, hmc, prof, prof2=None, prof3=None, prof4=None,
                      p_of_k_a=None, lk_arr=None, a_arr=None,
-                     extrap_order_lok=1, extrap_order_hik=1,
-                     use_log=False):
+                     extrap_order_lok=1, extrap_order_hik=1, use_log=False):
     r"""Super-sample covariance trispectrum
 
     Defined as the tensor product of the power spectrum responses
@@ -296,9 +280,6 @@ def halomod_Tk3D_SSC(cosmo, hmc,
         If ``prof2 is None``, ``prof`` will be used.
         If ``prof3 is None``, ``prof`` will be used.
         If ``prof4 is None``, ``prof2`` will be used.
-    prof12_2pt, prof34_2pt : :class:`~pyccl.halos.profiles_2pt.Profile2pt`
-        The two-point moment of ``prof`` and ``prof2``.
-        If ``prof34_2pt is None``, ``prof12_2pt`` will be used.
     p_of_k_a : :class:`~pyccl.pk2d.Pk2D`, or {'linear', 'nonlinear'}
         Power spectrum.
     a_arr : float or (na,) array_like, optional
@@ -328,10 +309,6 @@ def halomod_Tk3D_SSC(cosmo, hmc,
         prof3_bak = prof
     else:
         prof3_bak = prof3
-    if prof34_2pt is None:
-        prof34_2pt_bak = prof12_2pt
-    else:
-        prof34_2pt_bak = prof34_2pt
 
     # Power spectrum
     if isinstance(p_of_k_a, Pk2D):
@@ -375,7 +352,7 @@ def halomod_Tk3D_SSC(cosmo, hmc,
             norm4 = get_norm(prof4, aa)
             i11_4 = hmc.I_1_1(cosmo, k_use, aa, prof4)
 
-        i12_12 = hmc.I_1_2(cosmo, k_use, aa, prof, prof2, prof12_2pt)
+        i12_12 = hmc.I_1_2(cosmo, k_use, aa, prof, prof2)
         if (prof3 is None) and (prof4 is None) and (prof34_2pt is None):
             i12_34 = i12_12
         else:
@@ -385,17 +362,17 @@ def halomod_Tk3D_SSC(cosmo, hmc,
         norm34 = norm3 * norm4
 
         pk = pk2d.eval(k_use, aa, cosmo)
-        dpk = pk2d.eval_dlogpk_dlogk(k_use, aa, cosmo)
+        dpk = pk2d(k_use, aa, derivative=True)
         dpk12[ia, :] = norm12*((47/21 - dpk/3)*i11_1*i11_2*pk+i12_12)
         dpk34[ia, :] = norm34*((47/21 - dpk/3)*i11_3*i11_4*pk+i12_34)
 
         # Counter terms for clustering (i.e. - (bA + bB) * PAB
-        if prof1.is_number_counts or (prof2 is None or prof2.is_number_counts):
+        if prof.is_number_counts or (prof2 is None or prof2.is_number_counts):
             b1 = b2 = np.zeros_like(k_use)
-            i02_12 = hmc.I_0_2(cosmo, k_use, aa, prof1, prof12_2pt, prof2)
+            i02_12 = hmc.I_0_2(cosmo, k_use, aa, prof, prof2)
             P_12 = norm12 * (pk * i11_1 * i11_2 + i02_12)
 
-            if prof1.is_number_counts:
+            if prof.is_number_counts:
                 b1 = i11_1 * norm1
 
             if prof2 is None:
@@ -412,8 +389,7 @@ def halomod_Tk3D_SSC(cosmo, hmc,
             if (prof3 is None) and (prof4 is None) and (prof34_2pt is None):
                 i02_34 = i02_12
             else:
-                i02_34 = hmc.I_0_2(cosmo, k_use, aa, prof3_bak, prof34_2pt_bak,
-                                   prof4)
+                i02_34 = hmc.I_0_2(cosmo, k_use, aa, prof3_bak, prof4)
             P_34 = norm34 * (pk * i11_3 * i11_4 + i02_34)
 
             if prof3 is None:

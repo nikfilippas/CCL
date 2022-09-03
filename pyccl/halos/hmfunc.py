@@ -1,4 +1,4 @@
-from .massdef import MassDef, _dc_NakamuraSuto, _Dv_BryanNorman
+from .massdef import MassDef, dc_NakamuraSuto, Dv_BryanNorman
 from ..pyutils import get_broadcastable
 from ..parameters import physical_constants as const
 from ..interpolate import Interpolator1D
@@ -7,18 +7,24 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 
+__all__ = ("MassFunc", "MassFuncPress74", "MassFuncSheth99",
+           "MassFuncJenkins01", "MassFuncTinker08", "MassFuncTinker10",
+           "MassFuncDespali16", "MassFuncBocquet16", "MassFuncWatson13",
+           "MassFuncAngulo12")
+
+
 class MassFunc(ABC):
-    """Calculations of halo mass functions.
+    r"""Calculations of halo mass functions.
 
     We assume that all mass functions can be written as
 
     .. math::
 
-        \\frac{\\mathrm{d}n}{\\mathrm{d}\\log_{10}M} =
-        f(\\sigma_M)\\,\\frac{\\rho_M}{M}\\,
-        \\frac{\\mathrm{d}\\log \\sigma_M}{\\mathrm{d}\\log_{10} M}
+        \frac{\mathrm{d}n}{\mathrm{d}\log_{10}M} =
+        f(\sigma_M) \, \frac{\rho_M}{M} \,
+        \frac{\mathrm{d}\log \sigma_M}{\mathrm{d}\log_{10} M}
 
-    where :math:`\\sigma_M^2` is the overdensity variance on spheres with a
+    where :math:`\sigma_M^2` is the overdensity variance on spheres with a
     radius given by the Lagrangian radius for mass :math:`M`.
 
     Specific mass function parametrizations can be created by subclassing
@@ -166,13 +172,12 @@ class MassFuncPress74(MassFunc):
         return mass_def.Delta != "fof"
 
     def _get_fsigma(self, cosmo, sigM, a, lnM):
-        delta_c = 1.68647
-        nu = delta_c / sigM
+        nu = const.DELTA_C / sigM
         return self.norm * nu * np.exp(-0.5 * nu**2)
 
 
 class MassFuncSheth99(MassFunc):
-    """Mass function described in :arXiv:astro-ph/9901122.
+    r"""Mass function described in :arXiv:astro-ph/9901122.
     This parametrization is only valid for 'fof' masses.
 
     Parameters
@@ -180,9 +185,10 @@ class MassFuncSheth99(MassFunc):
     mass_def : :class:`~pyccl.halos.massdef.MassDef`, optional
         Mass definition.
         **Note**: This parametrization is only valid for FoF masses.
-    delta_c_fit : bool
-        Whether to use :math:`\\delta_{\\mathrm{crit}}` from the fit of
-        Nakamura & Suto 1997. If False, use :math:`1.68647`.
+    delta_c_fit : bool, optional
+        Whether to use :math:`\delta_{\rm c}` from the fit of Nakamura & Suto
+        (1997). If False, use :math:`\delta_c` from linear spherical collapse.
+        The default is False.
     """
     name = 'Sheth99'
 
@@ -199,9 +205,9 @@ class MassFuncSheth99(MassFunc):
         return mass_def.Delta != "fof"
 
     def _get_fsigma(self, cosmo, sigM, a, lnM):
-        δc = 1.68647
+        δc = const.DELTA_C
         if self.delta_c_fit:
-            δc = _dc_NakamuraSuto(cosmo, a, squeeze=False)
+            δc = dc_NakamuraSuto(cosmo, a, squeeze=False)
         nu = δc / sigM
         anu2 = self.a * nu**2
         return nu * self.A * (1. + anu2**(-self.p)) * np.exp(-anu2/2.)
@@ -305,8 +311,8 @@ class MassFuncDespali16(MassFunc):
         return mass_def.Delta == "fof"
 
     def _get_fsigma(self, cosmo, sigM, a, lnM):
-        δc = _dc_NakamuraSuto(cosmo, a, squeeze=False)
-        Δv = _Dv_BryanNorman(cosmo, a, squeeze=False)
+        δc = dc_NakamuraSuto(cosmo, a, squeeze=False)
+        Δv = Dv_BryanNorman(cosmo, a, squeeze=False)
 
         Ω = cosmo.omega_x(a, self. mass_def.rho_type, squeeze=False)
         x = np.log10(Ω * self.mass_def.get_Delta(cosmo, a, squeeze=False) / Δv)
@@ -388,7 +394,7 @@ class MassFuncTinker10(MassFunc):
 
     def _get_fsigma(self, cosmo, sigM, a, lnM):
         ld = np.log10(self._get_Delta_m(cosmo, a))
-        nu = 1.686 / sigM
+        nu = const.DELTA_C / sigM
         # redshift evolution only up to z=3
         a = np.clip(a, 0.25, 1)
         pa = self.pa0(ld) * a**(-0.27)
@@ -408,14 +414,14 @@ class MassFuncTinker10(MassFunc):
 
 
 class MassFuncBocquet16(MassFunc):
-    """Mass function described in :arXiv:1502.07357.
+    r"""Mass function described in :arXiv:1502.07357.
 
     Parameters
     ----------
     mass_def :class:`~pyccl.halos.massdef.MassDef`, optional
         Mass definition.
         **Note**: This parametrization is valid for SO masses with
-        :math:`\\Delta = 200\,[\\mathrm{m|c}]` and :math:`500 \\mathrm{c}`.
+        :math:`\Delta = 200 \, [\rm {m|c}]` and :math:`500 \rm c`.
         The default is 200m.
     hydro : bool, optional
         Whether to use the parametrization derived from baryonic feedback
@@ -541,7 +547,8 @@ class MassFuncWatson13(MassFunc):
         self.is_fof = self.mass_def.Delta == 'fof'
 
     def _check_mass_def(self, mass_def):
-        return not (mass_def.Delta == "fof" or isinstance(mass_def.Delta (int, float)))
+        return not (mass_def.Delta == "fof"
+                    or isinstance(mass_def.Delta, (int, float)))
 
     def _get_fsigma(self, cosmo, sigM, a, lnM):
         if self.is_fof:

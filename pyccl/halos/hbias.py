@@ -1,7 +1,13 @@
-from .massdef import MassDef, _dc_NakamuraSuto
+from .massdef import MassDef, dc_NakamuraSuto
+from ..parameters import physical_constants as const
 from ..pyutils import get_broadcastable
+
 import numpy as np
 from abc import ABC, abstractmethod
+
+
+__all__ = ("HaloBias", "HaloBiasSheth99", "HaloBiasSheth01",
+           "HaloBiasBhattacharya11", "HaloBiasTinker10")
 
 
 class HaloBias(ABC):
@@ -114,7 +120,7 @@ class HaloBias(ABC):
 
 
 class HaloBiasSheth99(HaloBias):
-    """Halo bias described in ``1999MNRAS.308..119S``.
+    r"""Halo bias described in ``1999MNRAS.308..119S``.
     This parametrization is only valid for 'fof' masses.
 
     Parameters
@@ -122,9 +128,10 @@ class HaloBiasSheth99(HaloBias):
     mass_def : :class:`~pyccl.halos.massdef.MassDef`, optional
         Mass definition.
         **Note**: This parametrization is only valid for FoF masses.
-    delta_c_fit : bool
-        Whether to use :math:`\\delta_{\\mathrm{crit}}` from the fit of
-        Nakamura & Suto 1997. If False, use :math:`1.68647`.
+    delta_c_fit : bool, optional
+        Whether to use :math:`\delta_{\rm c}` from the fit of Nakamura & Suto
+        (1997). If False, use :math:`\delta_c` from linear spherical collapse.
+        The default is False.
     """
     name = "Sheth99"
 
@@ -140,9 +147,9 @@ class HaloBiasSheth99(HaloBias):
         return mass_def.Delta != "fof"
 
     def _get_bsigma(self, cosmo, sigM, a):
-        δc = 1.68647
+        δc = const.DELTA_C
         if self.delta_c_fit:
-            δc = _dc_NakamuraSuto(cosmo, a, squeeze=False)
+            δc = dc_NakamuraSuto(cosmo, a, squeeze=False)
         nu = δc / sigM
         anu2 = self.a * nu**2
         return 1. + (anu2 - 1. + 2. * self.p / (1. + anu2**self.p)) / δc
@@ -166,7 +173,7 @@ class HaloBiasSheth01(HaloBias):
         self.a = 0.707
         self.b = 0.5
         self.c = 0.6
-        self.dc = 1.68647
+        self.dc = const.DELTA_C
 
     def _check_mass_def(self, mass_def):
         return mass_def.Delta != "fof"
@@ -201,7 +208,7 @@ class HaloBiasBhattacharya11(HaloBias):
         self.az = 0.01
         self.p = 0.807
         self.q = 1.795
-        self.dc = 1.68647
+        self.dc = const.DELTA_C
 
     def _check_mass_def(self, mass_def):
         return mass_def.Delta != "fof"
@@ -243,7 +250,7 @@ class HaloBiasTinker10(HaloBias):
         self.B = 0.183
         self.b = 1.5
         self.c = 2.4
-        self.dc = 1.68647
+        self.dc = const.DELTA_C
 
     def _check_mass_def(self, mass_def):
         Δ = mass_def.Delta

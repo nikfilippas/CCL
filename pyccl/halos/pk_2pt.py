@@ -1,4 +1,3 @@
-from .profiles_2pt import Profile2pt
 from ..pk2d import Pk2D
 from ..parameters import spline_params as sparams
 from ..errors import CCLWarning
@@ -12,21 +11,20 @@ __all__ = ("halomod_power_spectrum", "halomod_Pk2D")
 
 
 def _pk_hm(cosmo, hmc, *, k=None, a=None, prof, prof2=None,
-           prof_2pt=Profile2pt(),
            p_of_k_a="linear",
            get_1h=True, get_2h=True,
            smooth_transition=None, suppress_1h=None,
            extrap_order_lok=1, extrap_order_hik=2,
            pk2d_out=False, use_log=True, squeeze=True):
-    """Halo model power spectrum of two quantities expressed as halo profiles.
+    r"""Halo model power spectrum of two quantities expressed as halo profiles.
     The halo model power spectrum for two profiles :math:`u` and :math:`v` is:
 
     .. math::
 
         P_{u,v}(k, a) = I^0_2(k, a|u,v) +
-        I^1_1(k, a|u) \\, I^1_1(k, a|v) \\, P_{\\rm lin}(k, a)
+        I^1_1(k, a|u) \, I^1_1(k, a|v) \, P_{\rm lin}(k, a)
 
-    where :math:`P_{\\rm lin}(k ,a)` is the linear matter power spectrum,
+    where :math:`P_{\rm lin}(k ,a)` is the linear matter power spectrum,
     :math:`I^1_1` is defined in :meth:`~HMCalculator.I_1_1`,
     and :math:`I^0_2` is defined in :meth:`~HMCalculator.I_0_2`.
 
@@ -37,7 +35,7 @@ def _pk_hm(cosmo, hmc, *, k=None, a=None, prof, prof2=None,
     hmc : :class:`HMCalculator`
         Halo model calculator associated with the profile calculations.
     k : float or (nk,) array_like, optional
-        Comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
+        Comoving wavenumber in :math:`\rm Mpc^{-1}`.
         If ``pk2d_out is True``, this should be :math:`log(k)`.
         The default is defined via the spline parameters of ``cosmo``.
     a : float or (na,) array_like, optional
@@ -45,9 +43,6 @@ def _pk_hm(cosmo, hmc, *, k=None, a=None, prof, prof2=None,
         The default is defined via the spline parameters of ``cosmo``.
     prof, prof2 : :class:`~pyccl.halos.profiles.HaloProfile`
         Halo profiles. If ``prof2 is None``, ``prof`` will be used.
-    prof_2pt : :class:`~pyccl.halos.profiles_2pt.Profile2pt`, optional
-        2-point moment of the correlated profiles.
-        The default is :obj:`~pyccl.halos.Profile2pt()`.
     p_of_k_a : :class:`~pyccl.pk2d.Pk2D`, or {'linear', 'nonlinear'}
         Power spectrum.
         The default is the linear matter power spectrum stored in ``cosmo``.
@@ -55,15 +50,15 @@ def _pk_hm(cosmo, hmc, *, k=None, a=None, prof, prof2=None,
         Compute the 1-halo and 2-halo terms, respectively.
     smooth_transition : callable or None
         Modify the halo model 1-halo/2-halo transition region
-        via a time-dependent function :math:`\\alpha(a)`,
+        via a time-dependent function :math:`\alpha(a)`,
         defined as in ``HMCODE-2020`` (:arXiv:2009.01858). :math:`P(k,a) =
-        (P_{1h}^{\\alpha(a)}(k)+P_{2h}^{\\alpha(a)}(k))^{1/\\alpha}`.
+        (P_{1h}^{\alpha(a)}(k)+P_{2h}^{\alpha(a)}(k))^{1/\alpha}`.
         The default is ``None`` for no modification.
     suppress_1h : callable or None
         Suppress the 1-halo large scale contribution by a
         time- and scale-dependent function :math:`k_*(a)`,
         defined as in HMCODE-2020 (:arXiv:2009.01858).
-        :math:`\\frac{(k/k_*(a))^4}{1+(k/k_*(a))^4}`.
+        :math:`\frac{(k/k_*(a))^4}{1+(k/k_*(a))^4}`.
         The default is ``None`` for no damping.
     extrap_order_lok, extrap_order_hik : {0, 1, 2}
         Extrapolation order for low and high ``k``, respectively.
@@ -127,7 +122,7 @@ def _pk_hm(cosmo, hmc, *, k=None, a=None, prof, prof2=None,
     # 1-halo term.
     pk1h = 0
     if get_1h:
-        pk1h = hmc.I_0_2(cosmo, k, a, prof, prof2=prof2,prof_2pt=prof_2pt)
+        pk1h = hmc.I_0_2(cosmo, k, a, prof, prof2=prof2)
         if suppress_1h:
             # 1-halo large-scale dampening.
             ks = suppress_1h(a)

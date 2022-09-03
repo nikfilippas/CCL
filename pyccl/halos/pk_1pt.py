@@ -1,3 +1,6 @@
+__all__ = ("halomod_mean_profile_1pt", "halomod_bias_1pt")
+
+
 def halomod_mean_profile_1pt(cosmo, hmc, k, a, prof, *, squeeze=True):
     """Mass-weighted mean halo profile.
 

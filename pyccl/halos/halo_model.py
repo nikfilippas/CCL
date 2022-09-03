@@ -9,18 +9,17 @@ from ..pyutils import get_broadcastable
 
 import numpy as np
 
-from .pk_1pt import *  # noqa: F403
-from .pk_2pt import *  # noqa: F403
-from .pk_4pt import *  # noqa: F403
+
+__all__ = ("HMCalculator",)
 
 
 class HMCalculator:
-    """Implementation of methods used to compute various halo model quantities.
+    r"""Implementation of methods used to compute various halo model quantities.
     A lot of these quantities involve integrals of the sort:
 
     .. math::
 
-       \\int \\mathrm{d}M \\, n(M, a) \\, f(M, k, a),
+       \int \mathrm{d}M \, n(M, a) \, f(M, k, a),
 
     where :math:`n(M, a)` is the halo mass function, and :math:`f` is
     an arbitrary function of mass, scale factor and Fourier scales.
@@ -34,7 +33,7 @@ class HMCalculator:
     mass_def : :class:`~pyccl.halos.massdef.MassDef`
         Mass definition to use for the Halo Model calculations.
     k_large_scale : float
-        Wavenumber (in :math:`\\mathrm{Mpc}^{-1}`) indicating the effective
+        Wavenumber (in :math:`\rm Mpc^{-1}`) indicating the effective
         'very large scale'. Used to normalize some Halo Model quantities.
         The default is 1e-5.
     """
@@ -122,7 +121,7 @@ class HMCalculator:
         return i1 + small_mass_contribution
 
     def profile_norm(self, cosmo, a, prof):
-        """Compute :math:`I^0_1(k \\rightarrow 0,\, a|u)`.
+        r"""Compute :math:`I^0_1(k \rightarrow 0, \, a|u)`.
 
         Arguments
         ---------
@@ -142,18 +141,18 @@ class HMCalculator:
 
     def number_counts(self, cosmo, sel, solid_angle=1,
                       amin=None, amax=None, na=None):
-        """Compute the number of clusters between some scale factors,
+        r"""Compute the number of clusters between some scale factors,
         and for some solid angle, given a selection function:
 
         .. math::
 
-            \\mathrm{n_c}(\\mathrm{sel}) =
-            \\int \\mathrm{d}M \\int \\mathrm{d}a \\,
-            \\frac{\\mathrm{d}V}{\\mathrm{d}a \\, \\mathrm{d}\\Omega} \\,
-            n(M, a) \\, \\mathrm{sel}(M, a),
+            \mathrm{n_c}(\mathrm{sel}) =
+            \int \mathrm{d}M \int \mathrm{d}a \,
+            \frac{\mathrm{d}V}{\mathrm{d}a \, \mathrm{d}\Omega} \,
+            n(M, a) \, \mathrm{sel}(M, a),
 
         where :math:`n(M, a)` is the halo mass function, and
-        :math:`\\mathrm{sel}(M, a)` is the selection function.
+        :math:`\mathrm{sel}(M, a)` is the selection function.
 
         The selection function represents the probability per unit mass
         per unit scale factor and integrates to :math:`1`.
@@ -167,7 +166,7 @@ class HMCalculator:
             The function must be vectorized in both ``m`` and ``a``,
             and the output shape must be ``(na, nm)`` (not squeezed).
         solid_angle : float, optional
-            Solid angle (:math:`\\mathrm{sr}`) subtended in the sky for which
+            Solid angle (:math:`\rm sr`) subtended in the sky for which
             the number of clusters is calculated.
             The default is :math:`1`, with the output being the number of
             clusters per unit solid angle.
@@ -203,31 +202,31 @@ class HMCalculator:
         return self._integrator(M_int, a)
 
     def I_0_1(self, cosmo, k, a, prof):
-        """Compute the integral:
+        r"""Compute the integral:
 
         .. math::
 
-            I^0_1(k,a|u) = \\int \\mathrm{d}M \\, n(M, a) \\,
-            \\langle u(k, a|M) \\rangle,
+            I^0_1(k,a|u) = \int \mathrm{d}M \, n(M, a) \,
+            \langle u(k, a|M) \rangle,
 
         where :math:`n(M, a)` is the halo mass function, and
-        :math:`\\langle u(k, a|M)\\rangle` is the halo profile as a
+        :math:`\langle u(k, a|M) \rangle` is the halo profile as a
         function of wavenumber, scale factor and halo mass.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        k : float or (..., nk, ...) array_like
-            Comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
-        a : float or (..., na, ...) array_like
+        k : float or (nk,) array_like
+            Comoving wavenumber in :math:`\rm Mpc^{-1}`.
+        a : float or (na,) array_like
             Scale factor.
         prof : :class:`~pyccl.halos.profiles.HaloProfile`
             Halo profile.
 
         Returns
         -------
-        I_0_1 : float or (..., na, nk, ...) ndarray
+        I_0_1 : float or (na, nk)ndarray
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=False)
@@ -235,155 +234,144 @@ class HMCalculator:
         return self._integrate_over_mf(uk)
 
     def I_1_1(self, cosmo, k, a, prof):
-        """Compute the integral:
+        r"""Compute the integral:
 
         .. math::
 
-            I^1_1(k, a|u) = \\int \\mathrm{d}M \\, n(M, a) \\, b(M, a) \\,
-            \\langle u(k, a|M) \\rangle,
+            I^1_1(k, a|u) = \int \mathrm{d}M \, n(M, a) \, b(M, a) \,
+            \langle u(k, a|M) \rangle,
 
         where :math:`n(M, a)` is the halo mass function, :math:`b(M, a)` is
-        the halo bias function, and :math:`\\langle u(k, a|M)\\rangle` is the
+        the halo bias function, and :math:`\langle u(k, a|M) \rangle` is the
         halo profile as a function of wavenumber, scale factor and halo mass.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        k : float or (..., nk, ...) array_like
-            Comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
-        a : float or (..., na, ...) array_like
+        k : float or (nk,) array_like
+            Comoving wavenumber in :math:`\rm Mpc^{-1}`.
+        a : float or (na,) array_like
             Scale factor.
         prof : :class:`~pyccl.halos.profiles.HaloProfile`
             Halo profile.
 
         Returns
         -------
-        I_1_1 : float or (..., na, nk, ...) ndarray
+        I_1_1 : float or (na, nk) ndarray
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=True)
         uk = prof.fourier(cosmo, k, self._mass, a, mass_def=self.mass_def)
         return self._integrate_over_mbf(uk)
 
-    def I_0_2(self, cosmo, k, a, prof, *, prof2=None, prof_2pt):
-        """Compute the integral:
+    def I_0_2(self, cosmo, k, a, prof, prof2=None):
+        r"""Compute the integral:
 
         .. math::
 
-            I^0_2(k, a | u,v) = \\int \\mathrm{d}M \\, n(M, a) \\,
-            \\langle u(k, a|M) v(k, a|M)\ \rangle,
+            I^0_2(k, a | u,v) = \int \mathrm{d}M \, n(M, a) \,
+            \langle u(k, a|M) v(k, a|M) \rangle,
 
         where :math:`n(M, a)` is the halo mass function, and
-        :math:`\\langle u(k,a|M) v(k,a|M)\\rangle` is the two-point
+        :math:`\langle u(k,a|M) v(k,a|M)\rangle` is the two-point
         moment of the two halo profiles.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        k : float or (..., nk, ...) array_like
-            Comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
-        a : float or (..., na, ...) array_like
+        k : float or (nk,) array_like
+            Comoving wavenumber in :math:`\rm Mpc^{-1}`.
+        a : float or (na,) array_like
             Scale factor.
         prof, prof2 : :class:`~pyccl.halos.profiles.HaloProfile`
             Halo profiles. If ``prof2 is None``, ``prof`` will be used.
-        prof_2pt : :class:`~pyccl.halos.profiles_2pt.Profile2pt`
-            2-point moment of the correlated profiles.
 
         Returns
         -------
-        I_0_2 : float or (..., na, nk, ...) ndarray
+        I_0_2 : float or (na, nk) ndarray
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=False)
-        uk = prof_2pt.fourier_2pt(cosmo, k, self._mass, a, prof, prof2=prof2,
-                                  mass_def=self.mass_def)
+        uk = prof.fourier_2pt(cosmo, k, self._mass, a, prof2=prof2)
         return self._integrate_over_mf(uk)
 
-    def I_1_2(self, cosmo, k, a, prof, *, prof2=None, prof_2pt):
-        """Compute the integral:
+    def I_1_2(self, cosmo, k, a, prof, prof2=None):
+        r"""Compute the integral:
 
         .. math::
 
-            I^1_2(k, a|u,v) = \\int \\mathrm{d}M \\, n(M, a) \\, b(M, a) \\,
-            \\langle u(k, a|M) v(k, a|M) \\rangle,
+            I^1_2(k, a|u,v) = \int \mathrm{d}M \, n(M, a) \, b(M, a) \,
+            \langle u(k, a|M) v(k, a|M) \rangle,
 
         where :math:`n(M, a)` is the halo mass function, :math:`b(M, a)` is
-        the halo bias, and :math:`\\langle u(k,a|M) v(k,a|M)\\rangle` is the
+        the halo bias, and :math:`\langle u(k,a|M) v(k,a|M) \rangle` is the
         two-point moment of the two halo profiles.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        k : float or (..., nk, ...) array_like
-            Comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
-        a : float or (..., na, ...) array_like
+        k : float or (.nk,) array_like
+            Comoving wavenumber in :math:`\rm Mpc^{-1}`.
+        a : float or (na,) array_like
             Scale factor.
         prof, prof2 : :class:`~pyccl.halos.profiles.HaloProfile`
             Halo profiles. If ``prof2 is None``, ``prof`` will be used.
-        prof_2pt : :class:`~pyccl.halos.profiles_2pt.Profile2pt`
-            2-point moment of the correlated profiles.
 
         Returns
         -------
-        I_1_2 : float or (..., na, nk, ...) ndarray
+        I_1_2 : float or (na, nk) ndarray
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=True)
-        uk = prof_2pt.fourier_2pt(cosmo, k, self._mass, a, prof, prof2=prof2,
-                                  mass_def=self.mass_def)
+        uk = prof.fourier_2pt(cosmo, k, self._mass, a, prof2)
         return self._integrate_over_mbf(uk)
 
-    def I_0_22(self, cosmo, k, a, prof, *, prof2=None, prof3=None, prof4=None,
-               prof12_2pt, prof34_2pt=None):
-        """Compute the integral:
+    def I_0_22(self, cosmo, k, a, prof, prof2=None, prof3=None, prof4=None):
+        r"""Compute the integral:
 
         .. math::
 
             I^0_{2,2}(k_u, k_v, a|u_{1,2},v_{1,2}) =
-            \\int \\mathrm{d}M \\, n(M, a)\\,
-            \\langle u_1(k_u, a|M) u_2(k_u, a|M) \\rangle
-            \\langle v_1(k_v, a|M) v_2(k_v, a|M) \\rangle,
+            \int \mathrm{d}M \, n(M, a) \,
+            \langle u_1(k_u, a|M) u_2(k_u, a|M) \rangle
+            \langle v_1(k_v, a|M) v_2(k_v, a|M) \rangle,
 
         where :math:`n(M,a)` is the halo mass function, and
-        :math:`\\langle u(k,a|M) v(k,a|M)\\rangle` is the
+        :math:`\langle u(k,a|M) v(k,a|M) \rangle` is the
         two-point moment of the two halo profiles.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        k : float or (..., nk, ...) array_like
-            Comoving wavenumber in :math:`\\mathrm{Mpc}^{-1}`.
-        a : float or (..., na, ...) array_like
+        k : float or (nk,) array_like
+            Comoving wavenumber in :math:`\rm Mpc^{-1}`.
+        a : float or (na,) array_like
             Scale factor.
         prof, prof2, prof3, prof4 : :class:`~pyccl.halos.profiles.HaloProfile`
             Halo profiles.
             If ``prof2 is None``, ``prof`` will be used.
             If ``prof3 is None``, ``prof`` will be used.
             If ``prof4 is None``, ``prof2`` will be used.
-        prof12_2pt, prof34_2pt : :class:`~pyccl.halos.profiles_2pt.Profile2pt`
-            The two-point moment of ``prof`` and ``prof2``.
-            If ``prof34_2pt is None``, ``prof12_2pt`` will be used.
 
         Returns
         -------
-        I_0_22 : float or (..., na, nk, nk, ...) ndarray
+        I_0_22 : float or (na, nk, nk) ndarray
              Integral value.
         """
         if prof3 is None:
             prof3 = prof
-        if prof34_2pt is None:
-            prof34_2pt = prof12_2pt
 
         self._get_ingredients(cosmo, a, get_bf=False)
-        uk12 = prof12_2pt.fourier_2pt(cosmo, k, self._mass, a, prof,
-                                      prof2=prof2, mass_def=self.mass_def)
-        uk34 = prof34_2pt.fourier_2pt(cosmo, k, self._mass, a, prof3,
-                                      prof2=prof4, mass_def=self.mass_def)
-        # orthogonalize uk12 and uk34
+        uk12 = prof.fourier_2pt(cosmo, k, self._mass, a, prof2)
+        if (prof, prof2) == (prof3, prof4):
+            uk34 = uk12
+        else:
+            uk34 = prof3.fourier_2pt(cosmo, k, self._mass, a, prof4)
+
         uk12 = np.expand_dims(uk12, axis=2)            # (a, k, 1, M)
         uk34 = np.expand_dims(uk34, axis=1)            # (a, 1, k, M)
         shp_mf, shp_mf0 = self._mf.shape, self._mf0.shape

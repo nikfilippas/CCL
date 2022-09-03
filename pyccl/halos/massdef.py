@@ -5,7 +5,12 @@ import numpy as np
 from scipy.optimize import newton
 
 
-def _dc_NakamuraSuto(cosmo, a, *, squeeze=True):
+__all__ = ("MassDef", "MassDef200m", "MassDef200c", "MassDef500c",
+           "MassDefVir", "MassDefFoF", "convert_concentration",
+           "dc_NakamuraSuto", "Dv_BryanNorman")
+
+
+def dc_NakamuraSuto(cosmo, a, *, squeeze=True):
     """Compute the peak threshold :math:`\\delta_c(z)` assuming ΛCDM.
 
     Cosmology dependence of the critical linear density according to the
@@ -14,8 +19,8 @@ def _dc_NakamuraSuto(cosmo, a, *, squeeze=True):
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
-        Cosmological parameters.c
-    a : float or (..., na, ...) array_like
+        Cosmological parameters.
+    a : float or (na,) array_like
         Scale factor(s).
     squeeze : bool
         Squeeze extra dimensions of size (1,) in the output.
@@ -23,7 +28,7 @@ def _dc_NakamuraSuto(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    δ_c : float or (..., na, ...) array_like
+    δ_c : float or (na,) ndarray
         Peak theshold at ``a``.
     """
     a = np.asarray(a)
@@ -33,7 +38,7 @@ def _dc_NakamuraSuto(cosmo, a, *, squeeze=True):
     return out.squeeze()[()] if squeeze else out
 
 
-def _Dv_BryanNorman(cosmo, a, *, squeeze=True):
+def Dv_BryanNorman(cosmo, a, *, squeeze=True):
     """Compute the virial collapse density contrast w.r.t. matter density,
     assuming ΛCDM.
 
@@ -45,7 +50,7 @@ def _Dv_BryanNorman(cosmo, a, *, squeeze=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.c
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s).
     squeeze : bool
         Squeeze extra dimensions of size (1,) in the output.
@@ -53,7 +58,7 @@ def _Dv_BryanNorman(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    Δ_vir : float or (..., na, ...) array_like
+    Δ_vir : float or (na,) ndarray
         Virial collapse density contrast w.r.t. matter density.
     """
     a = np.asarray(a)
@@ -240,7 +245,7 @@ class MassDef:
             raise ValueError("FoF masses have no associated overdensity, "
                              "and can't be translated into other masses.")
         if self.Delta == 'vir':
-            return _Dv_BryanNorman(cosmo, a, squeeze=squeeze)
+            return Dv_BryanNorman(cosmo, a, squeeze=squeeze)
         out = self.Delta * np.ones_like(a)
         return out.squeeze()[()] if squeeze else out
 
