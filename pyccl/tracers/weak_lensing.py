@@ -1,4 +1,4 @@
-from .tracers import Tracer
+from .tracer_base import Tracer
 from .kernels import get_density_kernel, get_lensing_kernel
 from ..parameters import physical_constants as const
 

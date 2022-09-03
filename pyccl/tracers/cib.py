@@ -1,4 +1,4 @@
-from .tracers import Tracer
+from .tracer_base import Tracer
 import numpy as np
 
 

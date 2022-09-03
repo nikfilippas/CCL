@@ -1,4 +1,4 @@
-from .tracers import Tracer
+from .tracer_base import Tracer
 from ..parameters import physical_constants as const
 import numpy as np
 

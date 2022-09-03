@@ -1,4 +1,4 @@
-from .tracers import Tracer
+from .tracer_base import Tracer
 from .kernels import get_kappa_kernel
 
 
