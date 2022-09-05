@@ -6,10 +6,10 @@ import warnings
 import copy
 
 
-__all__ = ("_DefaultPowerSpectrum", "Pk2D", "parse_pk2d")
+__all__ = ("DefaultPowerSpectrum", "Pk2D", "parse_pk2d")
 
 
-_DefaultPowerSpectrum = 'delta_matter:delta_matter'
+DefaultPowerSpectrum = 'delta_matter:delta_matter'
 
 
 class Pk2D:
@@ -296,7 +296,7 @@ class Pk2D:
         """
 
 
-def parse_pk2d(cosmo=None, p_of_k_a=_DefaultPowerSpectrum, linear=False):
+def parse_pk2d(cosmo=None, p_of_k_a=DefaultPowerSpectrum, linear=False):
     """Return the ``Pk2D`` object, as indicated.
 
     Arguments

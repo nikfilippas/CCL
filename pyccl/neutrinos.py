@@ -64,15 +64,15 @@ def _nu_phasespace_integral(mnuOT):
 
 
 def Omeganuh2(a, m_nu, T_CMB, T_ncdm, *, squeeze=True):
-    """Calculate :math:`\\Omega_\\nu\\,h^2` at a given scale factor given
+    r"""Calculate :math:`\Omega_\nu \, h^2` at a given scale factor given
     the neutrino masses.
 
     Arguments
     ---------
-    a : float or (..., na, ...) array-like
+    a : float or (na,) array-like
         Scale factor(s), normalized to 1 today.
     m_nu : float or sequence
-        Neutrino masses in :math:`\\mathrm{eV}`.
+        Neutrino masses in :math:`\rm eV`.
     T_CMB : float
         Temperature of the Cosmic Microwave Background.
     T_ncdm : float
@@ -83,8 +83,8 @@ def Omeganuh2(a, m_nu, T_CMB, T_ncdm, *, squeeze=True):
 
     Returns
     -------
-    float or (..., na, ...) array_like:
-        :math:`\\Omega_\\nu\\,h^2` of the neutrino masses at ``a``.
+    float or (na,) array_like:
+        :math:`\Omega_\nu \, h^2` of the neutrino masses at ``a``.
     """
     a = np.asarray(a)
     m_nu = np.atleast_1d(m_nu)

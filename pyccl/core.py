@@ -1,7 +1,7 @@
 from .parameters import physical_constants as const
 from .neutrinos import NeutrinoMassSplits, Omeganuh2
 from .pspec import TransferFunctions, MatterPowerSpectra, BaryonPowerSpectra
-from .pk2d import _DefaultPowerSpectrum, Pk2D
+from .pk2d import DefaultPowerSpectrum, Pk2D
 from .interpolate import Interpolator1D
 from .errors import CCLError
 
@@ -497,7 +497,7 @@ class CosmologyCalculator(Cosmology):
             if name not in self._pkl:
                 raise ValueError(f"{name} is not a known linear P(k).")
             if model is None:
-                if name == _DefaultPowerSpectrum:
+                if name == DefaultPowerSpectrum:
                     raise ValueError("Non-linear matter P(k) does not exist.")
                 continue
 

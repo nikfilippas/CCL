@@ -168,9 +168,10 @@ class Interpolator2D(Interpolator):
             # TODO: For now, this option only does constant extrapolation.
             return self.f(x, y, *derivative, grid=False)
 
-        x, y = map(np.asarray, [x, y])
+        x, y = map(np.atleast_1d, [x, y])
         x, y = get_broadcastable(x, y)
-        shape = np.broadcast_shapes(x.shape, y.shape)
+        # shape = x.shape + y.shape  # FIXME
+        shape = np.broadcast_shapes(x.shape, y.shape)  # TODO: delete if ok
         x, y = x.squeeze(), y.squeeze()
         res = self.f(x, y, *derivative)
 

@@ -35,6 +35,8 @@ class BaryonPowerSpectra(Enum):
 
 
 def rescale_power_spectrum(cosmo, pk, rescale_mg=False, rescale_s8=False):
+    """
+    """
     rescale_mg = rescale_mg and cosmo["mu_0"] > 1e-14
     rescale_s8 = rescale_s8 and cosmo["A_s"] is None
     if not (rescale_mg or rescale_s8):

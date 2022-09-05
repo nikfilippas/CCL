@@ -1,5 +1,5 @@
 from .errors import CCLWarning
-from .pk2d import _DefaultPowerSpectrum, parse_pk2d
+from .pk2d import DefaultPowerSpectrum, parse_pk2d
 from .interpolate import linlog_spacing
 from .integrate import IntegratorFunction
 from .parameters import accuracy_params
@@ -116,7 +116,7 @@ def _angular_cl_limber(cosmo, tracer1, tracer2, ell, pk, integration_method):
 
 
 def angular_cl(cosmo, tracer1, tracer2=None, ell=None,
-               p_of_k_a=_DefaultPowerSpectrum,
+               p_of_k_a=DefaultPowerSpectrum,
                l_limber=-1., integration_method='spline'):
     """Angular (cross-)power spectrum for a pair of tracers.
 
@@ -134,7 +134,7 @@ def angular_cl(cosmo, tracer1, tracer2=None, ell=None,
     ell : float or (nell,) array_like, optional
         Angular wavenumber for angular power spectrum evaluation.
         By default, use the internally defined array of :math:`\\ell`.
-    p_of_k_a : :obj:`~pyccl.pk2d._DefaultPowerSpectrum` \
+    p_of_k_a : :obj:`~pyccl.pk2d.DefaultPowerSpectrum` \
         or :class:`~pyccl.pk2d.Pk2D`, optional
         3-D power spectrum to project.  String input must correspond to a
         non-linear power spectrum in ``cosmo``.

@@ -408,7 +408,6 @@ class HaloProfile(ABC):
         """
         a, k, M = map(np.atleast_1d, [a, k, M])
         a, k, M = get_broadcastable(a, k, M)
-        # Note, `_fourier_2pt` signature has to contain `r_corr`.
         # Try `self ⊗ prof2`. If it doesn't work do `prof2 ⊗ self`.
         try:
             out = self._fourier_2pt(cosmo, k, M, a, prof2)

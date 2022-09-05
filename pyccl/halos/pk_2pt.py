@@ -116,7 +116,7 @@ def _pk_hm(cosmo, hmc, *, k=None, a=None, prof, prof2=None,
     pk2h = 0
     if get_2h:
         i11 = hmc.I_1_1(cosmo, k, a, prof)
-        i11 *= 1 if prof2 == prof else hmc.I_1_1(cosmo, k, a, prof2)
+        i11 *= i11 if prof2 == prof else hmc.I_1_1(cosmo, k, a, prof2)
         pk2h = pkf(k, a) * i11
 
     # 1-halo term.

@@ -9,6 +9,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import warnings
 from enum import Enum
+import functools
 
 
 __all__ = ("Species", "h_over_h0", "comoving_radial_distance",
@@ -34,7 +35,11 @@ class Species(Enum):
 
 
 def _h_over_h0(cosmo, a):
-    """Calculate :math:`E(a) = \\frac{H(a)}{H_0}`.
+    r"""Ratio of Hubble constant at `a` over Hubble constant today.
+
+    .. math::
+
+        E(a) = \frac{H(a)}{H_0}.
 
     Arguments
     ---------
@@ -98,27 +103,8 @@ def compute_distances(cosmo) -> None:
     cosmo.data.age0 = cosmo.data.lookback(0)[()]
 
 
+@functools.wraps(_h_over_h0)
 def h_over_h0(cosmo, a, *, squeeze=True):
-    """Ratio of Hubble constant at `a` over Hubble constant today.
-
-    .. math::
-
-        E(a) = \\frac{H(a)}{H_0}.
-
-    Arguments
-    ---------
-    cosmo : :class:`~pyccl.core.Cosmology`
-        Cosmological parameters.
-    a : float or (..., na, ...) array_like
-        Scale factor(s) normalized to 1 today.
-    squeeze : bool, optional
-        Squeeze extra dimensions of size (1,) in the output.
-        The default is True.
-
-    Returns
-    -------
-    Ez : float or (..., na, ...) ndarray
-    """
     a = np.asarray(a)
     out = np.ones_like(a, dtype=float)
     idx = np.logical_or(a < 1 - _eps,  a > 1 + _eps)
@@ -128,17 +114,17 @@ def h_over_h0(cosmo, a, *, squeeze=True):
 
 
 def comoving_radial_distance(cosmo, a, *, squeeze=True):
-    """Comoving radial distance (in :math:`\\mathrm{Mpc}`).
+    r"""Comoving radial distance (in :math:`\rm Mpc`).
 
     .. math::
 
-        D_{\\mathrm{C}} = \\frac{c}{H_0} \\int_0^z \\frac{dz'}{E(z')}.
+        D_{\rm c} = \frac{c}{H_0} \int_0^z \frac{dz'}{E(z')}.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -146,7 +132,7 @@ def comoving_radial_distance(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D_C : float or (..., na, ...) ndarray
+    D_C : float or (na,) ndarray
         Comoving radial distance at ``a``.
     """
     a = np.asarray(a)
@@ -158,21 +144,21 @@ def comoving_radial_distance(cosmo, a, *, squeeze=True):
 
 
 def scale_factor_of_chi(cosmo, chi, *, squeeze=True):
-    """Scale factor at some comoving radial distance, :math:`a(\\chi)`.
+    r"""Scale factor at some comoving radial distance, :math:`a(\chi)`.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    chi : float or (..., nchi, ...) array_like
-        Comoving radial distance :math:`\\chi` in :math:`\\mathrm{Mpc}`.
+    chi : float or (nchi,) array_like
+        Comoving radial distance :math:`\chi` in :math:`\rm Mpc`.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
         The default is True.
 
     Returns
     -------
-    a_chi : float or (..., nchi, ...) ndarray
+    a_chi : float or (nchi,) ndarray
         Scale factor at ``chi``.
     """
     chi = np.asarray(chi)
@@ -184,30 +170,30 @@ def scale_factor_of_chi(cosmo, chi, *, squeeze=True):
 
 
 def sinn(cosmo, chi, *, squeeze=True):
-    """Piecewise function related to the geometry of the Universe.
+    r"""Piecewise function related to the geometry of the Universe.
 
     .. math::
 
-        \\mathrm{sinn(x)} = \\begin{cases}
-        \\sin(x)   &  k = +1   \\\\
-            x      &  k = 0    \\\\
-        \\sinh(x)  &  k = -1
-        \\end{cases}
+        \mathrm{sinn(x)} = \begin{cases}
+        \sin(x)   &  k = +1   \\
+            x      &  k = 0   \\
+        \sinh(x)  &  k = -1
+        \end{cases}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    chi : float or (..., nchi, ...) array_like
-        Comoving radial distance :math:`\\chi` in :math:`\\mathrm{Mpc}`.
+    chi : float or (nchi,) array_like
+        Comoving radial distance :math:`\chi` in :math:`\rm Mpc`.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
         The default is True.
 
     Returns
     -------
-    sinn : float or (..., nchi, ...) ndarray
-        Value of the :math:`\\mathrm{sinn}` function at :math:`\\chi`.
+    sinn : float or (nchi,) ndarray
+        Value of the :math:`\rm sinn` function at :math:`\chi`.
     """
     chi = np.asarray(chi)
     k = cosmo["k_sign"]
@@ -221,10 +207,10 @@ def sinn(cosmo, chi, *, squeeze=True):
 
 
 def comoving_angular_distance(cosmo, a, *, squeeze=True):
-    """Comoving angular distance (in :math:`\\mathrm{Mpc}`).
+    r"""Comoving angular distance (in :math:`\rm Mpc`).
 
     .. math::
-        D_{\\mathrm{M}} = \\mathrm{sinn}(\\chi(a)).
+        D_{\rm M} = \mathrm{sinn}(\chi(a)).
 
     .. note::
 
@@ -232,14 +218,14 @@ def comoving_angular_distance(cosmo, a, *, squeeze=True):
         and is **not** the angular diameter distance or the angular separation.
         The comoving angular distance is defined such that the comoving
         distance between two objects at a fixed scale factor separated
-        by an angle :math:`\\theta` is :math:`\\theta r_{A}(a)` where
+        by an angle :math:`\theta` is :math:`\theta r_{A}(a)` where
         :math:`r_{A}(a)` is the comoving angular distance.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -247,7 +233,7 @@ def comoving_angular_distance(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D_M : float or (..., na, ...) ndarray
+    D_M : float or (na,) ndarray
         Comoving angular distance at ``a``.
     """
     D_c = comoving_radial_distance(cosmo, a, squeeze=False)
@@ -258,14 +244,14 @@ transverse_comoving_distance = comoving_angular_distance  # alias
 
 
 def angular_diameter_distance(cosmo, a1, a2=None, *, squeeze=True):
-    """Angular diameter distance (in :math:`\\mathrm{Mpc}`).
+    r"""Angular diameter distance (in :math:`\rm Mpc `).
 
     Defined as the ratio of an object's physical transverse size to its
     angular size. It is related to the comoving angular distance as:
 
     .. math::
 
-        D_{\\mathrm{A}} = \\frac{D_{\\mathrm{M}}}{1 + z}
+        D_{\rm A} = \frac{D_{\rm M}}{1 + z}
 
     .. note::
 
@@ -277,9 +263,9 @@ def angular_diameter_distance(cosmo, a1, a2=None, *, squeeze=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
            Cosmological parameters.
-    a1 : float or (..., na1, ...) array_like
+    a1 : float or (na1,) array_like
         Scale factor(s), normalized to 1 today.
-    a2 : float or (..., na2, ...) array_like, optional
+    a2 : float or (na2,) array_like, optional
         Scale factor(s), normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -287,7 +273,7 @@ def angular_diameter_distance(cosmo, a1, a2=None, *, squeeze=True):
 
     Returns
     -------
-    D_A : float, (..., na1, na2, ...) ndarray or (.., na, ...) ndarray
+    D_A : float, (na1, na2,) ndarray or (na,) ndarray
         Angular diameter distance. If ``a1.shape != a2.shape`` but ``a1`` and
         ``a2`` can be broadcast to one another, all distance combinations are
         returned. If the input shapes match, the pairwise distance is returned.
@@ -304,19 +290,19 @@ def angular_diameter_distance(cosmo, a1, a2=None, *, squeeze=True):
 
 
 def luminosity_distance(cosmo, a, *, squeeze=True):
-    """Luminosity distance.
+    r"""Luminosity distance.
 
     Defined by the relationship between bolometric flux :math:`S` and
     bolometric luminosity :math:`L`.
 
     .. math::
-        D_{\\mathrm{L}} = \\sqrt{\\frac{L}{4 \\pi S}}
+        D_{\rm L} = \sqrt{\frac{L}{4 \pi S}}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -324,7 +310,7 @@ def luminosity_distance(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D_L : float or (..., na, ...) ndarray
+    D_L : float or (na,) ndarray
         Luminosity distance at ``a``.
     """
     a = np.asarray(a)
@@ -333,21 +319,21 @@ def luminosity_distance(cosmo, a, *, squeeze=True):
 
 
 def distance_modulus(cosmo, a, *, squeeze=True):
-    """Distance modulus.
+    r"""Distance modulus.
 
     Used to convert between apparent and absolute magnitudes
-    via :math:`m = M + (\\mathrm{dist.\\,mod.})`, where :math:`m` is the
+    via :math:`m = M + (\rm dist. \, mod.)` where :math:`m` is the
     apparent magnitude and :math:`M` is the absolute magnitude.
 
     .. math::
 
-        m - M = 5 * \\log_{10}(D_{\\mathrm{L}} / 10\\,\\mathrm{pc}).
+        m - M = 5 * \log_{10}(D_{\rm L} / 10 \, \rm pc).
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -355,7 +341,7 @@ def distance_modulus(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D_M : float or (..., na, ...) ndarray
+    D_M : float or (na,) ndarray
         Distance modulus at ``a``.
     """
     a = np.asarray(a)
@@ -369,17 +355,17 @@ def distance_modulus(cosmo, a, *, squeeze=True):
 
 
 def hubble_distance(cosmo, a, *, squeeze=True):
-    """Hubble distance in :math:`\\mathrm{Mpc}`.
+    r"""Hubble distance in :math:`\rm Mpc`.
 
     .. math::
 
-        D_{\\mathrm{H}} = \\frac{cz}{H_0}
+        D_{\rm H} = \frac{cz}{H_0}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -387,7 +373,7 @@ def hubble_distance(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D_H : float or (..., na ...) ndarray
+    D_H : float or (na,) ndarray
         Hubble distance.
     """
     a = np.asarray(a)
@@ -396,18 +382,17 @@ def hubble_distance(cosmo, a, *, squeeze=True):
 
 
 def comoving_volume_element(cosmo, a, *, squeeze=True):
-    """Comoving volume element in
-    :math:`\\mathrm{Gpc}^3 \\, \\mathrm{sr}^{-1}`.
+    r"""Comoving volume element in :math:`\rm Gpc^3 \, sr^{-1}`.
 
     .. math::
 
-        \\frac{\\mathrm{d}V}{\\mathrm{d}a \\, \\mathrm{d} \\Omega}
+        \frac{\mathrm{d}V}{\mathrm{d}a \, \mathrm{d} \Omega}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -415,7 +400,7 @@ def comoving_volume_element(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    dV : float or (..., na, ...) ndarray
+    dV : float or (na,) ndarray
         Comoving volume per unit scale factor per unit solid angle.
 
     See Also
@@ -430,18 +415,18 @@ def comoving_volume_element(cosmo, a, *, squeeze=True):
 
 
 def comoving_volume(cosmo, a, *, solid_angle=4*np.pi, squeeze=True):
-    """Comoving volume, in :math:`\\mathrm{Gpc}^3`.
+    r"""Comoving volume, in :math:`\rm Gpc^3`.
 
     .. math::
 
-        V_{\\mathrm{C}} = \\int_{\\Omega} \\mathrm{{d}}\\Omega \\int_z
-        D_{\\mathrm{H}} \\frac{(1+z)^2 D_{\\mathrm{A}}^2}{E(z)} \\mathrm{d}z
+        V_{\rm C} = \int_{\Omega} \mathrm{{d}}\Omega \int_z \mathrm{d}z
+        D_{\rm H} \frac{(1+z)^2 D_{\mathrm{A}}^2}{E(z)}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     solid_angle : float
         Solid angle subtended in the sky for which
@@ -452,7 +437,7 @@ def comoving_volume(cosmo, a, *, solid_angle=4*np.pi, squeeze=True):
 
     Returns
     -------
-    V_C : float or (..., na, ...) ndarray
+    V_C : float or (na,) ndarray
         Comoving volume at ``a``.
 
     See Also
@@ -479,14 +464,14 @@ def comoving_volume(cosmo, a, *, solid_angle=4*np.pi, squeeze=True):
 
 
 def lookback_time(cosmo, a, *, squeeze=True):
-    """Difference of the age of the Universe between some scale factor
-    and today, in :math:`\\mathrm{Gyr}`.
+    r"""Difference of the age of the Universe between some scale factor
+    and today, in :math:`\rm Gyr`.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -494,7 +479,7 @@ def lookback_time(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    t_L : float or (..., na, ...) ndarray
+    t_L : float or (na,) ndarray
         Lookback time at ``a``.
     """
     a = np.asarray(a)
@@ -506,13 +491,13 @@ def lookback_time(cosmo, a, *, squeeze=True):
 
 
 def age_of_universe(cosmo, a, *, squeeze=True):
-    """Age of the Universe at some scale factor, in :math:`\\mathrm{Gyr}`.
+    r"""Age of the Universe at some scale factor, in :math:`\rm Gyr`.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -520,7 +505,7 @@ def age_of_universe(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    t_age : float or (..., na, ...) ndarray
+    t_age : float or (na,) ndarray
         Age of the Universe at ``a``.
     """
     cosmo.compute_distances()
@@ -598,13 +583,13 @@ def omega_x(cosmo, a, species, *, squeeze=True):
 
 
 def rho_x(cosmo, a, species, is_comoving=False, *, squeeze=True):
-    """Physical or comoving density as a function of scale factor.
+    r"""Physical or comoving density as a function of scale factor.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     species : string
         Species type. Should be one of
@@ -624,9 +609,9 @@ def rho_x(cosmo, a, species, is_comoving=False, *, squeeze=True):
 
     Returns
     -------
-    rho_x : float or (..., na, ...) ndarray
+    rho_x : float or (na,) ndarray
         Physical density of a given species at a scale factor,
-        in units of :math:`\\mathrm{M_{\\odot}} / \\mathrm{Mpc}^3`.
+        in units of :math:`\rm M_\odot / Mpc^3`.
     """
     a = np.asarray(a)
     comfac = a**3 if is_comoving else np.ones(a.shape)
@@ -690,7 +675,7 @@ def growth_factor(cosmo, a, *, squeeze=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -698,7 +683,7 @@ def growth_factor(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D : float or (..., na, ...) ndarray
+    D : float or (na,) ndarray
         Growth factor at ``a``.
     """
     a = np.asarray(a)
@@ -716,7 +701,7 @@ def growth_factor_unnorm(cosmo, a, *, squeeze=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -724,7 +709,7 @@ def growth_factor_unnorm(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    D_unnorm : float or (..., na, ...) ndarray
+    D_unnorm : float or (na,) ndarray
         Unnormalized growth factor at ``a``.
     """
     out = growth_factor(cosmo, a, squeeze=False) * cosmo.data.growth0
@@ -732,18 +717,18 @@ def growth_factor_unnorm(cosmo, a, *, squeeze=True):
 
 
 def growth_rate(cosmo, a, *, squeeze=True):
-    """Growth rate defined as the logarithmic derivative of the
+    r"""Growth rate defined as the logarithmic derivative of the
     growth factor,
 
     .. math::
 
-        \\frac{\\mathrm{d}\\ln{D}}{\\mathrm{d}\\ln{a}}.
+        \frac{\mathrm{d}\ln{D}}{\mathrm{d}\ln{a}}.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor(s) normalized to 1 today.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -751,7 +736,7 @@ def growth_rate(cosmo, a, *, squeeze=True):
 
     Returns
     -------
-    dlnD_dlna : float or (..., na, ...) ndarray
+    dlnD_dlna : float or (na,) ndarray
         Growth rate at ``a``.
     """
     a = np.asarray(a)
@@ -761,12 +746,12 @@ def growth_rate(cosmo, a, *, squeeze=True):
 
 
 def sigma_critical(cosmo, a_lens, a_source, *, squeeze=True):
-    """Returns the critical surface mass density.
+    r"""Returns the critical surface mass density.
 
     .. math::
 
-         \\Sigma_{\\mathrm{crit}} = \\frac{c^2}{4\\pi G}
-          \\frac{D_{\\rm{s}}}{D_{\\rm{l}}D_{\\rm{ls}}},
+         \Sigma_{\mathrm{crit}} = \frac{c^2}{4 \pi G}
+         \frac{D_{\rm s}}{D_{\rm l}D_{\rm ls}},
 
     where :math:`c` is the speed of light, :math:`G` is the
     gravitational constant, and :math:`D_i` is the angular diameter distance
@@ -777,9 +762,9 @@ def sigma_critical(cosmo, a_lens, a_source, *, squeeze=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         A Cosmology object.
-    a_lens : float or (..., na_lens, ...) array_like
+    a_lens : float or (na_lens,) array_like
         Scale factor of lens.
-    a_source : float or (..., na_source, ...) array_like
+    a_source : float or (na_source,) array_like
         Scale factor of source.
     squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
@@ -787,10 +772,9 @@ def sigma_critical(cosmo, a_lens, a_source, *, squeeze=True):
 
     Returns
     -------
-    sigma_critical : float, (..., na_lens, na_source, ...) ndarray \
-        or (..., na, ...) ndarray
-        :math:`\\Sigma_{\\mathrm{crit}}` in units of
-        :math:`\\mathrm{M_{\\odot}}/\\mathrm{Mpc}^2`.
+    sigma_critical : float, (na_lens, na_source,) ndarray or (na,) ndarray
+        :math:`\Sigma_{\rm crit} in units of
+        :math:`\rm M_\odot / Mpc^2`.
         If ``a_lens.shape != a_source.shape`` but ``a_lens`` and ``a_source``
         can be broadcast to one another, all distance combinations are
         returned. If the input shapes match, the pairwise distance is returned.

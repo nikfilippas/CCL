@@ -11,7 +11,7 @@ __all__ = ("MassDef", "MassDef200m", "MassDef200c", "MassDef500c",
 
 
 def dc_NakamuraSuto(cosmo, a, *, squeeze=True):
-    """Compute the peak threshold :math:`\\delta_c(z)` assuming ΛCDM.
+    r"""Compute the peak threshold :math:`\delta_c(z)` assuming ΛCDM.
 
     Cosmology dependence of the critical linear density according to the
     spherical-collapse model. Fitting function from Nakamura & Suto (1997).
@@ -70,19 +70,19 @@ def Dv_BryanNorman(cosmo, a, *, squeeze=True):
 
 
 def convert_concentration(c_old, Delta_old, Delta_new, *, squeeze=True):
-    """Compute the concentration parameter for a different mass definition.
+    r"""Compute the concentration parameter for a different mass definition.
     This is done assuming an NFW profile. The output concentration ``c_new``
     is found by solving the equation:
 
     .. math::
 
-        f(c_{\\rm old}) \\Delta_{\\rm old} = f(c_{\\rm new}) \\Delta_{\\rm new}
+        f(c_{\rm old}) \Delta_{\rm old} = f(c_{\rm new}) \Delta_{\rm new}
 
     where
 
     .. math::
 
-        f(x) = \\frac{x^3}{\\log(1+x) - x/(1+x)}.
+        f(x) = \frac{x^3}{\log(1+x) - x/(1+x)}.
 
     .. note::
 
@@ -91,14 +91,14 @@ def convert_concentration(c_old, Delta_old, Delta_new, *, squeeze=True):
         shape (na,), so that the Δ-conversion only depends on scale factor.
         Every mass is only translated for its scale factor. The output has the
         same shape as the input, and all concentrations are translated with
-        :math:`\\frac{\\Delta_{\\mathrm{old}}}{\\Delta_{\\mathrm{new}}}`.
+        :math:`\frac{\Delta_{\rm old}}{\Delta_{\rm new}}`.
 
     Arguments
     ---------
-    c_old : float or (..., na, nM, ...) array_like
+    c_old : float or (na, nM,) array_like
         Concentration values to translate.
     Delta_old, Delta_new : float or (na,) array_like
-        Overdensity (:math:`\\Delta`) parameters associated with the
+        Overdensity (:math:`\Delta`) parameters associated with the
         halo mass definition of the old and new concentrations, respectively.
         See :class:`~pyccl.halos.massdef.MassDef` for details.
     squeeze : bool
@@ -107,7 +107,7 @@ def convert_concentration(c_old, Delta_old, Delta_new, *, squeeze=True):
 
     Returns
     -------
-    c_new : float or ``np.shape(c_old)`` array_like
+    c_new : float or ``np.shape(c_old)`` ndarray
         Translated concentration to the new mass definition.
     """
     c_old = np.asarray(c_old, dtype=float)
@@ -158,13 +158,13 @@ def _compute_concentration_conversion():
 
 
 class MassDef:
-    """Halo mass definition. Halo masses are defined in terms of an overdensity
-    parameter :math:`\\Delta` and an associated density :math:`X` (either the
+    r"""Halo mass definition. Halo masses are defined in terms of an overdensity
+    parameter :math:`\Delta` and an associated density :math:`X` (either the
     matter density or the critical density):
 
     .. math::
 
-        M = \\frac{4 \\pi}{3} \\Delta\\,\\rho_X\\, R^3,
+        M = \frac{4 \pi}{3} \Delta \, \rho_X \, R^3,
 
     where :math:`R` is the halo radius. This object also holds methods to
     translate between :math:`R` and :math:`M`, and to translate masses between
@@ -230,7 +230,7 @@ class MassDef:
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.c
-        a : float or (..., na, ...) array_like
+        a : float or (na,) array_like
             Scale factor(s).
         squeeze : bool
             Squeeze extra dimensions of size (1,) in the output.
@@ -238,7 +238,7 @@ class MassDef:
 
         Returns
         -------
-        Delta : float or (..., na, ...) array_like
+        Delta : float or (na,) ndarray
             Overdensity parameter at ``a``.
         """
         if self.Delta == 'fof':
@@ -250,14 +250,16 @@ class MassDef:
         return out.squeeze()[()] if squeeze else out
 
     def get_radius(self, cosmo, M, a, *, squeeze=True):
-        """
+        r"""Compute the radius corresponding to the input masses and this
+        mass definition.
+
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        M : float or (..., nM, ...) array_like
-            Halo mass in :math:`\\mathrm{M}_{\\odot}`.
-        a : float or (..., na, ...) array_like
+        M : float or (nM,) array_like
+            Halo mass in :math:`\rm M_\odot`.
+        a : float or (na,) array_like
             Scale factor(s).
         squeeze : bool, optional
             Squeeze extra dimensions of size (1,) in the output.
@@ -265,8 +267,8 @@ class MassDef:
 
         Returns
         -------
-        R : float or (..., na, nM, ...) ndarray
-            Halo radius in physical :math:`\\mathrm{Mpc}`.
+        R : float or (na, nM,) ndarray
+            Halo radius in physical :math:`\rm Mpc`.
         """
         return cosmo.m2r(M, a,
                          Delta=self.get_Delta(cosmo, a, squeeze=False),
@@ -276,15 +278,15 @@ class MassDef:
                          squeeze=squeeze)
 
     def translate_mass(self, cosmo, M, a, mass_def_other, *, squeeze=True):
-        """Translate halo mass in this definition into another definition.
+        r"""Translate halo mass in this definition into another definition.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        M : float or (..., nM, ...) array_like
-            Halo mass in :math:`\\mathrm{M}_{\\odot}`.
-        a : float or (..., na, ...) array_like
+        M : float or (nM,) array_like
+            Halo mass in :math:`\rm M_\odot`.
+        a : float or (na,) array_like
             Scale factor(s).
         mass_def_other : :class:`~pyccl.halos.massdef.MassDef`
             Mass definition to translate to.
@@ -294,7 +296,7 @@ class MassDef:
 
         Returns
         -------
-        M_translated : float or (..., na, nM, ...) array_like
+        M_translated : float or (na, nM,) ndarray
             Halo masses in new definition.
         """
         if self.concentration is None:
@@ -326,12 +328,12 @@ class MassDef:
 
     @classmethod
     def from_name(cls, name):
-        """Return a mass definition from name string.
+        r"""Return a mass definition from name string.
 
         Arguments
         ---------
         name : string
-            A mass definition name (e.g. ``'200m'`` for :math:`\\Delta=200_m`).
+            A mass definition name (e.g. ``'200m'`` for :math:`\Delta=200_m`).
 
         Returns
         -------
@@ -349,25 +351,25 @@ class MassDef:
 
 
 def MassDef200m():
-    """:math:`\\Delta = 200m` mass definition."""
+    r""":math:`\Delta = 200m` mass definition."""
     return MassDef(200, "matter", concentration="Duffy08")
 
 
 def MassDef200c():
-    """:math:`\\Delta = 200c` mass definition."""
+    r""":math:`\Delta = 200c` mass definition."""
     return MassDef(200, "critical", concentration="Duffy08")
 
 
 def MassDef500c():
-    """:math:`\\Delta = 500m` mass definition."""
+    r""":math:`\Delta = 500m` mass definition."""
     return MassDef(500, "critical", concentration="Ishiyama21")
 
 
 def MassDefVir():
-    """:math:`\\Delta = \\mathrm{vir}` mass definition."""
+    r""":math:`\Delta = \rm vir` mass definition."""
     return MassDef("vir", "critical", concentration="Klypin11")
 
 
 def MassDefFoF():
-    """:math:`\\Delta = \\mathrm{FoF}` mass definition."""
+    r""":math:`\Delta = \rm FoF` mass definition."""
     return MassDef("fof", "matter")

@@ -11,12 +11,12 @@ __all__ = ("HaloBias", "HaloBiasSheth99", "HaloBiasSheth01",
 
 
 class HaloBias(ABC):
-    """Calculations of halo bias functions.
+    r"""Calculations of halo bias functions.
 
     .. note::
 
         Currently, we assume that all halo bias parametrizations can be written
-        as functions that depend only on :math:`M` through :math:`\\sigma_M`,
+        as functions that depend only on :math:`M` through :math:`\sigma_M`,
         the overdensity variance on spheres of the Lagrangian radius that
         corresponds to mass :math:`M`. To that end, specific parametrizations
         may be created by subclassing and implementing ``_get_bsigma``.
@@ -56,8 +56,8 @@ class HaloBias(ABC):
 
     @abstractmethod
     def _get_bsigma(self, cosmo, sigM, a):
-        """Specific implementation of halo bias as a function of
-        :math:`\\sigma_{\\mathrm{M}}`.
+        r"""Specific implementation of halo bias as a function of
+        :math:`\sigma_{\rm M}`.
 
         Arguments
         ---------
@@ -72,19 +72,19 @@ class HaloBias(ABC):
         Returns
         -------
         bsigma : (na, nsigM) ndarray
-            :math:`f(\\sigma_{\\mathrm{M}})` function.
+            :math:`f(\sigma_{\rm M})` function.
         """
 
     def get_halo_bias(self, cosmo, M, a, *, squeeze=True):
-        """Compute the halo bias function.
+        r"""Compute the halo bias function.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        M : float or (..., nM, ...) array_like
-            Halo mass in :math:`\\mathrm{M_{\\odot}}`.
-        a : float or (..., na, ...) array_like
+        M : float or (nM,) array_like
+            Halo mass in :math:`\rm M_\odot`.
+        a : float or (na,) array_like
             Scale factor.
         squeeze : bool, optional
             Squeeze extra dimensions of size (1,) in the output.
@@ -92,7 +92,7 @@ class HaloBias(ABC):
 
         Returns
         -------
-        halo_bias : float or (..., na, nM, ...) array_like
+        halo_bias : float or (na, nM,) array_like
             Halo bias.
         """
         a, M = map(np.asarray, [a, M])
@@ -221,12 +221,12 @@ class HaloBiasBhattacharya11(HaloBias):
 
 
 class HaloBiasTinker10(HaloBias):
-    """Halo bias described in :arXiv:1001.3162.
+    r"""Halo bias described in :arXiv:1001.3162.
 
     .. note::
 
         This parametrization is valid for SO-matter based mass definitions with
-        :math:`200 < \\Delta < 3200`. CCL will internally translate SO-critical
+        :math:`200 < \Delta < 3200`. CCL will internally translate SO-critical
         based mass definitions to SO-matter.
 
     Parameters
@@ -258,7 +258,7 @@ class HaloBiasTinker10(HaloBias):
                     or Δ == "vir")
 
     def _get_Delta_m(self, cosmo, a):
-        """Translate SO mass definitions to :math:`\\rho_{\\mathrm{m}}`."""
+        r"""Translate SO mass definitions to :math:`\rho_{\rm m}`."""
         Δ = self.mass_def.get_Delta(cosmo, a, squeeze=False)
         if self.mass_def.rho_type == 'matter':
             return Δ

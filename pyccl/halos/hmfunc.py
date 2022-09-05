@@ -64,7 +64,7 @@ class MassFunc(ABC):
         """Runs after ``__init__`` to initialize internal attributes."""
 
     def _get_Delta_m(self, cosmo, a):
-        """Translate SO mass definitions to :math:`\\rho_{\\mathrm{m}}`.
+        r"""Translate SO mass definitions to :math:`\rho_{\rm m}`.
         This method is used in the Tinker mass functions.
         """
         Δ = self.mass_def.get_Delta(cosmo, a, squeeze=False)
@@ -77,7 +77,7 @@ class MassFunc(ABC):
 
     @abstractmethod
     def _get_fsigma(self, cosmo, sigM, a, lnM):
-        """Specific implementation of mass function :math:`f(\\sigma_M)`.
+        r"""Specific implementation of mass function :math:`f(\sigma_M)`.
 
         Arguments
         ---------
@@ -89,29 +89,29 @@ class MassFunc(ABC):
         a : (na, 1) ndarray
             Scale factor, corresponding to the rows of ``sigM``.
         lnM : (1, nlnM) ndarray
-            Natural logarithm of the halo mass in :math:`\\mathrm{M_{\\odot}}`.
+            Natural logarithm of the halo mass in :math:`\rm M_\odot`.
             This is provided in addition to ``sigM`` for convenience.
 
         Returns
         -------
         fsigma : (na, nsigM) ndarray
-            :math:`f(\\sigma_M)` function.
+            :math:`f(\sigma_M)` function.
         """
 
     def get_mass_function(self, cosmo, M, a, *, squeeze=True):
-        """Compute the mass function.
+        r"""Compute the mass function.
 
         .. math::
 
-            \\frac{\\mathrm{d}n}{\\mathrm{d} \\log_{10} M}
+            \frac{\mathrm{d}n}{\mathrm{d} \log_{10} M}
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        M : float or (..., nM, ...) array_like
-            Halo mass in units of :math:`\\mathrm{M}_{\\odot}`.
-        a : float or (..., na, ...) array_like
+        M : float or (nM,) array_like
+            Halo mass in units of :math:`\rm M_\odot`.
+        a : float or (na,) array_like
             Scale factor.
         squeeze : bool, optional
             Squeeze extra dimensions of size (1,) in the output.
@@ -119,8 +119,8 @@ class MassFunc(ABC):
 
         Returns
         -------
-        mf : float or (..., na, nM, ...) array_like
-            Mass function in units of :math:`\\mathrm{Mpc}^{-3}` (comoving).
+        mf : float or (na, nM,) array_like
+            Mass function in units of :math:`\rm Mpc^{-3}` (comoving).
         """
         a, M = map(np.asarray, [a, M])
         a, M = get_broadcastable(a, M)
@@ -240,12 +240,12 @@ class MassFuncJenkins01(MassFunc):
 
 
 class MassFuncTinker08(MassFunc):
-    """Mass function described in :arXiv:0803.2706.
+    r"""Mass function described in :arXiv:0803.2706.
 
     .. note::
 
         This parametrization is valid for SO-matter based mass definitions with
-        :math:`200 < \\Delta < 3200`. CCL will internally translate SO-critical
+        :math:`200 < \Delta < 3200`. CCL will internally translate SO-critical
         based mass definitions to SO-matter.
 
     Parameters
@@ -334,12 +334,12 @@ class MassFuncDespali16(MassFunc):
 
 
 class MassFuncTinker10(MassFunc):
-    """Mass function described in :arXiv:1001.3162.
+    r"""Mass function described in :arXiv:1001.3162.
 
     .. note::
 
         This parametrization is valid for SO-matter based mass definitions with
-        :math:`200 < \\Delta < 3200`. CCL will internally translate SO-critical
+        :math:`200 < \Delta < 3200`. CCL will internally translate SO-critical
         based mass definitions to SO-matter.
 
     Parameters

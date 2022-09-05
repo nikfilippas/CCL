@@ -56,14 +56,14 @@ class Concentration(ABC):
 
     @abstractmethod
     def _concentration(cosmo, M, a):
-        """Specific implementation of the concentration-mass relation.
+        r"""Specific implementation of the concentration-mass relation.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
         M : (1, nM) ndarray
-            Halo mass in :math:`\\mathrm{M_{\\odot}}` at every ``a``.
+            Halo mass in :math:`\rm M_\odot` at every ``a``.
         a : (na, 1) ndarray
             Scale factor.
 
@@ -74,15 +74,15 @@ class Concentration(ABC):
         """
 
     def get_concentration(self, cosmo, M, a, *, squeeze=True):
-        """Compute the concentration.
+        r"""Compute the concentration.
 
         Arguments
         ---------
         cosmo : :class:`~pyccl.core.Cosmology`
             Cosmological parameters.
-        M : float or (..., nM, ...) array_like
-            Halo mass in :math:`\\mathrm{M_{\\odot}}`.
-        a : float or (..., na, ...) array_like
+        M : float or (nM,) array_like
+            Halo mass in :math:`\rm M_\odot`.
+        a : float or (na,) array_like
             Scale factor.
         squeeze : bool
             Squeeze extra dimensions of size (1,) in the output.
@@ -90,7 +90,7 @@ class Concentration(ABC):
 
         Returns
         -------
-        cM : float or (..., na, nM, ...) array_like
+        cM : float or (na, nM,) array_like
             Concentration.
         """
         a, M = map(np.asarray, [a, M])
@@ -118,8 +118,8 @@ class Concentration(ABC):
 
 
 class ConcentrationDiemer15(Concentration):
-    """Concentration-mass relation by Diemer & Kravtsov (2015)
-    :arXiv:1407.4730. Valid only for S.O. :math:`\\Delta = 200c`
+    r"""Concentration-mass relation by Diemer & Kravtsov (2015)
+    :arXiv:1407.4730. Valid only for S.O. :math:`\Delta = 200c`
     mass definitions.
 
     Parameters
@@ -163,15 +163,15 @@ class ConcentrationDiemer15(Concentration):
 
 
 class ConcentrationBhattacharya13(Concentration):
-    """Concentration-mass relation by Bhattacharya et al. (2013)
+    r"""Concentration-mass relation by Bhattacharya et al. (2013)
     :arXiv:1112.5479. Valid only for S.O. masses with
-    :math:`\\Delta=200m` and :math:`\\Delta=200c`.
+    :math:`\Delta=200m` and :math:`\Delta=200c`.
 
     Parameters
     ----------
     mass_def : :class:`~pyccl.halos.massdef.MassDef`
         Mass definition for this :math:`c(M)` parametrization.
-        The default is :math:`\\Delta=200c`.
+        The default is :math:`\Delta=200c`.
     """
     name = 'Bhattacharya13'
 
@@ -204,8 +204,8 @@ class ConcentrationBhattacharya13(Concentration):
 
 
 class ConcentrationPrada12(Concentration):
-    """Concentration-mass relation by Prada et al. (2012)
-    :arXiv:1104.5130. Valid only for S.O. masses with :math:`\\Delta = 200c`.
+    r"""Concentration-mass relation by Prada et al. (2012)
+    :arXiv:1104.5130. Valid only for S.O. masses with :math:`\Delta = 200c`.
 
     Parameters
     ---------
@@ -253,9 +253,9 @@ class ConcentrationPrada12(Concentration):
 
 
 class ConcentrationKlypin11(Concentration):
-    """Concentration-mass relation by Klypin et al. (2011)
+    r"""Concentration-mass relation by Klypin et al. (2011)
     :arXiv:1002.3660. Only valid for S.O. masses with
-    :math:`\\Delta = \\Delta_{\\mathrm{vir}}`.
+    :math:`\Delta = \Delta_{\rm vir}`.
 
     Parameters
     ---------
@@ -277,11 +277,11 @@ class ConcentrationKlypin11(Concentration):
 
 
 class ConcentrationDuffy08(Concentration):
-    """Concentration-mass relation by Duffy et al. (2008)
+    r"""Concentration-mass relation by Duffy et al. (2008)
     :arXiv:0804.2486. Only valid for S.O. masses with
-    :math:`\\Delta = \\Delta_{\\mathrm{vir}}`,
-    :math:`\\Delta = 200m`,
-    or :math:`\\Delta = 200c`.
+    :math:`\Delta = \Delta_{\rm vir}`,
+    :math:`\Delta = 200m`,
+    or :math:`\Delta = 200c`.
 
     Parameters
     ---------
@@ -315,11 +315,11 @@ class ConcentrationDuffy08(Concentration):
 
 
 class ConcentrationIshiyama21(Concentration):
-    """Concentration-mass relation by Ishiyama et al. (2021)
+    r"""Concentration-mass relation by Ishiyama et al. (2021)
     :arXiv:2007.14720. Only valid for S.O. masses with
-    :math:`\\Delta = \\Delta_{\\mathrm{vir}}`,
-    :math:`\\Delta = 200c`,
-    or :math:`\\Delta = 500c`.
+    :math:`\Delta = \Delta_{\rm vir}`,
+    :math:`\Delta = 200c`,
+    or :math:`\Delta = 500c`.
 
     Parameters
     ----------

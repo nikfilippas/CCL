@@ -1,4 +1,6 @@
 import numpy as np
+from inspect import signature
+import functools
 
 
 def expand_dim(arr, ndim, pos) -> np.ndarray:
@@ -83,14 +85,19 @@ def get_broadcastable(*arrs) -> list:
         >>> a, b, shape
         (array([[0], [1]]), array([[0, 1, 2]]), (2, 3))
     """
-    if sum([arr.size < 2 for arr in arrs]) >= len(arrs) - 1:
-        # Just single numbers. Allow one array to have dimensions.
-        return arrs
+    # if sum([arr.size < 2 for arr in arrs]) >= len(arrs) - 1:
+    #     # Both just numbers. Allow one array to have dimensions.
+    #     return arrs
 
     shapes = [arr.shape for arr in arrs]
     if len(set(shapes)) != len(shapes):
         # Some shapes are equal! While these are broadcastable,
         # we want to orthogonalize them as they are different quantities.
+        return get_expanded(*arrs)
+
+    if any([shape == (1,) for shape in shapes]):
+        # One of the arrays is just a number, so it is broadcastable.
+        # Don't broadcast, orthogonalize instead.
         return get_expanded(*arrs)
 
     try:
@@ -100,6 +107,48 @@ def get_broadcastable(*arrs) -> list:
     except ValueError:
         # Expand the dimensions if numpy broadcasting doesn't work.
         return get_expanded(*arrs)
+
+
+def squeeze_dispatcher(func=None, *, dims=None):
+    """Wrap function to make it squeezable.
+
+    Dimensions are first internally orthogonalized as indicated in ``dims``,
+    fed into the original function, and output according to the added
+    ``squeeze`` keyword.
+
+    Arguments
+    ---------
+    func : function
+        Function to wrap.
+    dims : str
+        Names of dimensions in the order they appear in the output separated.
+        by whitespace. For example, ``dims=['a b']`` will output an array of
+        shape ``(na, nb)``.
+    """
+    if func is None:
+        dims = dims.split()
+        return functools.partial(squeeze_dispatcher, dims=dims)
+
+    sign = signature(func)
+
+    @functools.wraps(func)
+    def new_func(*args, squeeze=True, **kwargs):
+        # Bind input args and kwargs to original function.
+        bound = sign.bind(*args, **kwargs)
+        bound.apply_defaults()
+        arguments = bound.arguments
+
+        # Broadcast them as needed.
+        axes = [np.atleast_1d(arguments[param]) for param in dims]
+        axes = get_broadcastable(*axes)
+        arguments.update(dict(zip(dims, axes)))
+
+        # Call original function and squeeze as needed.
+        ret = func(**arguments)
+        return ret.squeeze()[()] if squeeze else ret
+
+    return new_func
+
 
 
 def resample_array():

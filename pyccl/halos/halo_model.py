@@ -1,7 +1,6 @@
 from .massdef import MassDef
 from .hmfunc import MassFunc
 from .hbias import HaloBias
-from ..parameters import accuracy_params
 from ..parameters import spline_params as sparams
 from ..parameters import physical_constants as const
 from ..integrate import IntegratorSamples
@@ -66,10 +65,8 @@ class HMCalculator:
 
         # Initialize precision parameters.
         self._k_large_scale = k_large_scale
-        self._lmass = np.linspace(accuracy_params.M_MIN,
-                                  accuracy_params.M_MAX,
-                                  accuracy_params.N_M)
-        self._mass = 10.**self._lmass
+        self._mass = np.geomspace(sparams.M_MIN, sparams.M_MAX, sparams.N_M)
+        self._lmass = np.log10(self._mass)
         self._m0 = self._mass[0]
 
         # Initialize integration methods.
@@ -96,7 +93,7 @@ class HMCalculator:
         cached_bf = cosmo == self._cosmo_bf and np.array_equal(a, self._a_bf)
         if not cached_bf:
             hbias = self.halo_bias.get_halo_bias
-            self._bf = hbias(cosmo, self._mass, a)
+            self._bf = hbias(cosmo, self._mass, a, squeeze=False)
             self._bf = np.expand_dims(self._bf, axis=1)  # (a, [k], M)
             integ = self._integrator(self._mf*self._bf*self._mass, self._lmass)
             self._mbf0 = (ρ0 - integ) / self._m0
@@ -230,7 +227,7 @@ class HMCalculator:
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=False)
-        uk = prof.fourier(cosmo, k, self._mass, a, mass_def=self.mass_def)
+        uk = prof.fourier(cosmo, k, self._mass, a, squeeze=False)
         return self._integrate_over_mf(uk)
 
     def I_1_1(self, cosmo, k, a, prof):
@@ -262,7 +259,7 @@ class HMCalculator:
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=True)
-        uk = prof.fourier(cosmo, k, self._mass, a, mass_def=self.mass_def)
+        uk = prof.fourier(cosmo, k, self._mass, a, squeeze=False)
         return self._integrate_over_mbf(uk)
 
     def I_0_2(self, cosmo, k, a, prof, prof2=None):
@@ -294,7 +291,8 @@ class HMCalculator:
             Integral value.
         """
         self._get_ingredients(cosmo, a, get_bf=False)
-        uk = prof.fourier_2pt(cosmo, k, self._mass, a, prof2=prof2)
+        uk = prof.fourier_2pt(cosmo, k, self._mass, a, prof2=prof2,
+                              squeeze=False)
         return self._integrate_over_mf(uk)
 
     def I_1_2(self, cosmo, k, a, prof, prof2=None):

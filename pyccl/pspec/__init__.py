@@ -2,10 +2,10 @@ from .pspec_base import (
     TransferFunctions,
     MatterPowerSpectra,
     BaryonPowerSpectra,
-    rescale_power_spectrum,
     PowerSpectrum,
     PowerSpectrumAnalytic,
     PowerSpectrumNonLinear,
+    rescale_power_spectrum,
 )
 
 from .eh import EisensteinHuWiggles, EisensteinHuNoWiggles
@@ -24,10 +24,10 @@ __all__ = (
     "TransferFunctions",
     "MatterPowerSpectra",
     "BaryonPowerSpectra",
-    "rescale_power_spectrum",
     "PowerSpectrum",
     "PowerSpectrumAnalytic",
     "PowerSpectrumNonLinear",
+    "rescale_power_spectrum",
     "PowerSpectrumBBKS",
     "PowerSpectrumBCM",
     "PowerSpectrumCAMB",

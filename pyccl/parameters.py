@@ -95,7 +95,7 @@ class _PhysicalConstants(CCLParameters, freeze=True):
     # Unit conversion (m/Mpc).
     MPC_TO_METER = 1e6 * PC_TO_METER
     # Stefan-Boltzmann's constant (kg m^2 / s).
-    STBOLTZ = (pi**2/60) * KBOLTZ**4 / (HBAR)**3 / CLIGHT**2
+    STBOLTZ = (pi**2/60) * KBOLTZ**4 / HBAR**3 / CLIGHT**2
     # Solar mass in (kg).
     SOLAR_MASS = 4 * pi*pi * AU**3 / GNEWT / YEAR**2
     # Critical density (100 M_sun/h / (Mpc/h)^3).

@@ -1,6 +1,6 @@
 from .pspec import (PowerSpectrum, TransferFunctions,
                     MatterPowerSpectra, BaryonPowerSpectra)
-from .pk2d import _DefaultPowerSpectrum, Pk2D, parse_pk2d
+from .pk2d import DefaultPowerSpectrum, Pk2D, parse_pk2d
 from .interpolate import Interpolator2D
 from .integrate import IntegratorFunction
 from .errors import CCLWarning
@@ -11,6 +11,7 @@ from .parameters import spline_params as sparams
 import numpy as np
 from scipy.special import jv
 import warnings
+import functools
 
 
 __all__ = ("get_linear_power", "get_nonlin_power", "linear_power",
@@ -42,7 +43,7 @@ def compute_linear_power(cosmo):
         extras_camb["nonlin"] = True
         camb_model = PowerSpectrum.from_model(mps.value)
         pkl, pknl = camb_model(cosmo).get_power_spectrum(**extras_camb)
-        cosmo._pknl[_DefaultPowerSpectrum] = pknl
+        cosmo._pknl[DefaultPowerSpectrum] = pknl
 
     is_computed = pkl is not None and TRF(trf) == TRF.CAMB
     pk = pkl if is_computed else model.get_power_spectrum(**extras)
@@ -51,7 +52,7 @@ def compute_linear_power(cosmo):
                                       rescale_s8=model.rescale_s8,
                                       rescale_mg=model.rescale_mg)
 
-    cosmo._pkl[_DefaultPowerSpectrum] = pk
+    cosmo._pkl[DefaultPowerSpectrum] = pk
 
 
 def compute_nonlin_power(cosmo):
@@ -88,10 +89,10 @@ def compute_nonlin_power(cosmo):
     if BPS(bps) == BPS.BCM:
         pk = pk.apply_model(cosmo, "bcm")
 
-    cosmo._pknl[_DefaultPowerSpectrum] = pk
+    cosmo._pknl[DefaultPowerSpectrum] = pk
 
 
-def get_linear_power(cosmo, name=_DefaultPowerSpectrum):
+def get_linear_power(cosmo, name=DefaultPowerSpectrum):
     """Get the :class:`~pyccl.pk2d.Pk2D` object associated with
     the linear power spectrum ``name``.
 
@@ -109,7 +110,7 @@ def get_linear_power(cosmo, name=_DefaultPowerSpectrum):
     return cosmo._pkl[name]
 
 
-def get_nonlin_power(cosmo, name=_DefaultPowerSpectrum):
+def get_nonlin_power(cosmo, name=DefaultPowerSpectrum):
     """Get the :class:`~pyccl.pk2d.Pk2D` object associated with
     the non-linear power spectrum ``name``.
 
@@ -127,7 +128,7 @@ def get_nonlin_power(cosmo, name=_DefaultPowerSpectrum):
     return cosmo._pknl[name]
 
 
-def linear_power(cosmo, k, a, p_of_k_a=_DefaultPowerSpectrum, *,
+def linear_power(cosmo, k, a, p_of_k_a=DefaultPowerSpectrum, *,
                  derivative=False, squeeze=True):
     """The linear power spectrum (:math:`\\mathrm{Mpc}^3`).
 
@@ -155,7 +156,7 @@ def linear_power(cosmo, k, a, p_of_k_a=_DefaultPowerSpectrum, *,
                                                  squeeze=squeeze)
 
 
-def dlnPk_dlnk(cosmo, k, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
+def dlnPk_dlnk(cosmo, k, a, p_of_k_a=DefaultPowerSpectrum, *, squeeze=True):
     """Helper for the logarithmic derivative of the linear power spectrum.
     See :func:`linear_power` for details.
     """
@@ -163,7 +164,7 @@ def dlnPk_dlnk(cosmo, k, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
                         squeeze=squeeze)
 
 
-def nonlin_power(cosmo, k, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
+def nonlin_power(cosmo, k, a, p_of_k_a=DefaultPowerSpectrum, *, squeeze=True):
     """The non-linear power spectrum (:math:`\\mathrm{Mpc}^3`).
 
     Arguments
@@ -201,7 +202,7 @@ def linear_matter_power(cosmo, k, a, *, squeeze=True):
         The default is True.
     """
     return linear_power(cosmo, k, a,
-                        p_of_k_a=_DefaultPowerSpectrum,
+                        p_of_k_a=DefaultPowerSpectrum,
                         squeeze=squeeze)
 
 
@@ -221,7 +222,7 @@ def nonlin_matter_power(cosmo, k, a, *, squeeze=True):
         The default is True.
     """
     return nonlin_power(cosmo, k, a,
-                        p_of_k_a=_DefaultPowerSpectrum,
+                        p_of_k_a=DefaultPowerSpectrum,
                         squeeze=squeeze)
 
 
@@ -293,49 +294,54 @@ def _integrate_sigma(cosmo, integrand):
     return np.sqrt(σ * np.log(10) / (2 * np.pi**2))
 
 
-def sigmaR(cosmo, R, a=1, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
-    """RMS variance in a top-hat sphere of radius ``R`` :math:\\mathrm{Mpc}.
+def _sigmaR(cosmo, R, a=1, p_of_k_a=DefaultPowerSpectrum):
+    r"""RMS variance in a top-hat sphere of radius ``R`` :math:\rm Mpc.
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    R : float or (..., nR, ...) array_like
+    R : float or (nR,) array_like
         Radius of the top-hat sphere.
-    a : float or (..., na, ...) array_like, optional
+    a : float or (na,) array_like, optional
         Scale factor, normalized to 1 today. The default is 1.
     p_of_k_a : :class:`~pyccl.pk2d.Pk2D` or str
         3-D power spectrum to integrate.
         If a string is passed, a non-linear power spectrum under that name
         must be stored in ``cosmo`` (e.g.`'delta_matter:delta_matter'`).
-    squeeze : bool
-        Squeeze extra dimensions of size (1,) in the output.
-        The default is True.
 
     Returns
     -------
-    σ_R : float or (..., na, nR, ...) ndarray
+    σ_R : float or (na, nR,) ndarray
         RMS variance in a top-hat sphere of radius ``R``.
     """
-    pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
-    a, R = map(np.asarray, [a, R])
+    a, R = map(np.atleast_1d, [a, R])
     a, R = get_broadcastable(a, R)
-    a, R = a[..., None], R[..., None]  # create a trailing integration axis
-    shp = np.broadcast_shapes(a.shape, R.shape)
 
+    # Integrand axes are [a, R, k]. Integrate over final axis (k).
+    shp = np.broadcast_shapes(a.shape, R.shape)
+    k_shape = (1,) * len(shp) + (-1,)  # add a trailing axis
+    a, R = a[..., None], R[..., None]  # create a trailing integration axis
+
+    pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
     def sigmaR_integrand(lk):
-        # Integrand axes are [a, R, k]. Integrate over final axis (k).
-        k_shape = ((1,) * (len(shp) - 1) + (-1,))  # add a trailing axis
         lk = np.atleast_1d(lk).reshape(k_shape)
         k = 10**lk
         pka = pk(k, a, squeeze=False)
         return pka * k**3 * _w_tophat(k*R)**2
 
-    out = _integrate_sigma(cosmo, sigmaR_integrand)
+    return _integrate_sigma(cosmo, sigmaR_integrand)
+
+
+@functools.wraps(_sigmaR)
+def sigmaR(cosmo, R, a=1, p_of_k_a=DefaultPowerSpectrum, *, squeeze=True):
+    if p_of_k_a == DefaultPowerSpectrum:
+        return sigmaM(cosmo, r2m(cosmo, R), a, squeeze=squeeze)
+    out = _sigmaR(cosmo, R, a, p_of_k_a=p_of_k_a)
     return out.squeeze()[()] if squeeze else out
 
 
-def sigmaV(cosmo, R, a=1, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
+def sigmaV(cosmo, R, a=1, p_of_k_a=DefaultPowerSpectrum, *, squeeze=True):
     """RMS variance in the displacement field in a top-hat sphere of radius R.
     The linear displacement field is the gradient of the linear density field.
 
@@ -343,32 +349,33 @@ def sigmaV(cosmo, R, a=1, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    R : float or (..., nR, ...) array_like
+    R : float or (nR,) array_like
         Radius of the top-hat sphere.
-    a : float or (..., na, ...), optional
+    a : float or (na,), optional
         Scale factor, normalized to 1 today. The default is 1.
     p_of_k_a : :class:`~pyccl.pk2d.Pk2D` or str
         3-D power spectrum to integrate.
         If a string is passed, a non-linear power spectrum under that name
         must be stored in ``cosmo`` (e.g.`'delta_matter:delta_matter'`).
-    squeeze : bool
+    squeeze : bool, optional
         Squeeze extra dimensions of size (1,) in the output.
         The default is True.
 
     Returns
     -------
-    σ_V : float or (..., na, nR, ...) ndarray
+    σ_V : float or (na, nR,) ndarray
         RMS variance of the displacement field in a top-hat sphere of radius R.
     """
-    pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
-    a, R = map(np.asarray, [a, R])
+    a, R = map(np.atleast_1d, [a, R])
     a, R = get_broadcastable(a, R)
-    a, R = a[..., None], R[..., None]  # create a trailing integration axis
-    shp = np.broadcast_shapes(a.shape, R.shape)
 
+    # Integrand axes are [a, R, k]. Integrate over final axis (k).
+    shp = np.broadcast_shapes(a.shape, R.shape)
+    k_shape = (1,) * len(shp) + (-1,)  # add a trailing axis
+    a, R = a[..., None], R[..., None]  # create a trailing integration axis
+
+    pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
     def sigmaV_integrand(lk):
-        # Integrand axes are [a, R, k]. Integrate over final axis (k).
-        k_shape = ((1,) * (len(shp) - 1) + (-1,))  # add a trailing axis
         lk = np.atleast_1d(lk).reshape(k_shape)
         k = 10**lk
         pka = pk(k, a, squeeze=False)
@@ -378,7 +385,7 @@ def sigmaV(cosmo, R, a=1, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
     return out.squeeze()[()] if squeeze else out
 
 
-def sigma8(cosmo, p_of_k_a=_DefaultPowerSpectrum):
+def sigma8(cosmo, p_of_k_a=DefaultPowerSpectrum):
     """RMS variance in a top-hat sphere of radius 8 Mpc/h.
 
     .. note::
@@ -395,26 +402,30 @@ def sigma8(cosmo, p_of_k_a=_DefaultPowerSpectrum):
         If a string is passed, a non-linear power spectrum under that name
         must be stored in ``cosmo`` (e.g.`'delta_matter:delta_matter'`).
     """
-    if cosmo["sigma8"] is not None:
+    if p_of_k_a == DefaultPowerSpectrum and cosmo["sigma8"] is not None:
+        # Return the value stored in cosmo.
         return cosmo["sigma8"]
     out = sigmaR(cosmo, 8/cosmo["h"], 1., p_of_k_a=p_of_k_a)
-    cosmo.params.sigma8 = out
+    if p_of_k_a == DefaultPowerSpectrum:
+        # Populate sigma8 in cosmo.
+        cosmo.params.sigma8 = out
     return out
 
 
-def sigma2B(cosmo, R, a, p_of_k_a, *, squeeze=True):
+def sigma2B(cosmo, R, a, p_of_k_a=DefaultPowerSpectrum, *, squeeze=True):
     """
     # TODO
     """
-    pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
-    a, R = map(np.asarray, [a, R])
+    a, R = map(np.atleast_1d, [a, R])
     a, R = get_broadcastable(a, R)
-    a, R = a[..., None], R[..., None]  # create a trailing integration axis
-    shp = np.broadcast_shapes(a.shape, R.shape)
 
+    # Integrand axes are [a, R, k]. Integrate over final axis (k).
+    shp = np.broadcast_shapes(a.shape, R.shape)
+    k_shape = (1,) * len(shp) + (-1,)  # add a trailing axis
+    a, R = a[..., None], R[..., None]  # create a trailing integration axis
+
+    pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
     def sigma2B_integrand(lk):
-        # Integrand axes are [a, R, k]. Integrate over final axis (k).
-        k_shape = ((1,) * (len(shp) - 1) + (-1,))  # add a trailing axis
         lk = np.atleast_1d(lk).reshape(k_shape)
         k = 10**lk
         pka = pk(k, a, squeeze=False)
@@ -424,7 +435,7 @@ def sigma2B(cosmo, R, a, p_of_k_a, *, squeeze=True):
     return out.squeeze()[()] if squeeze else out
 
 
-def kNL(cosmo, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
+def kNL(cosmo, a, p_of_k_a=DefaultPowerSpectrum):
     r"""Scale for the non-linear cut.
 
     `k_{\rm NL}` is calculated based on Lagrangian perturbation
@@ -445,9 +456,6 @@ def kNL(cosmo, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
         3-D power spectrum to integrate.
         If a string is passed, a non-linear power spectrum under that name
         must be stored in ``cosmo`` (e.g.`'delta_matter:delta_matter'`).
-    squeeze : bool, optional
-        Squeeze extra dimensions of size (1,) in the output.
-        The default is True.
 
     Returns
     -------
@@ -457,8 +465,7 @@ def kNL(cosmo, a, p_of_k_a=_DefaultPowerSpectrum, *, squeeze=True):
     pk = parse_pk2d(cosmo, p_of_k_a, linear=True)
     integrator = IntegratorFunction("fixed_quadrature", acc.EPSREL_KNL)
     PL = integrator(pk, sparams.K_MIN, sparams.K_MAX, args=(a,))
-    out = 1. / np.sqrt(PL / (6*np.pi**2))
-    return out.squeeze()[()] if squeeze else out
+    return 1. / np.sqrt(PL / (6*np.pi**2))
 
 
 def r2m(cosmo, R, a=1, Delta=1, species="matter", comoving=True, *,
@@ -501,12 +508,12 @@ def r2m(cosmo, R, a=1, Delta=1, species="matter", comoving=True, *,
         Halo mass in :math:`\rm M_\odot`.
     """
     # Axes are [a, R, Delta].
-    a, R, Delta = map(np.asarray, [a, R, Delta])
+    a, R, Delta = map(np.atleast_1d, [a, R, Delta])
     if Delta_vectorized:
         a, R, Delta = get_broadcastable(a, R, Delta)
     else:
         a, R = get_broadcastable(a, R)
-        Delta.shape = a.shape
+        Delta = np.broadcast_to(Delta, a.shape)
     ρ = cosmo.rho_x(a, species=species, is_comoving=comoving, squeeze=False)
     M = (4/3) * np.pi * Delta * R**3 * ρ
     return M.squeeze()[()] if squeeze else M
@@ -577,7 +584,7 @@ def compute_sigma(cosmo):
 
     a = sparams.get_sm_spline_a()
     m = sparams.get_sm_spline_lm()
-    y = np.log([cosmo.sigmaR(m2r(cosmo, 10**m), aa, pk) for aa in a])
+    y = np.log(_sigmaR(cosmo, m2r(cosmo, 10**m), a, pk))
     cosmo.data.logsigma = Interpolator2D(a, m, y, extrap_orders=[1, 1, 1, 1])
 
 
@@ -589,9 +596,9 @@ def sigmaM(cosmo, M, a, *, squeeze=True, grid=True):
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    M : float or (..., nM, ...) array_like
+    M : float or (nM,) array_like
         Halo masses (in units of M_sun).
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor, normalized to 1 today.
     squeeze : bool
         Squeeze extra dimensions of size (1,) in the output.
@@ -603,7 +610,7 @@ def sigmaM(cosmo, M, a, *, squeeze=True, grid=True):
 
     Returns
     -------
-    σ_Μ : float or (..., na, nM, ...) ndarray
+    σ_Μ : float or (na, nM) ndarray
         RMS variance of the halo masses ``M`` at scale factor ``a``.
     """
     cosmo.compute_sigma()
@@ -612,20 +619,20 @@ def sigmaM(cosmo, M, a, *, squeeze=True, grid=True):
 
 
 def dlnsigM_dlogM(cosmo, M, a, *, squeeze=True):
-    """Logarithmic derivative of the RMS variance for the given halo mass
-    of the linear power spectrum (:math:`\\mathrm{M_{\\odot}}`).
+    r"""Logarithmic derivative of the RMS variance for the given halo mass
+    of the linear power spectrum (:math:`\rm M_\odot`).
 
     .. math::
 
-        \\frac{\\mathrm{d} \\ln (1 / \\sigma(M))}{\\mathrm{d} \\log_{10} M}
+        \frac{\mathrm{d} \ln (1 / \sigma(M))}{\mathrm{d} \log_{10} M}
 
     Arguments
     ---------
     cosmo : :class:`~pyccl.core.Cosmology`
         Cosmological parameters.
-    M : float or (..., nM, ...) array_like
+    M : float or (nM,) array_like
         Halo masses (in units of M_sun).
-    a : float or (..., na, ...) array_like
+    a : float or (na,) array_like
         Scale factor, normalized to 1 today.
     squeeze : bool
         Squeeze extra dimensions of size (1,) in the output.
@@ -633,7 +640,7 @@ def dlnsigM_dlogM(cosmo, M, a, *, squeeze=True):
 
     Returns
     -------
-    dlnσM_dlogM : float or (.., na, nM, ...) ndarray
+    dlnσM_dlogM : float or (na, nM,) ndarray
         Logarithmic RMS variance of the halo masses ``M`` at ``a``.
     """
     cosmo.compute_sigma()
