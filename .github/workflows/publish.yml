@@ -1,11 +1,11 @@
-name: Upload to PyPI
+name: Publish to PyPI
 
 on:
   release:
     types: [published]
 
 jobs:
-  Upload:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,3 +23,24 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_PYCCL_UPLOAD }}
+
+
+name: Publish to Anaconda
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: publish-to-conda
+      uses: maxibor/conda-package-publish-action@v1.1
+      with:
+        subDir: 'conda'
+        AnacondaToken: ${{ secrets.ANACONDA_TOKEN }}
