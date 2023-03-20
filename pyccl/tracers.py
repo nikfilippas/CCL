@@ -246,7 +246,7 @@ class Tracer(CCLObject):
                     # none of them has this transfer type
                     continue
                 if not np.allclose(c2py[attr](spl1),
-                                    c2py[attr](spl2), **kwargs):
+                                   c2py[attr](spl2), **kwargs):
                     # both have this transfer type, but they are unequal
                     return False
         return True
