@@ -1,4 +1,4 @@
-from .profile_base import HaloProfile
+from .profile_base import HaloProfile, HaloProfileNumberCounts
 from .gaussian import HaloProfileGaussian
 from .powerlaw import HaloProfilePowerLaw
 from .nfw import HaloProfileNFW
@@ -10,6 +10,7 @@ from .hod import HaloProfileHOD
 
 __all__ = (
     "HaloProfile",
+    "HaloProfileNumberCounts",
     "HaloProfileGaussian",
     "HaloProfilePowerLaw",
     "HaloProfileNFW",
