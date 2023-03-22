@@ -569,6 +569,7 @@ class NzTracer(Tracer):
     distribution interpolator. Currently only used for
     :class:`NumberCountsTracer` and :class:`WeakLensingTracer`.
     """
+
     def get_dndz(self, z):
         """Get the redshift distribution for this tracer.
 
