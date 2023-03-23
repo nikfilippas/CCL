@@ -536,8 +536,15 @@ class HaloProfile(CCLAutoreprObject):
         return sig_r_t_out
 
 
+class HaloProfileNumberCounts(HaloProfile):
+    """Base for number counts halo profiles."""
+    normprof = True
+    is_number_counts = True
+
+
 class HaloProfileMatter(HaloProfile):
     """Base for matter halo profiles."""
+    normprof = True
 
 
 class HaloProfilePressure(HaloProfile):

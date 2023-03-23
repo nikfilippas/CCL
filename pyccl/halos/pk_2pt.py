@@ -10,6 +10,13 @@ import numpy as np
 __all__ = ("halomod_power_spectrum", "halomod_Pk2D",)
 
 
+def _Ix2(func, cosmo, hmc, k, a, prof, prof2, prof_2pt, p_of_k_a,
+         get_1h, get_2h, smooth_transition, suppress_1h):
+    pass
+
+
+
+
 @warn_api(pairs=[("normprof1", "normprof"), ("supress_1h", "suppress_1h")],
           reorder=["prof_2pt", "prof2", "p_of_k_a", "normprof", "normprof2"])
 def halomod_power_spectrum(cosmo, hmc, k, a, prof, *,
