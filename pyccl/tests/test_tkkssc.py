@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 import pyccl as ccl
 from pyccl import UnlockInstance
+from pyccl.halos import HaloProfileNumberCounts
 
 
 COSMO = ccl.Cosmology(
@@ -14,11 +15,10 @@ HMF = ccl.halos.MassFuncTinker10(COSMO, mass_def=M200)
 HBF = ccl.halos.HaloBiasTinker10(COSMO, mass_def=M200)
 P1 = ccl.halos.HaloProfileNFW(ccl.halos.ConcentrationDuffy08(M200),
                               fourier_analytic=True)
-# P2 will have is_number_counts = True
-P2 = ccl.halos.HaloProfileHOD(ccl.halos.ConcentrationDuffy08(M200))
-P2_nogc = ccl.halos.HaloProfileHOD(ccl.halos.ConcentrationDuffy08(M200))
-with UnlockInstance(P2_nogc):
-    P2_nogc.is_number_counts = False
+# P2 will be an instance of `HaloProfileNumberCounts`
+cm = ccl.halos.ConcentrationDuffy08(mass_def=M200)
+P2 = ccl.halos.HaloProfileHOD(c_m_relation=cm)
+P2_nogc = ccl.halos.HaloProfileHOD(c_m_relation=cm)
 P3 = ccl.halos.HaloProfilePressureGNFW()
 P4 = P1
 Pneg = ccl.halos.HaloProfilePressureGNFW(P0=-1)
@@ -33,13 +33,14 @@ def get_ssc_counterterm_gc(k, a, hmc, prof1, prof2, prof12_2pt,
                            normalize=False):
 
     P_12 = b1 = b2 = np.zeros_like(k)
-    if prof1.is_number_counts or prof2.is_number_counts:
+    if (isinstance(prof1, HaloProfileNumberCounts)
+            or isinstance(prof2, HaloProfileNumberCounts)):
         norm1 = hmc.profile_norm(COSMO, a, prof1)
         norm2 = hmc.profile_norm(COSMO, a, prof2)
         norm12 = 1
-        if prof1.is_number_counts or normalize:
+        if isinstance(prof1, HaloProfileNumberCounts) or normalize:
             norm12 *= norm1
-        if prof2.is_number_counts or normalize:
+        if isinstance(prof2, HaloProfileNumberCounts) or normalize:
             norm12 *= norm2
 
         i11_1 = hmc.I_1_1(COSMO, k, a, prof1)
@@ -49,10 +50,10 @@ def get_ssc_counterterm_gc(k, a, hmc, prof1, prof2, prof12_2pt,
         pk = ccl.linear_matter_power(COSMO, k, a)
         P_12 = norm12 * (pk * i11_1 * i11_2 + i02_12)
 
-        if prof1.is_number_counts:
+        if isinstance(prof1, HaloProfileNumberCounts):
             b1 = ccl.halos.halomod_bias_1pt(COSMO, hmc, k, a, prof1,
                                             normprof=False) * norm1
-        if prof2.is_number_counts:
+        if isinstance(prof2, HaloProfileNumberCounts):
             b2 = ccl.halos.halomod_bias_1pt(COSMO, hmc, k, a, prof2,
                                             normprof=False) * norm2
 
@@ -181,8 +182,8 @@ def test_tkkssc_counterterms_gc(kwargs):
     k_arr = KK
     a_arr = np.array([0.3, 0.5, 0.7, 1.0])
 
-    # Tk's without clustering terms. Set is_number_counts=False for HOD
-    # profiles
+    # Tk's without clustering terms. Achieved by a custom HOD class that
+    # inherits directly from `HaloProfile` (not `HaloProfileNumberCounts`).
     # Ensure HOD profiles are normalized
     kwargs_nogc = kwargs.copy()
     keys = list(kwargs.keys())
@@ -359,7 +360,7 @@ def test_tkkssc_linear_bias_smoke_and_errors():
     pk = COSMO.get_nonlin_power()
     ccl.halos.halomod_Tk3D_SSC_linear_bias(COSMO, hmc, prof=prof, p_of_k_a=pk)
 
-    # Error when prof is not NFW
+    # Raise when prof is not NFW
     with pytest.raises(TypeError):
         ccl.halos.halomod_Tk3D_SSC_linear_bias(COSMO, hmc, prof=P2)
 

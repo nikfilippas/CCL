@@ -1,13 +1,12 @@
-from .. import ccllib as lib
 from ..base import UnlockInstance, warn_api
 from ..pk2d import Pk2D
 from ..tk3d import Tk3D
-from ..pyutils import check
 from ..errors import CCLWarning
-from .profiles import HaloProfileNFW
+from .profiles import HaloProfileNFW, HaloProfileNumberCounts
 from .profiles_2pt import Profile2pt
 import numpy as np
 import warnings
+from functools import partial
 
 
 __all__ = ("halomod_trispectrum_1h", "halomod_Tk3D_1h",
@@ -81,72 +80,47 @@ def halomod_trispectrum_1h(cosmo, hmc, k, a, prof, *,
     a_use = np.atleast_1d(a).astype(float)
     k_use = np.atleast_1d(k).astype(float)
 
-    if prof2 is None:
-        prof2 = prof
-    if prof3 is None:
-        prof3 = prof
-    if prof4 is None:
-        prof4 = prof2
-    if prof12_2pt is None:
-        prof12_2pt = Profile2pt()
-    if prof34_2pt is None:
-        prof34_2pt = prof12_2pt
-
-    # TODO: Remove for CCLv3.
-    if normprof1 is not None:
-        with UnlockInstance(prof):
-            prof.normprof = normprof1
-    if normprof2 is not None:
-        with UnlockInstance(prof2):
-            prof2.normprof = normprof2
-    if normprof3 is not None:
-        with UnlockInstance(prof3):
-            prof3.normprof = normprof3
-    if normprof4 is not None:
-        with UnlockInstance(prof4):
-            prof4.normprof = normprof4
-
-    def get_norm(prof, sf):
-        return hmc.profile_norm(cosmo, sf, prof) if prof.normprof else 1
+    # define all the profiles
+    prof, prof2, prof3, prof4, prof12_2pt, prof34_2pt = \
+        _allocate_profiles(prof, prof2, prof3, prof4, prof12_2pt, prof34_2pt,
+                           normprof1, normprof2, normprof3, normprof4)
 
     na = len(a_use)
     nk = len(k_use)
     out = np.zeros([na, nk, nk])
     for ia, aa in enumerate(a_use):
         # Compute profile normalizations
-        norm1 = get_norm(prof, aa)
+        norm1 = _get_norm(prof, aa)
         # Compute second profile normalization
         if prof2 == prof:
             norm2 = norm1
         else:
-            norm2 = get_norm(prof2, aa)
+            norm2 = _get_norm(prof2, aa)
 
         if prof3 == prof:
             norm3 = norm1
         else:
-            norm3 = get_norm(prof3, aa)
+            norm3 = _get_norm(prof3, aa)
 
         if prof4 == prof2:
             norm4 = norm2
         else:
-            norm4 = get_norm(prof4, aa)
+            norm4 = _get_norm(prof4, aa)
 
         norm = norm1 * norm2 * norm3 * norm4
 
         # Compute trispectrum at this redshift
-        tk_1h = hmc.I_0_22(cosmo, k_use, aa,
-                           prof=prof, prof2=prof2,
-                           prof4=prof4, prof3=prof3,
-                           prof12_2pt=prof12_2pt,
-                           prof34_2pt=prof34_2pt)
+        tk_1h = hmc.I_0_22(
+            cosmo, k_use, aa, prof=prof, prof2=prof2, prof4=prof4, prof3=prof3,
+            prof12_2pt=prof12_2pt, prof34_2pt=prof34_2pt)
 
         # Normalize
         out[ia, :, :] = tk_1h * norm
 
+    print(out)
     if np.ndim(a) == 0:
         out = np.squeeze(out, axis=0)
     if np.ndim(k) == 0:
-        out = np.squeeze(out, axis=-1)
         out = np.squeeze(out, axis=-1)
     return out
 
@@ -218,15 +192,9 @@ def halomod_Tk3D_1h(cosmo, hmc, prof, *,
         :class:`~pyccl.tk3d.Tk3D`: 1-halo trispectrum.
     """
     if lk_arr is None:
-        status = 0
-        nk = lib.get_pk_spline_nk(cosmo.cosmo)
-        lk_arr, status = lib.get_pk_spline_lk(cosmo.cosmo, nk, status)
-        check(status, cosmo=cosmo)
+        cosmo.get_pk_spline_nk()
     if a_arr is None:
-        status = 0
-        na = lib.get_pk_spline_na(cosmo.cosmo)
-        a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-        check(status, cosmo=cosmo)
+        cosmo.get_pk_spline_na()
 
     tkk = halomod_trispectrum_1h(cosmo, hmc, np.exp(lk_arr), a_arr,
                                  prof, prof2=prof2,
@@ -236,18 +204,7 @@ def halomod_Tk3D_1h(cosmo, hmc, prof, *,
                                  normprof1=normprof1, normprof2=normprof2,
                                  normprof3=normprof3, normprof4=normprof4)
 
-    if use_log:
-        # avoid zeros (this is system-dependent)
-        tiny = np.nextafter(0, 1)
-        tkk[tkk == 0] = tiny
-        if np.any(tkk < 0):
-            warnings.warn(
-                "Some values were not positive. "
-                "Will not interpolate in log-space.",
-                category=CCLWarning)
-            use_log = False
-        else:
-            tkk = np.log(tkk)
+    tkk, use_log = _logged_output(tkk, log=use_log)
 
     tk3d = Tk3D(a_arr=a_arr, lk_arr=lk_arr, tkk_arr=tkk,
                 extrap_order_lok=extrap_order_lok,
@@ -322,15 +279,9 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, *, prof,
         :class:`~pyccl.tk3d.Tk3D`: SSC effective trispectrum.
     """
     if lk_arr is None:
-        status = 0
-        nk = lib.get_pk_spline_nk(cosmo.cosmo)
-        lk_arr, status = lib.get_pk_spline_lk(cosmo.cosmo, nk, status)
-        check(status, cosmo=cosmo)
+        cosmo.get_pk_spline_lk()
     if a_arr is None:
-        status = 0
-        na = lib.get_pk_spline_na(cosmo.cosmo)
-        a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-        check(status, cosmo=cosmo)
+        cosmo.get_pk_spline_a()
 
     # Make sure biases are of the form number of a x number of k
     ones = np.ones_like(a_arr)
@@ -342,19 +293,11 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, *, prof,
     k_use = np.exp(lk_arr)
 
     if not isinstance(prof, HaloProfileNFW):
-        raise TypeError("prof should be HaloProfileNFW.")
+        raise TypeError("prof must be HaloProfileNFW")
     prof_2pt = Profile2pt()
 
     # Power spectrum
-    if isinstance(p_of_k_a, Pk2D):
-        pk2d = p_of_k_a
-    elif (p_of_k_a is None) or (str(p_of_k_a) == 'linear'):
-        pk2d = cosmo.get_linear_power('delta_matter:delta_matter')
-    elif str(p_of_k_a) == 'nonlinear':
-        pk2d = cosmo.get_nonlin_power('delta_matter:delta_matter')
-    else:
-        raise TypeError("p_of_k_a must be `None`, \'linear\', "
-                        "\'nonlinear\' or a `Pk2D` object")
+    pk2d = _get_power_spectrum(cosmo, p_of_k_a)
 
     na = len(a_arr)
     nk = len(k_use)
@@ -366,13 +309,13 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, *, prof,
         i12 = hmc.I_1_2(cosmo, k_use, aa, prof,
                         prof2=prof, prof_2pt=prof_2pt) * norm
 
-        pk = pk2d.eval(k_use, aa, cosmo)
-        dpk = pk2d.eval_dlogpk_dlogk(k_use, aa, cosmo)
-        # ~ [(47/21 - 1/3 dlogPk/dlogk) * Pk+I12]
+        pk = pk2d(k_use, aa)
+        dpk = pk2d(k_use, aa, derivative=True)
+        # ~ [(47/21 - 1/3 dlogPk/dlogk) * Pk + I12]
         dpk12[ia] = ((47/21 - dpk/3)*pk + i12)
-        dpk34[ia] = dpk12[ia].copy()  # Avoid surprises
+        dpk34[ia] = dpk12[ia].copy()
 
-        # Counter terms for clustering (i.e. - (bA + bB) * PAB
+        # Counter terms for clustering (i.e. - (bA + bB) * PAB)
         if any([is_number_counts1, is_number_counts2,
                 is_number_counts3, is_number_counts4]):
             b1 = b2 = b3 = b4 = 0
@@ -396,16 +339,7 @@ def halomod_Tk3D_SSC_linear_bias(cosmo, hmc, *, prof,
         dpk12[ia] *= bias1[ia] * bias2[ia]
         dpk34[ia] *= bias3[ia] * bias4[ia]
 
-    if use_log:
-        if np.any(dpk12 <= 0) or np.any(dpk34 <= 0):
-            warnings.warn(
-                "Some values were not positive. "
-                "Will not interpolate in log-space.",
-                category=CCLWarning)
-            use_log = False
-        else:
-            dpk12 = np.log(dpk12)
-            dpk34 = np.log(dpk34)
+    dpk12, dpk34, use_log = _logged_output(dpk12, dpk34, log=use_log)
 
     tk3d = Tk3D(a_arr=a_arr, lk_arr=lk_arr,
                 pk1_arr=dpk12, pk2_arr=dpk34,
@@ -494,18 +428,94 @@ def halomod_Tk3D_SSC(
         :class:`~pyccl.tk3d.Tk3D`: SSC effective trispectrum.
     """
     if lk_arr is None:
-        status = 0
-        nk = lib.get_pk_spline_nk(cosmo.cosmo)
-        lk_arr, status = lib.get_pk_spline_lk(cosmo.cosmo, nk, status)
-        check(status, cosmo=cosmo)
+        cosmo.get_pk_spline_lk()
     if a_arr is None:
-        status = 0
-        na = lib.get_pk_spline_na(cosmo.cosmo)
-        a_arr, status = lib.get_pk_spline_a(cosmo.cosmo, na, status)
-        check(status, cosmo=cosmo)
+        cosmo.get_pk_spline_na()
 
     k_use = np.exp(lk_arr)
 
+    # define all the profiles
+    prof, prof2, prof3, prof4, prof12_2pt, prof34_2pt = \
+        _allocate_profiles(prof, prof2, prof3, prof4, prof12_2pt, prof34_2pt,
+                           normprof1, normprof2, normprof3, normprof4)
+
+    pk2d = _get_power_spectrum(cosmo, p_of_k_a)
+
+    dpk12, dpk34 = [np.zeros((len(a_arr), len(k_use))) for _ in range(2)]
+    for ia, aa in enumerate(a_arr):
+        # Compute profile normalizations
+        norm1 = _get_norm(prof, aa)
+        i11_1 = hmc.I_1_1(cosmo, k_use, aa, prof)
+        # Compute second profile normalization
+        if prof2 == prof:
+            norm2 = norm1
+            i11_2 = i11_1
+        else:
+            norm2 = _get_norm(prof2, aa)
+            i11_2 = hmc.I_1_1(cosmo, k_use, aa, prof2)
+
+        if prof3 == prof:
+            norm3 = norm1
+            i11_3 = i11_1
+        else:
+            norm3 = _get_norm(prof3, aa)
+            i11_3 = hmc.I_1_1(cosmo, k_use, aa, prof3)
+
+        if prof4 == prof2:
+            norm4 = norm2
+            i11_4 = i11_2
+        else:
+            norm4 = _get_norm(prof4, aa)
+            i11_4 = hmc.I_1_1(cosmo, k_use, aa, prof4)
+
+        i12_12 = hmc.I_1_2(cosmo, k_use, aa, prof,
+                           prof2=prof2, prof_2pt=prof12_2pt)
+        if (prof, prof2) == (prof3, prof4):
+            i12_34 = i12_12
+        else:
+            i12_34 = hmc.I_1_2(cosmo, k_use, aa, prof3,
+                               prof2=prof4, prof_2pt=prof34_2pt)
+
+        norm12 = norm1 * norm2
+        norm34 = norm3 * norm4
+
+        pk = pk2d(k_use, aa)
+        dpk = pk2d(k_use, aa, derivative=True)
+        # (47/21 - 1/3 dlogPk/dlogk) * I11 * I11 * Pk + I12
+        dpk12[ia] = norm12*((47/21 - dpk/3)*i11_1*i11_2*pk + i12_12)
+        dpk34[ia] = norm34*((47/21 - dpk/3)*i11_3*i11_4*pk + i12_34)
+
+        # Counter terms for clustering (i.e. - (bA + bB) * PAB)
+        get_counterterm = partial(_get_counterterm, cosmo=cosmo, hmc=hmc,
+                                  k=k_use, a=aa, pk=pk)
+
+        if _is_NC(prof) or _is_NC(prof2):
+            dpk12[ia] -= get_counterterm(prof, prof2, prof12_2pt,
+                                         norm1, norm2, i11_1, i11_2)
+
+        if _is_NC(prof3) or _is_NC(prof4):
+            if (prof, prof2, prof12_2pt) == (prof3, prof4, prof34_2pt):
+                dpk34[ia] -= dpk12[ia]
+            else:
+                dpk34[ia] -= get_counterterm(prof3, prof4, prof34_2pt,
+                                             norm3, norm4, i11_3, i11_4)
+
+    dpk12, dpk34, use_log = _logged_output(dpk12, dpk34, log=use_log)
+
+    tk3d = Tk3D(a_arr=a_arr, lk_arr=lk_arr,
+                pk1_arr=dpk12, pk2_arr=dpk34,
+                extrap_order_lok=extrap_order_lok,
+                extrap_order_hik=extrap_order_hik, is_logt=use_log)
+    return tk3d
+
+
+_get_norm = lambda p, a: hmc.profile_norm(cosmo, a, p) if p.normprof else 1  # noqa
+_is_NC = lambda p: isinstance(prof, HaloProfileNumberCounts)  # noqa
+
+
+def _allocate_profiles(prof, prof2, prof3, prof4, prof12_2pt, prof34_2pt,
+                       normprof1, normprof2, normprof3, normprof4):
+    """Helper that controls how the undefined profiles are allocated."""
     if prof2 is None:
         prof2 = prof
     if prof3 is None:
@@ -531,115 +541,39 @@ def halomod_Tk3D_SSC(
         with UnlockInstance(prof4):
             prof4.normprof = normprof4
 
-    # Power spectrum
+    return prof, prof2, prof3, prof4, prof12_2pt, prof34_2pt
+
+
+def _get_counterterm(pA, pB, p2pt, nA, nB, i11_A, i11_B, *,
+                     cosmo, hmc, k, a, pk):
+    """Helper to compute counter-terms."""
+    # p : profiles | p2pt : 2-point | n : norms | i11 : I_1_1 integral
+    bA = i11_A * nA if _is_NC(pA) else np.zeros_like(k)
+    bB = i11_B * nB if _is_NC(pB) else np.zeros_like(k)
+    i02 = hmc.I_0_2(cosmo, k, a, pA, prof2=pB, prof_2pt=p2pt)
+    P = nA * nB * (pk * i11_A * i11_B + i02)
+    return (bA + bB) * P
+
+
+def _get_power_spectrum(cosmo, p_of_k_a):
+    """Helper to retrieve the power spectrum."""
     if isinstance(p_of_k_a, Pk2D):
-        pk2d = p_of_k_a
-    elif (p_of_k_a is None) or str(p_of_k_a) == 'linear':
-        pk2d = cosmo.get_linear_power('delta_matter:delta_matter')
-    elif str(p_of_k_a) == 'nonlinear':
-        pk2d = cosmo.get_nonlin_power('delta_matter:delta_matter')
-    else:
-        raise ValueError("p_of_k_a must be `None`, 'linear', "
-                         "'nonlinear' or a `Pk2D` object")
+        return p_of_k_a
+    elif p_of_k_a in [None, "linear"]:
+        return cosmo.get_linear_power()
+    elif p_of_k_a == 'nonlinear':
+        return cosmo.get_nonlin_power()
+    raise TypeError("p_of_k_a must be one of (None, 'linear', 'nonlinear') "
+                    " or `Pk2D`.")
 
-    def get_norm(profile, sf):
-        return hmc.profile_norm(cosmo, sf, profile) if profile.normprof else 1
 
-    dpk12, dpk34 = [np.zeros((len(a_arr), len(k_use))) for _ in range(2)]
-    for ia, aa in enumerate(a_arr):
-        # Compute profile normalizations
-        norm1 = get_norm(prof, aa)
-        i11_1 = hmc.I_1_1(cosmo, k_use, aa, prof)
-        # Compute second profile normalization
-        if prof2 == prof:
-            norm2 = norm1
-            i11_2 = i11_1
-        else:
-            norm2 = get_norm(prof2, aa)
-            i11_2 = hmc.I_1_1(cosmo, k_use, aa, prof2)
-
-        if prof3 == prof:
-            norm3 = norm1
-            i11_3 = i11_1
-        else:
-            norm3 = get_norm(prof3, aa)
-            i11_3 = hmc.I_1_1(cosmo, k_use, aa, prof3)
-
-        if prof4 == prof2:
-            norm4 = norm2
-            i11_4 = i11_2
-        else:
-            norm4 = get_norm(prof4, aa)
-            i11_4 = hmc.I_1_1(cosmo, k_use, aa, prof4)
-
-        i12_12 = hmc.I_1_2(cosmo, k_use, aa, prof,
-                           prof2=prof2, prof_2pt=prof12_2pt)
-        if (prof, prof2) == (prof3, prof4):
-            i12_34 = i12_12
-        else:
-            i12_34 = hmc.I_1_2(cosmo, k_use, aa, prof3,
-                               prof2=prof4, prof_2pt=prof34_2pt)
-
-        norm12 = norm1 * norm2
-        norm34 = norm3 * norm4
-
-        pk = pk2d.eval(k_use, aa, cosmo)
-        dpk = pk2d.eval_dlogpk_dlogk(k_use, aa, cosmo)
-        # (47/21 - 1/3 dlogPk/dlogk) * I11 * I11 * Pk+I12
-        dpk12[ia, :] = norm12*((47/21 - dpk/3)*i11_1*i11_2*pk + i12_12)
-        dpk34[ia, :] = norm34*((47/21 - dpk/3)*i11_3*i11_4*pk + i12_34)
-
-        # Counter terms for clustering (i.e. - (bA + bB) * PAB
-        if prof.is_number_counts or prof2.is_number_counts:
-            b1 = b2 = np.zeros_like(k_use)
-            i02_12 = hmc.I_0_2(cosmo, k_use, aa, prof, prof2=prof2,
-                               prof_2pt=prof12_2pt)
-            P_12 = norm12 * (pk * i11_1 * i11_2 + i02_12)
-
-            if prof.is_number_counts:
-                b1 = i11_1 * norm1
-
-            if prof2 == prof:
-                b2 = b1
-            elif prof2.is_number_counts:
-                b2 = i11_2 * norm2
-
-            dpk12[ia, :] -= (b1 + b2) * P_12
-
-        if prof3.is_number_counts or prof4.is_number_counts:
-            b3 = b4 = np.zeros_like(k_use)
-            if (prof, prof2, prof12_2pt) == (prof3, prof4, prof34_2pt):
-                i02_34 = i02_12
-            else:
-                i02_34 = hmc.I_0_2(cosmo, k_use, aa, prof3, prof2=prof4,
-                                   prof_2pt=prof34_2pt)
-            P_34 = norm34 * (pk * i11_3 * i11_4 + i02_34)
-
-            if prof3 == prof:
-                b3 = b1
-            elif prof3.is_number_counts:
-                b3 = i11_3 * norm3
-
-            if prof4 == prof2:
-                b4 = b2
-            elif prof4.is_number_counts:
-                b4 = i11_4 * norm4
-
-            dpk34[ia, :] -= (b3 + b4) * P_34
-
-    if use_log:
-        if np.any(dpk12 <= 0) or np.any(dpk34 <= 0):
-            warnings.warn(
-                "Some values were not positive. "
-                "Will not interpolate in log-space.",
-                category=CCLWarning)
-            use_log = False
-        else:
-            dpk12 = np.log(dpk12)
-            dpk34 = np.log(dpk34)
-
-    tk3d = Tk3D(a_arr=a_arr, lk_arr=lk_arr,
-                pk1_arr=dpk12, pk2_arr=dpk34,
-                extrap_order_lok=extrap_order_lok,
-                extrap_order_hik=extrap_order_hik, is_logt=use_log)
-    return tk3d
+def _logged_output(*arrs, log):
+    """Helper that logs the output if needed."""
+    if not log:
+        return *arrs, log
+    is_negative = [(arr <= 0).any() for arr in arrs]
+    if any(is_negative):
+        warnings.warn("Some values were non-positive. "
+                      "Interpolating linearly.", CCLWarning)
+        return *arrs, False
+    return *[np.log(arr) for arr in arrs], log
