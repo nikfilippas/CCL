@@ -73,12 +73,10 @@ class HMIngredients(CCLAutoreprObject):
                 mass definition.
         """
         if mass_def_other is not None:
-            M_use = mass_def_other.translate_mass(
+            return mass_def_other.translate_mass(
                 cosmo, M, a,
                 mass_def_other=self.mass_def)
-        else:
-            M_use = M
-        return M_use
+        return M
 
     def _get_Delta_m(self, cosmo, a):
         """ For SO-based mass definitions, this returns the corresponding
