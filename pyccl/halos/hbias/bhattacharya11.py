@@ -7,16 +7,18 @@ __all__ = ("HaloBiasBhattacharya11",)
 
 
 class HaloBiasBhattacharya11(HaloBias):
-    """ Implements halo bias described in arXiv:1005.2239.
-    This parametrization is only valid for 'fof' masses.
+    """Halo mass bias by Bhattacharya et al. (2013)
+    :arXiv:1005.2239.
 
-    Args:
-        mass_def (:class:`~pyccl.halos.massdef.MassDef`):
-            a mass definition object.
-            this parametrization accepts FoF masses only.
-            If `None`, FoF masses will be used.
-        mass_def_strict (bool): if False, consistency of the mass
-            definition will be ignored.
+    .. note::
+
+        This parametrization is only valid for FoF masses.
+
+    Parameters
+    ----------
+    mass_def : :class:`~pyccl.halos.massdef.MassDef`, optional
+        Mass definition for this :math:`b(M)` parametrization.
+        The default is FoF.
     """
     name = "Bhattacharya11"
 
