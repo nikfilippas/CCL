@@ -99,7 +99,7 @@ class HMIngredients(CCLAutoreprObject):
             # Passed mass is incompatible with model.
 
             if self._mass_def_strict_always:
-                # Class has no universal model and is incompatible with
+                # Class has no universal model and mass is incompatible.
                 raise ValueError(
                     f"{msg} and this requirement cannot be relaxed.")
 
