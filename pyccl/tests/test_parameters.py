@@ -1,8 +1,9 @@
 import tempfile
 import numpy as np
+from numpy.testing import (
+    assert_raises, assert_no_warnings, assert_almost_equal)
 import pytest
 import pyccl as ccl
-import warnings
 
 
 def test_parameters_lcdm_defaults():
@@ -92,11 +93,9 @@ def test_parameters_nu(m_nu_type):
 
 
 def test_parameters_nu_Nnurel_neg():
-    with pytest.raises(ValueError):
-        ccl.Cosmology(
-            Omega_c=0.27, Omega_b=0.049,
-            h=0.67, sigma8=0.8, n_s=0.96, m_nu=[0.03, 0.02, 0.04],
-            Neff=3., m_nu_type='list')
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.27, Omega_b=0.049,
+                  h=0.67, sigma8=0.8, n_s=0.96, m_nu=[0.03, 0.02, 0.04],
+                  Neff=3., m_nu_type='list')
 
 
 def test_parameters_nu_list():
@@ -318,26 +317,27 @@ def test_parameters_valid_input():
     """
     Check that valid parameter arguments are accepted.
     """
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96, Omega_k=0.05)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96, Neff=2.046)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96, Neff=3.046, m_nu=0.06)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96, w0=-0.9)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96, w0=-0.9, wa=0.1)
-        # Check that kwarg order doesn't matter
-        ccl.Cosmology(h=0.7, Omega_c=0.25, Omega_b=0.05,
-                      A_s=2.1e-9, n_s=0.96)
-        # Try a set of parameters with non-zero mu0 / Sig0
-        ccl.Cosmology(h=0.7, Omega_c=0.25, Omega_b=0.05,
-                      A_s=2.1e-9, n_s=0.96, mu_0=0.1, sigma_0=0.1)
+    assert_no_warnings(ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                       A_s=2.1e-9, n_s=0.96)
+    assert_no_warnings(ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                       A_s=2.1e-9, n_s=0.96, Omega_k=0.05)
+    assert_no_warnings(ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                       A_s=2.1e-9, n_s=0.96, Neff=2.046)
+    assert_no_warnings(ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                       A_s=2.1e-9, n_s=0.96, Neff=3.046, m_nu=0.06)
+
+    assert_no_warnings(ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                       A_s=2.1e-9, n_s=0.96, w0=-0.9)
+    assert_no_warnings(ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                       A_s=2.1e-9, n_s=0.96, w0=-0.9, wa=0.1)
+
+    # Check that kwarg order doesn't matter
+    assert_no_warnings(ccl.Cosmology, h=0.7, Omega_c=0.25, Omega_b=0.05,
+                       A_s=2.1e-9, n_s=0.96)
+
+    # Try a set of parameters with non-zero mu0 / Sig0
+    assert_no_warnings(ccl.Cosmology, h=0.7, Omega_c=0.25, Omega_b=0.05,
+                       A_s=2.1e-9, n_s=0.96, mu_0=0.1, sigma_0=0.1)
 
 
 def test_parameters_missing():
@@ -346,48 +346,56 @@ def test_parameters_missing():
     not when non-compulsory ones are.
     """
 
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25)
 
     # Check that a single missing compulsory parameter is noticed
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, n_s=0.96)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, A_s=2.1e-9, n_s=0.96)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, h=0.7, A_s=2.1e-9, n_s=0.96)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25, Omega_b=0.05,
+                  h=0.7, A_s=2.1e-9)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25, Omega_b=0.05,
+                  h=0.7, n_s=0.96)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25, Omega_b=0.05,
+                  A_s=2.1e-9, n_s=0.96)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25,
+                  h=0.7, A_s=2.1e-9, n_s=0.96)
+    assert_raises(ValueError, ccl.Cosmology, Omega_b=0.05,
+                  h=0.7, A_s=2.1e-9, n_s=0.96)
 
     # Make sure that compulsory parameters are compulsory
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-                      Omega_k=None)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-                      w0=None)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-                      wa=None)
+    assert_raises(
+        ValueError, ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        Omega_k=None)
+    assert_raises(
+        ValueError, ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        w0=None)
+    assert_raises(
+        ValueError, ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        wa=None)
 
     # Check that sigma8 vs A_s is handled ok.
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, n_s=0.8,
-                      A_s=2.1e-9, sigma8=0.7)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, n_s=0.8)
+    assert_raises(
+        ValueError, ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, n_s=0.8,
+        A_s=2.1e-9, sigma8=0.7)
+    assert_raises(
+        ValueError, ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, n_s=0.8)
 
     # Make sure that optional parameters are optional
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-                      z_mg=None, df_mg=None)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-                      z_mg=None)
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
-                      df_mg=None)
+    assert_no_warnings(
+        ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        z_mg=None, df_mg=None)
+    assert_no_warnings(
+        ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        z_mg=None)
+    assert_no_warnings(
+        ccl.Cosmology,
+        Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+        df_mg=None)
 
 
 def test_parameters_set():
@@ -399,14 +407,13 @@ def test_parameters_set():
         n_s=0.96)
 
     # Check that values of sigma8 and A_s won't be misinterpreted by the C code
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2e-5, n_s=0.96)
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, sigma8=9e-6, n_s=0.96)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25, Omega_b=0.05,
+                  h=0.7, A_s=2e-5, n_s=0.96)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25, Omega_b=0.05,
+                  h=0.7, sigma8=9e-6, n_s=0.96)
 
     # Check that error is raised when unrecognized parameter requested
-    with pytest.raises(KeyError):
-        params['wibble']
+    assert_raises(KeyError, lambda: params['wibble'])
 
 
 def test_parameters_mgrowth():
@@ -422,41 +429,52 @@ def test_parameters_mgrowth():
 
     # Valid constructions
     for omega_g in [None, 0.0, 0.1]:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=zarr, df_mg=dfarr, Omega_g=omega_g)
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=[0., 0.1, 0.2],
-                          df_mg=[0.1, 0.1, 0.1], Omega_g=omega_g)
+        assert_no_warnings(
+            ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=zarr, df_mg=dfarr, Omega_g=omega_g)
+        assert_no_warnings(
+            ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=[0., 0.1, 0.2],
+            df_mg=[0.1, 0.1, 0.1], Omega_g=omega_g)
 
         # Invalid constructions
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=zarr, Omega_g=omega_g)
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, df_mg=dfarr, Omega_g=omega_g)
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=None, df_mg=dfarr, Omega_g=omega_g)
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=zarr, df_mg=0.1, Omega_g=omega_g)
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=zarr, df_mg=f_func, Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=zarr, Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            df_mg=dfarr, Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=None,
+            df_mg=dfarr, Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=zarr,
+            df_mg=0.1, Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=zarr,
+            df_mg=f_func, Omega_g=omega_g)
 
         # Mis-matched array sizes and dimensionality
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=zarr, df_mg=dfarr[1:],
-                          Omega_g=omega_g)
-        with pytest.raises(ValueError):
-            ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9,
-                          n_s=0.96, z_mg=zarr,
-                          df_mg=np.column_stack((dfarr, dfarr)),
-                          Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=zarr,
+            df_mg=dfarr[1:], Omega_g=omega_g)
+        assert_raises(
+            ValueError, ccl.Cosmology,
+            Omega_c=0.25, Omega_b=0.05, h=0.7, A_s=2.1e-9, n_s=0.96,
+            z_mg=zarr,
+            df_mg=np.column_stack((dfarr, dfarr)), Omega_g=omega_g)
 
 
 def test_parameters_read_write():
@@ -471,26 +489,25 @@ def test_parameters_read_write():
         temp_file_name = tmpfile.name
 
     # Write out and then read in the parameters from that file
-    with pytest.raises(IOError):
-        params.write_yaml("/bogus/file/name")
+    assert_raises(IOError, params.write_yaml, "/bogus/file/name")
     params.write_yaml(temp_file_name)
     params2 = ccl.Cosmology.read_yaml(temp_file_name)
 
     # Check the read-in params are equal to the written out ones
-    assert params["Omega_c"] == params2["Omega_c"]
-    assert params["Neff"] == params2["Neff"]
-    assert params["sum_nu_masses"] == params2["sum_nu_masses"]
+    assert_almost_equal(params['Omega_c'], params2['Omega_c'])
+    assert_almost_equal(params['Neff'], params2['Neff'])
+    assert_almost_equal(params['sum_nu_masses'], params2['sum_nu_masses'])
 
     # check overriding parameters with kwargs
     params3 = ccl.Cosmology.read_yaml(temp_file_name,
                                       matter_power_spectrum='emu',
                                       n_s=1.1)
     # check unmodified parameters are the same
-    assert params["Omega_c"] == params3["Omega_c"]
-    assert params["Neff"] == params3["Neff"]
+    assert_almost_equal(params['Omega_c'], params3['Omega_c'])
+    assert_almost_equal(params['Neff'], params3['Neff'])
     # check new parameters and config correctly updated
-    assert params3["n_s"] == 1.1
-    assert params["sum_nu_masses"] == params3["sum_nu_masses"]
+    assert_almost_equal(1.1, params3['n_s'])
+    assert_almost_equal(params['sum_nu_masses'], params3['sum_nu_masses'])
     assert params3._config_init_kwargs['matter_power_spectrum'] == 'emu'
 
     # Now make a file that will be deleted so it does not exist
@@ -498,15 +515,14 @@ def test_parameters_read_write():
     with tempfile.NamedTemporaryFile(delete=True) as tmpfile:
         temp_file_name = tmpfile.name
 
-    with pytest.raises(IOError):
-        ccl.Cosmology.read_yaml(filename=temp_file_name)
-    with pytest.raises(IOError):
-        params.read_yaml(
-            filename=temp_file_name+"/nonexistent_directory/params.yml")
+    assert_raises(IOError, ccl.Cosmology.read_yaml, filename=temp_file_name)
+    assert_raises(
+        IOError,
+        params.read_yaml,
+        filename=temp_file_name+"/nonexistent_directory/params.yml")
 
 
 def test_omega_k():
     """ Check that the value of Omega_k is within reasonable bounds. """
-    with pytest.raises(ValueError):
-        ccl.Cosmology(Omega_c=0.25, Omega_b=0.05, h=0.7,
-                      A_s=2.1e-9, n_s=0.96, Omega_k=-2)
+    assert_raises(ValueError, ccl.Cosmology, Omega_c=0.25, Omega_b=0.05, h=0.7,
+                  A_s=2.1e-9, n_s=0.96, Omega_k=-2)

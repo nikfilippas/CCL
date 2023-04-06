@@ -3,6 +3,7 @@ import pytest
 from unittest import mock
 import pyccl as ccl
 import sys
+from numpy.testing import assert_raises
 from pyccl.boltzmann import get_isitgr_pk_lin
 try:
     from importlib import reload
@@ -36,7 +37,7 @@ def test_power_mu_sigma_sigma8norm(tf):
         assert np.allclose(pk_rat, gfac)
 
     with mock.patch.dict(sys.modules, {'isitgr': None}):
-        with pytest.raises(ModuleNotFoundError):
+        with assert_raises(ModuleNotFoundError):
             get_isitgr_pk_lin(cosmo)
     # Importing ccl without isitgr is fine.  No ModuleNotFoundError triggered.
     with mock.patch.dict(sys.modules, {'isitgr': None}):

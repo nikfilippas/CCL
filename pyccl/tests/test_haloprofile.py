@@ -1,5 +1,6 @@
 import numpy as np
 import pyccl as ccl
+from pyccl.pyutils import assert_warns
 import pytest
 
 
@@ -20,7 +21,8 @@ def test_haloprofile_smoke(func, r):
     mass = 1e14
     odelta = 200
     # These are all deprecated
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        prof = getattr(ccl, func)(cosmo, c, mass, odelta, a, r)
+    prof = assert_warns(
+        ccl.CCLDeprecationWarning,
+        getattr(ccl, func), cosmo, c, mass, odelta, a, r)
     assert np.all(np.isfinite(prof))
     assert np.shape(prof) == np.shape(r)

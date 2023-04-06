@@ -1,5 +1,8 @@
 import numpy as np
 import pytest
+from numpy.testing import (
+    assert_,
+    assert_raises, assert_almost_equal, assert_allclose)
 import pyccl as ccl
 
 
@@ -48,42 +51,37 @@ def test_tk3d_errors():
     (a_arr, lk_arr, fka1_arr, fka2_arr, tkka_arr) = get_arrays()
 
     # Decreasing a
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr[::-1], lk_arr, tkk_arr=tkka_arr)
+    assert_raises(ValueError, ccl.Tk3D, a_arr[::-1], lk_arr,
+                  tkk_arr=tkka_arr)
     # Decreasing lk
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr[::-1], tkk_arr=tkka_arr)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr[::-1],
+                  tkk_arr=tkka_arr)
     # Non monotonic
     a2 = a_arr.copy()
     a2[1] = a2[0]
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a2, lk_arr, tkk_arr=tkka_arr)
+    assert_raises(ValueError, ccl.Tk3D, a2, lk_arr,
+                  tkk_arr=tkka_arr)
 
     # If no input
-    with pytest.raises(TypeError):
-        ccl.Tk3D()
+    assert_raises(TypeError, ccl.Tk3D)
 
     # No input tkk or fkas
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr)
 
     # Missing one fka factor
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr, pk2_arr=fka2_arr)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr, pk2_arr=fka2_arr)
 
     # fka has wrong shape
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr, pk1_arr=tkka_arr)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr, pk1_arr=tkka_arr)
 
     # tkka has wrong shape
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr, tkk_arr=fka1_arr)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr, tkk_arr=fka1_arr)
 
     # Wrong extrapolation orders
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr, tkk_arr=tkka_arr, extrap_order_hik=-1)
-    with pytest.raises(ValueError):
-        ccl.Tk3D(a_arr, lk_arr, tkk_arr=tkka_arr, extrap_order_lok=2)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr,
+                  tkk_arr=tkka_arr, extrap_order_hik=-1)
+    assert_raises(ValueError, ccl.Tk3D, a_arr, lk_arr,
+                  tkk_arr=tkka_arr, extrap_order_lok=2)
 
 
 def test_tk3d_smoke():
@@ -92,16 +90,15 @@ def test_tk3d_smoke():
     tsp1 = ccl.Tk3D(a_arr, lk_arr, pk1_arr=fka1_arr,
                     pk2_arr=fka2_arr)
     tsp2 = ccl.Tk3D(a_arr, lk_arr, tkk_arr=tkka_arr)
-    assert not np.isnan(tsp1.eval(1E-2, 0.5))
-    assert not np.isnan(tsp2.eval(1E-2, 0.5))
+    assert_(not np.isnan(tsp1.eval(1E-2, 0.5)))
+    assert_(not np.isnan(tsp2.eval(1E-2, 0.5)))
 
 
 def test_tk3d_eval_errors():
     (a_arr, lk_arr, fka1_arr, fka2_arr, tkka_arr) = get_arrays()
     tsp = ccl.Tk3D(a_arr, lk_arr, pk1_arr=fka1_arr,
                    pk2_arr=fka2_arr)
-    with pytest.raises(TypeError):
-        tsp.eval(1E-2, np.array([0.1]))
+    assert_raises(TypeError, tsp.eval, 1E-2, np.array([0.1]))
 
 
 def test_tk3d_delete():
@@ -127,19 +124,19 @@ def test_tk3d_eval(is_product):
     atest = 0.5
     ptrue = tkkaf(ktest, ktest, atest)
     phere = tsp.eval(ktest, atest)
-    assert np.allclose(phere, ptrue, atol=0, rtol=1e-6)
+    assert_almost_equal(phere/ptrue, 1., 6)
 
     ktest = 5E-5
     atest = 0.5
     ptrue = tkkaf(ktest, ktest, atest)
     phere = tsp.eval(ktest, atest)
-    assert np.allclose(phere, ptrue, atol=0, rtol=1e-6)
+    assert_almost_equal(phere/ptrue, 1., 6)
 
     # Test at array of points
     ktest = np.logspace(-3, 1, 10)
     ptrue = tkkaf(ktest[None, :], ktest[:, None], atest)
     phere = tsp.eval(ktest, atest)
-    assert np.allclose(phere, ptrue, atol=0, rtol=1e-6)
+    assert_allclose(phere.flatten(), ptrue.flatten(), rtol=1E-6)
 
 
 def test_tk3d_call():

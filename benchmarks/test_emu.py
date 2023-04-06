@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 import pyccl as ccl
 
 EMU_TOLERANCE = 3.0E-2
@@ -37,9 +38,9 @@ def test_emu_nu(model):
     k = data[:, 0]
 
     # Catch warning about neutrino linear growth
-    with pytest.warns(ccl.CCLWarning):
-        pk = ccl.nonlin_matter_power(cosmo, k, a)
-
+    pk = ccl.pyutils.assert_warns(ccl.CCLWarning,
+                                  ccl.nonlin_matter_power,
+                                  cosmo, k, a)
     err = np.abs(pk/data[:, 1]-1)
     assert np.allclose(err, 0, rtol=0, atol=EMU_TOLERANCE)
 
@@ -103,14 +104,16 @@ def test_emu_lin(model):
 
     # Catch warning about neutrino linear growth
     if (np.sum(mnu) > 0):
-        with pytest.warns(ccl.CCLWarning):
-            pk = ccl.nonlin_matter_power(cosmo, k, a)
+        pk = ccl.pyutils.assert_warns(ccl.CCLWarning,
+                                      ccl.nonlin_matter_power,
+                                      cosmo, k, a)
     else:
         pk = ccl.nonlin_matter_power(cosmo, k, a)
 
     # Catch warning about linear matter power
-    with pytest.warns(ccl.CCLWarning):
-        pk_lin = ccl.linear_matter_power(cosmo, k, a)
+    pk_lin = ccl.pyutils.assert_warns(ccl.CCLWarning,
+                                      ccl.linear_matter_power,
+                                      cosmo, k, a)
 
     err = np.abs(pk/pk_lin-1)
     assert np.allclose(err, 0, rtol=0, atol=EMU_TOLERANCE)
