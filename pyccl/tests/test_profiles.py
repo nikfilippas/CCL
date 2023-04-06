@@ -315,11 +315,10 @@ def test_simple_smoke(prof_class):
     def r_s(cosmo, M, a, mass_def):
         return mass_def.get_radius(cosmo, M, a)
 
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        if prof_class == ccl.halos.HaloProfileGaussian:
-            p = prof_class(r_scale=r_s, rho0=one_f)
-        else:
-            p = prof_class(r_scale=r_s, tilt=one_f)
+    if prof_class == ccl.halos.HaloProfileGaussian:
+        p = prof_class(r_scale=r_s, rho0=one_f)
+    else:
+        p = prof_class(r_scale=r_s, tilt=one_f)
     smoke_assert_prof_real(p)
 
 
@@ -327,8 +326,7 @@ def test_gaussian_accuracy():
     def fk(k):
         return np.pi**1.5 * np.exp(-k**2 / 4)
 
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        p = ccl.halos.HaloProfileGaussian(r_scale=one_f, rho0=one_f)
+    p = ccl.halos.HaloProfileGaussian(r_scale=one_f, rho0=one_f)
 
     k_arr = np.logspace(-3, 2, 1024)
     fk_arr = p.fourier(COSMO, k_arr, 1., 1., mass_def=M200)
@@ -350,8 +348,7 @@ def test_projected_plaw_accuracy(alpha):
     def alpha_f(cosmo, a):
         return alpha
 
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        p = ccl.halos.HaloProfilePowerLaw(r_scale=one_f, tilt=alpha_f)
+    p = ccl.halos.HaloProfilePowerLaw(r_scale=one_f, tilt=alpha_f)
     p.update_precision_fftlog(plaw_fourier=alpha)
 
     rt_arr = np.logspace(-3, 2, 1024)
@@ -375,8 +372,7 @@ def test_plaw_accuracy(alpha):
     def alpha_f(cosmo, a):
         return alpha
 
-    with pytest.warns(ccl.CCLDeprecationWarning):
-        p = ccl.halos.HaloProfilePowerLaw(r_scale=one_f, tilt=alpha_f)
+    p = ccl.halos.HaloProfilePowerLaw(r_scale=one_f, tilt=alpha_f)
     p.update_precision_fftlog(plaw_fourier=alpha)
 
     k_arr = np.logspace(-3, 2, 1024)

@@ -4,7 +4,6 @@ from numpy.testing import assert_raises
 import pyccl
 from pyccl import ccllib, CCLError
 
-pyccl.gsl_params.LENSING_KERNEL_SPLINE_INTEGRATION = False
 PYCOSMO = pyccl.Cosmology(Omega_c=0.27, Omega_b=0.045, h=0.67,
                           sigma8=0.8, n_s=0.96,
                           transfer_function='bbks')
@@ -200,6 +199,3 @@ def test_swig_power():
         [0.5, 1.0],
         3,
         status)
-
-
-pyccl.gsl_params.reload()  # reset to the default parameters

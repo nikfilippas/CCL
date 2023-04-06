@@ -52,7 +52,7 @@ def test_concentration_Ishiyama21(pars):
 
     hmd = ccl.halos.MassDef(Delta, "critical")
 
-    cm = ccl.halos.ConcentrationIshiyama21(mass_def=hmd,
+    cm = ccl.halos.ConcentrationIshiyama21(mdef=hmd,
                                            relaxed=pars["relaxed"],
                                            Vmax=pars["Vmax"])
 
