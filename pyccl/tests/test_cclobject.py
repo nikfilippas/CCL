@@ -96,25 +96,24 @@ def test_CCLObject():
     assert TR1 == TR2
 
 
-def test_CCLAutoRepr():
+def test_CCLAutoreprObject():
     # Test eq --> repr <-- hash for all kinds of CCL halo objects.
 
     # 1. Build a halo model calculator using the default parametrizations.
-    cosmo = ccl.CosmologyVanillaLCDM(transfer_function="bbks")
     HMC = ccl.halos.HMCalculator(
-        cosmo, massfunc="Tinker08", hbias="Tinker10", mass_def="200m")
+        mass_function="Tinker08", halo_bias="Tinker10", mass_def="200m")
 
     # 2. Define separate default halo model ingredients.
     MDEF = ccl.halos.MassDef200m()
-    HMF = ccl.halos.MassFuncTinker08(cosmo, mass_def=MDEF)
-    HBF = ccl.halos.HaloBiasTinker10(cosmo, mass_def=MDEF)
+    HMF = ccl.halos.MassFuncTinker08(mass_def=MDEF)
+    HBF = ccl.halos.HaloBiasTinker10(mass_def=MDEF)
 
     # 3. Test equivalence.
-    assert MDEF == HMC._mdef
-    assert HMF == HMC._massfunc
-    assert HBF == HMC._hbias
+    assert MDEF == HMC.mass_def
+    assert HMF == HMC.mass_function
+    assert HBF == HMC.halo_bias
     HMC2 = ccl.halos.HMCalculator(
-        cosmo, massfunc=HMF, hbias=HBF, mass_def=MDEF)
+        mass_function=HMF, halo_bias=HBF, mass_def=MDEF)
     assert HMC == HMC2
 
     # 4. Test halo profiles.
@@ -173,7 +172,7 @@ def test_CCLObject_default_behavior():
     assert instances[0] != instances[1]
     assert hash(instances[0]) != hash(instances[1])
 
-    MyType = type("MyType", (ccl.CCLAutoRepr,), {"test": 0})
+    MyType = type("MyType", (ccl.CCLAutoreprObject,), {"test": 0})
     instances = [MyType() for _ in range(2)]
     assert instances[0] != instances[1]
 
@@ -187,7 +186,7 @@ def test_HaloProfile_abstractmethods():
 
 def init_decorator(func):
     """Check that all attributes listed in ``__repr_attrs__`` are defined in
-    the constructor of all subclasses of ``CCLAutoRepr``.
+    the constructor of all subclasses of ``CCLAutoreprObject``.
     NOTE: Used in ``conftest.py``.
     """
 
