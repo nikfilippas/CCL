@@ -86,6 +86,7 @@ class HaloProfileHernquist(HaloProfileMatter):
         return M / (2 * np.pi * Rs**3 * (c / (1 + c))**2)
 
     def _real(self, cosmo, r, M, a, mass_def):
+        print("hello")
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
