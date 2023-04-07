@@ -1,7 +1,9 @@
+from ..errors import CCLDeprecationWarning
 from _thread import RLock
 from abc import ABC, abstractmethod
 from inspect import signature
 import functools
+import warnings
 
 
 __all__ = ("ObjectLock",
@@ -100,7 +102,7 @@ class UnlockInstance:
                     pass
 
             # Lock the instance on exit.
-            self.object_lock.lock()
+            # self.object_lock.lock()  # TODO: Uncomment in CCLv3.
 
     @classmethod
     def unlock_instance(cls, func=None, *, name=None, mutate=True):
@@ -146,26 +148,26 @@ class UnlockInstance:
             newfunc = cls.unlock_instance(mutate=mutate)(func)
             setattr(cl, name, newfunc)
 
-    # TODO: Remove for CCLv3 & replace with Funlock.
-    @classmethod
-    def Funlock2(cls, cl, name):
-        """Replacement for Funlock incompatibility with signature.bind."""
+    # # TODO: Remove for CCLv3 & replace with Funlock.
+    # @classmethod
+    # def Funlock2(cls, cl, name):
+    #     """Replacement for Funlock incompatibility with signature.bind."""
 
-        def lock_on_exit(func):
-            @functools.wraps(func)
-            def wrapper(self, *args, **kwargs):
-                out = func(self, *args, **kwargs)
-                init_name = self.__class__.__init__.__qualname__
-                this_name = func.__qualname__
-                if this_name is init_name:  # skip this if called via `super()`
-                    self._object_lock.lock()
-                return out
-            return wrapper
+    #     def lock_on_exit(func):
+    #         @functools.wraps(func)
+    #         def wrapper(self, *args, **kwargs):
+    #             out = func(self, *args, **kwargs)
+    #             init_name = self.__class__.__init__.__qualname__
+    #             this_name = func.__qualname__
+    #             if this_name is init_name:  # skip this if called via `super()`
+    #                 self._object_lock.lock()
+    #             return out
+    #         return wrapper
 
-        func = vars(cl).get(name)
-        if func is not None:
-            newfunc = lock_on_exit(func)
-            setattr(cl, name, newfunc)
+    #     func = vars(cl).get(name)
+    #     if func is not None:
+    #         newfunc = lock_on_exit(func)
+    #         setattr(cl, name, newfunc)
 
 
 unlock_instance = UnlockInstance.unlock_instance
@@ -303,12 +305,10 @@ class CCLObject(ABC):
         # 2. Replace repr (if implemented) with its cached version.
         if "__repr__" in vars(cls):
             FancyRepr.add(cls)
-            FancyRepr.bind_and_replace(cls, cls.__repr__)
 
-        # 3. Unlock instance on specific methods.
+        # 3. Unlock instance on specific methods.  # TODO: Uncomment in CCLv3.
         # UnlockInstance.Funlock(cls, "__init__", mutate=False)
-        UnlockInstance.Funlock2(cls, "__init__")  # TODO: Replace in CCLv3.
-        UnlockInstance.Funlock(cls, "update_parameters", mutate=True)
+        # UnlockInstance.Funlock(cls, "update_parameters", mutate=True)
 
         # 4. Process linked abstract methods.
         isabstract = lambda f: hasattr(f, "__isabstractlinkedmethod__")  # noqa
@@ -337,34 +337,26 @@ class CCLObject(ABC):
 
     def __setattr__(self, name, value):
         if self._object_lock.locked:
-            raise AttributeError("CCL objects can only be updated via "
-                                 "`update_parameters`, if implemented.")
+            warnings.warn("Direct attribute assignment of CCLObjects is "
+                          "depreacted and will be disabled in CCLv3.0.0.",
+                          CCLDeprecationWarning)
+            # TODO: Replace for CCLv3.
+            # raise AttributeError("CCL objects can only be updated via "
+            #                      "`update_parameters`, if implemented.")
         object.__setattr__(self, name, value)
 
     def update_parameters(self, **kwargs):
         name = self.__class__.__qualname__
         raise NotImplementedError(f"{name} objects are immutable.")
 
-    @functools.cached_property
-    def _repr(self):
+    def __repr__(self):
         # By default we use `__repr__` from `object`.
         return object.__repr__(self)
 
-    @functools.cached_property
-    def _hash(self):
+    def __hash__(self):
         # `__hash__` makes use of the `repr` of the object,
         # so we have to make sure that the `repr` is unique.
         return hash(repr(self))
-
-    def __ccl_repr__(self):
-        # The custom `__repr__` is converted to a
-        # cached property and is replaced by this method.
-        return self._repr
-
-    __repr__ = __ccl_repr__
-
-    def __hash__(self):
-        return self._hash
 
     def __eq__(self, other):
         # Two same-type objects are equal if their representations are equal.

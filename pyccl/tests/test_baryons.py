@@ -32,8 +32,8 @@ def test_bcm_correct_smoke():
 def test_bcm_update_params():
     bar2 = ccl.BaryonsSchneider15(log10Mc=14.1, eta_b=0.7, k_s=40.)
     bar2.update_parameters(log10Mc=bar.log10Mc,
-                           eta_b=bar.eta_b,
-                           k_s=bar.k_s)
+                            eta_b=bar.eta_b,
+                            k_s=bar.k_s)
     assert bar == bar2
 
 
