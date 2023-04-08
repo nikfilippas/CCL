@@ -123,10 +123,10 @@ class Cosmology(CCLObject):
             parameters.
         Neff (:obj:`float`, optional): Effective number of massless
             neutrinos present. Defaults to 3.046.
-        m_nu (:obj:`float`, optional): Total mass in eV of the massive
+        m_nu (:obj:`float`, or array optional): Total mass in eV of the massive
             neutrinos present. Defaults to 0.
         m_nu_type (:obj:`str`, optional): The type of massive neutrinos. Should
-            be one of 'inverted', 'normal', 'equal', 'single', or 'list'.
+            be one of 'inverted', 'normal', 'equal', 'sum', 'single', or 'list'
             The default of None is the same as 'normal'.
         w0 (:obj:`float`, optional): First order term of dark energy equation
             of state. Defaults to -1.
@@ -441,7 +441,7 @@ class Cosmology(CCLObject):
         Omega_g = np.nan if Omega_g is None else Omega_g
 
         # Check to make sure Omega_k is within reasonable bounds.
-        if Omega_k is not None and Omega_k < -1.0135:
+        if Omega_k < -1.0135:
             raise ValueError("Omega_k must be more than -1.0135.")
 
         # Modified growth.
@@ -457,40 +457,27 @@ class Cosmology(CCLObject):
             raise ValueError("Set either A_s or sigma8 and not both.")
 
         # Check if any compulsory parameters are not set
-        compul = [Omega_c, Omega_b, Omega_k, w0, wa, h, n_s]
-        names = ['Omega_c', 'Omega_b', 'Omega_k', 'w0', 'wa', 'h', 'n_s']
-        for name, item in zip(names, compul):
-            if item is None:
-                raise ValueError(f"Must set parameter {name}.")
+        compul = {"Omega_c": Omega_c, "Omega_b": Omega_b, "h": h, "n_s": n_s}
+        for param, value in compul.items():
+            if value is None:
+                raise ValueError(f"Must set parameter {param}.")
 
         # Make sure the neutrino parameters are consistent
         # and if a sum is given for mass, split into three masses.
-        if hasattr(m_nu, "__len__"):
-            if (len(m_nu) != 3):
-                raise ValueError("m_nu must be a float or array-like object "
-                                 "with length 3.")
-            elif m_nu_type in ['normal', 'inverted', 'equal']:
+        if not (isinstance(m_nu, (int, float)) or hasattr(m_nu, "__iter__")):
+            raise ValueError("m_nu must be float or sequence of length 3")
+        if hasattr(m_nu, "__iter__"):
+            if m_nu_type not in [None, "list"]:
                 raise ValueError(
-                    "m_nu_type '%s' cannot be passed with a list "
-                    "of neutrino masses, only with a sum." % m_nu_type)
-            elif m_nu_type is None:
-                m_nu_type = 'list'  # False
-            mnu_list = [0]*3
-            for i in range(0, 3):
-                mnu_list[i] = m_nu[i]
+                    "Invalid hierarchy for sequence of neutrino masses.")
+            m_nu_type = "list"
+            mnu_list = [mass for mass in m_nu]
 
         else:
-            try:
-                m_nu = float(m_nu)
-            except Exception:
-                raise ValueError(
-                    "m_nu must be a float or array-like object with "
-                    "length 3.")
-
             if m_nu_type is None:
                 m_nu_type = 'normal'
             m_nu = [m_nu]
-            if (m_nu_type == 'normal'):
+            if m_nu_type == 'normal':
                 if (m_nu[0] < (np.sqrt(7.62E-5) + np.sqrt(2.55E-3))
                         and (m_nu[0] > 1e-15)):
                     raise ValueError("if m_nu_type is 'normal', we are "
