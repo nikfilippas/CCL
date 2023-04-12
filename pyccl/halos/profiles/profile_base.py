@@ -2,9 +2,13 @@ from ...pyutils import resample_array, _fftlog_transform
 from ...base import (CCLAutoRepr, abstractlinkedmethod, templatemethod,
                      unlock_instance, warn_api, deprecate_attr)
 from ...base.parameters import FFTLogParams
+from ...errors import CCLDeprecationWarning
+from ..halo_model_base import Concentration
+from ..mass_concentration import MassConcentration
 import numpy as np
 from abc import abstractmethod
 import functools
+import warnings
 
 
 __all__ = ("HaloProfile", "HaloProfileNumberCounts", "HaloProfileMatter",
@@ -42,7 +46,15 @@ class HaloProfile(CCLAutoRepr):
                                  )(super.__getattribute__)
 
     def __init__(self, *, mass_concentration):
-        self.mass_concentration = mass_concentration
+        if isinstance(mass_concentration, Concentration):
+            warnings.warn(
+                "Halo profiles take `MassConcentration` as an initialization "
+                "parameter, fixing mass and (optionally) concentration.",
+                CCLDeprecationWarning)
+            self.mass_concentration = MassConcentration(
+                concentration=mass_concentration)
+        else:
+            self.mass_concentration = mass_concentration
         self.precision_fftlog = FFTLogParams()
 
     @property
