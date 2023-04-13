@@ -41,9 +41,9 @@ class HaloProfile(CCLAutoRepr):
     __getattr__ = deprecate_attr(pairs=[('cM', 'concentration')]
                                  )(super.__getattribute__)
 
-    def __init__(self, *, mass_concentration):
+    def __init__(self, *, mass_concentration, **fftlog):
         self.mass_concentration = mass_concentration
-        self.precision_fftlog = FFTLogParams()
+        self.precision_fftlog = FFTLogParams(**fftlog)
 
     @property
     @abstractmethod

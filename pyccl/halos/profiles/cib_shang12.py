@@ -82,7 +82,8 @@ class HaloProfileCIBShang12(HaloProfileCIB):
     """
     __repr_attrs__ = __eq_attrs__ = (
         "mass_concentration", "nu", "alpha", "T0", "beta", "gamma", "s_z",
-        "l10meff", "sigLM", "Mmin", "L0", "precision_fftlog", "normprof",)
+        "log10Meff", "siglog10M", "Mmin", "L0",
+        "precision_fftlog", "normprof",)
     __getattr__ = deprecate_attr(pairs=[('cM', 'concentration'),
                                         ('l10meff', 'log10Meff'),
                                         ('sigLM', 'siglog10M')]
@@ -94,8 +95,9 @@ class HaloProfileCIBShang12(HaloProfileCIB):
                      ("sigLM", "siglog10M")])
     def __init__(self, *, mass_concentration, nu_GHz, alpha=0.36, T0=24.4,
                  beta=1.75, gamma=1.7, s_z=3.6, log10Meff=12.6,
-                 siglog10M=0.707, Mmin=1E10, L0=6.4E-8):
+                 siglog10M=0.707, Mmin=1E10, L0=6.4E-8, **fftlog):
 
+        self._one_over_4pi = 1/(4*np.pi)
         self.nu = nu_GHz
         self.alpha = alpha
         self.T0 = T0
@@ -107,7 +109,7 @@ class HaloProfileCIBShang12(HaloProfileCIB):
         self.Mmin = Mmin
         self.L0 = L0
         self.pNFW = HaloProfileNFW(mass_concentration=mass_concentration)
-        super().__init__(mass_concentration=mass_concentration)
+        super().__init__(mass_concentration=mass_concentration, **fftlog)
 
     def dNsub_dlnM_TinkerWetzel10(self, Msub, Mparent):
         """Subhalo mass function of Tinker & Wetzel (2010ApJ...719...88T)
