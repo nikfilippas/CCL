@@ -6,6 +6,8 @@ import warnings
 import numpy as np
 import yaml
 from inspect import getmembers, isfunction, signature
+from dataclasses import dataclass
+from scipy.interpolate import Akima1DInterpolator
 
 from . import ccllib as lib
 from .errors import CCLError, CCLWarning
@@ -686,14 +688,6 @@ class Cosmology(CCLObject):
         # and rebuild the C data
         self._build_cosmo()
         self._object_lock.lock()  # Lock on exit.
-
-    def compute_distances(self):
-        """Compute the distance splines."""
-        if self.has_distances:
-            return
-        status = 0
-        status = lib.cosmology_compute_distances(self.cosmo, status)
-        check(status, self)
 
     def compute_growth(self):
         """Compute the growth function."""

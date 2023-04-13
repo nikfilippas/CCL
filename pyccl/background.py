@@ -13,9 +13,10 @@ CCL defines seven species types:
 These strings define the `species` inputs to the functions below.
 """
 import numpy as np
+from scipy.interpolate import Akima1DInterpolator as interp
 from . import ccllib as lib
 from .pyutils import (_vectorize_fn, _vectorize_fn3,
-                      _vectorize_fn4, _vectorize_fn5)
+                      _vectorize_fn4, _vectorize_fn5, check, loglin_spacing)
 from .parameters import physical_constants as const
 from .base import warn_api
 
@@ -28,6 +29,29 @@ species_types = {
     'neutrinos_rel': lib.species_ur_label,
     'neutrinos_massive': lib.species_nu_label,
 }
+
+
+def compute_distances(cosmo):
+    """Compute the distance splines."""
+    if cosmo.has_distances:
+        return
+    status = 0
+    status = lib.cosmology_compute_distances(cosmo.cosmo, status)
+    check(status, cosmo)
+
+    # lookback time
+    spl = cosmo.cosmo.spline_params  # Replace for CCLv3.
+    a = loglin_spacing(spl.A_SPLINE_MINLOG, spl.A_SPLINE_MIN, spl.A_SPLINE_MAX,
+                       spl.A_SPLINE_NLOG, spl.A_SPLINE_NA)
+    t_H = const.MPC_TO_METER / 1e14 / const.YEAR / cosmo["h"]
+    hoh0 = cosmo.h_over_h0(a)
+    integral = interp(a, 1/(a*hoh0)).f.antiderivative()
+    a_eval = np.r_[1.0, a]  # make a single call to the spline
+    vals = integral(a_eval)
+    t_arr = t_H * (vals[0] - vals[1:])
+
+    cosmo.cosmo.data.lookback = interp(a, t_arr)
+    cosmo.cosmo.data.age0 = cosmo.data.lookback(0)[()]
 
 
 def h_over_h0(cosmo, a):
