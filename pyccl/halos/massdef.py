@@ -1,13 +1,62 @@
 from .. import ccllib as lib
-from ..core import check
 from ..background import species_types
 from ..base import CCLAutoRepr, CCLNamedClass, warn_api, deprecate_attr
+from ..base.parameters import physical_constants as const
+from .mass_conversion import convert_concentration
 import numpy as np
 
 
-__all__ = ("mass2radius_lagrangian", "convert_concentration", "MassDef",
-           "MassDef200m", "MassDef200c", "MassDef500c", "MassDefVir",
-           "MassDefFof",)
+__all__ = ("dc_NakamuraSuto", "Dv_BryanNorman", "mass2radius_lagrangian",
+           "MassDef", "MassDef200m", "MassDef200c", "MassDef500c",
+           "MassDefVir", "MassDefFof",)
+
+
+def dc_NakamuraSuto(cosmo, a):
+    r"""Compute the peak threshold :math:`\delta_c(z)` assuming Î›CDM.
+
+    Cosmology dependence of the critical linear density according to the
+    spherical-collapse model. Fitting function from Nakamura & Suto (1997).
+
+    Arguments
+    ---------
+    cosmo : :class:`~pyccl.core.Cosmology`
+        Cosmological parameters.
+    a : float or (na,) array_like
+        Scale factor(s).
+
+    Returns
+    -------
+    delta_c : float or (na,) ndarray
+        Peak theshold at ``a``.
+    """
+    Om_mz = cosmo.omega_x(a, "matter")
+    return const.DELTA_C * (1 + 0.012299 * np.log10(Om_mz))
+
+
+def Dv_BryanNorman(cosmo, a):
+    """Compute the virial collapse density contrast w.r.t. matter density,
+    assuming Î›CDM.
+
+    Cosmology dependence of the critical linear density according to the
+    spherical-collapse model. Fitting function from Bryan & Norman (1997).
+    :arXiv:`astro-ph/9710107`.
+
+    Arguments
+    ---------
+    cosmo : :class:`~pyccl.core.Cosmology`
+        Cosmological parameters.c
+    a : float or (na,) array_like
+        Scale factor(s).
+
+    Returns
+    -------
+    Delta_vir : float or (na,) ndarray
+        Virial collapse density contrast w.r.t. matter density.
+    """
+    Om_mz = cosmo.omega_x(a, "matter")
+    x = Om_mz - 1
+    Dv0 = 18 * np.pi * np.pi
+    return (Dv0 + 82*x - 39*x**2) / Om_mz
 
 
 def mass2radius_lagrangian(cosmo, M):
@@ -22,50 +71,9 @@ def mass2radius_lagrangian(cosmo, M):
     Returns:
         float or array_like: lagrangian radius in comoving Mpc.
     """
-    M_use = np.atleast_1d(M)
-    R = (M_use / (4.18879020479 * cosmo.rho_x(1, 'matter')))**(1./3.)
-    if np.ndim(M) == 0:
-        return R[0]
-    return R
+    M = np.asarray(M)
+    return (M / (4.18879020479 * cosmo.rho_x(1, 'matter')))**(1./3.)
 
-
-@warn_api
-def convert_concentration(cosmo, *, c_old, Delta_old, Delta_new):
-    """ Computes the concentration parameter for a different mass definition.
-    This is done assuming an NFW profile. The output concentration `c_new` is
-    found by solving the equation:
-
-    .. math::
-        f(c_{\\rm old}) \\Delta_{\\rm old} = f(c_{\\rm new}) \\Delta_{\\rm new}
-
-    where
-
-    .. math::
-        f(x) = \\frac{x^3}{\\log(1+x) - x/(1+x)}.
-
-    Args:
-        cosmo (:class:`~pyccl.core.Cosmology`): A Cosmology object.
-        c_old (float or array_like): concentration to translate from.
-        Delta_old (float): Delta parameter associated to the input
-            concentration. See description of the MassDef class.
-        Delta_new (float): Delta parameter associated to the output
-            concentration.
-
-    Returns:
-        float or array_like: concentration parameter for the new
-        mass definition.
-    """
-    status = 0
-    c_old_use = np.atleast_1d(c_old)
-    c_new, status = lib.convert_concentration_vec(cosmo.cosmo,
-                                                  Delta_old, c_old_use,
-                                                  Delta_new, c_old_use.size,
-                                                  status)
-    check(status, cosmo=cosmo)
-
-    if np.isscalar(c_old):
-        return c_new[0]
-    return c_new
 
 
 class MassDef(CCLAutoRepr, CCLNamedClass):
@@ -218,7 +226,7 @@ class MassDef(CCLAutoRepr, CCLNamedClass):
         R_this = self.get_radius(cosmo, M, a)
         om_new = cosmo.omega_x(a, mass_def_other.rho_type)
         D_new = mass_def_other.get_Delta(cosmo, a) * om_new
-        c_new = convert_concentration(cosmo, c_old=c_this,
+        c_new = convert_concentration(c_old=c_this,
                                       Delta_old=D_this,
                                       Delta_new=D_new)
         R_new = c_new * R_this / c_this
