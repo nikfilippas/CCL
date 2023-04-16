@@ -83,6 +83,7 @@ from .bcm import (
 )
 
 from .neutrinos import *
+from .musigma import *
 
 # Cells & Tracers
 from .cells import angular_cl

@@ -103,7 +103,7 @@ def _methods_of_cosmology(cls=None, *, modules=[]):
 
 _modules = ["background", "bcm", "boltzmann", "cells", "correlations",
             "covariances", "neutrinos", "pk2d", "power", "pyutils",
-            "tk3d", "tracers", "halos", "nl_pt"]
+            "tk3d", "tracers", "halos", "nl_pt", "musigma", ]
 
 
 @dataclass
