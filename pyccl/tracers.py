@@ -7,27 +7,8 @@ from .core import check
 from .errors import CCLWarning
 from .base.parameters import physical_constants
 from .base import CCLObject, UnlockInstance, unlock_instance, warn_api
-from .pyutils import (_check_array_params, NoneArr, _vectorize_fn6,
+from .pyutils import (_check_array_params, NoneArr,
                       _get_spline1d_arrays, _get_spline2d_arrays)
-
-
-def _Sig_MG(cosmo, a, k):
-    """Redshift-dependent modification to Poisson equation for massless
-    particles under modified gravity.
-
-    Args:
-        cosmo (:class:`~pyccl.core.Cosmology`): a Cosmology object.
-        a (float or array_like): Scale factor(s), normalized to 1 today.
-        k (float or array_like): Wavenumber for scale
-
-    Returns:
-        float or array_like: Modification to Poisson equation under
-            modified gravity at scale factor a.
-            Sig_MG is assumed to be proportional to Omega_Lambda(z),
-            see e.g. Abbott et al. 2018, 1810.02499, Eq. 9.
-    """
-    cosmo.compute_distances()
-    return _vectorize_fn6(lib.Sig_MG, lib.Sig_MG_vec, cosmo, a, k)
 
 
 def _check_background_spline_compatibility(cosmo, z):
@@ -486,7 +467,7 @@ class Tracer(CCLObject):
         k = np.exp(lk)
         # computing MG factor array
         mgfac_1d = 1
-        mgfac_1d += _Sig_MG(cosmo, a, k)
+        mgfac_1d += cosmo.Sigma_MG(k, a)
         # converting 1D MG factor to a 2D array, so it is compatible
         # with the transfer_ka input structure in MG_add.tracer and
         # add.tracer

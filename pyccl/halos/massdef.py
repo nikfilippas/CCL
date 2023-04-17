@@ -12,7 +12,7 @@ __all__ = ("dc_NakamuraSuto", "Dv_BryanNorman", "mass2radius_lagrangian",
 
 
 def dc_NakamuraSuto(cosmo, a):
-    r"""Compute the peak threshold :math:`\delta_c(z)` assuming Î›CDM.
+    r"""Compute the peak threshold :math:`\delta_c(z)` assuming ΛCDM.
 
     Cosmology dependence of the critical linear density according to the
     spherical-collapse model. Fitting function from Nakamura & Suto (1997).
@@ -35,7 +35,7 @@ def dc_NakamuraSuto(cosmo, a):
 
 def Dv_BryanNorman(cosmo, a):
     """Compute the virial collapse density contrast w.r.t. matter density,
-    assuming Î›CDM.
+    assuming ΛCDM.
 
     Cosmology dependence of the critical linear density according to the
     spherical-collapse model. Fitting function from Bryan & Norman (1997).

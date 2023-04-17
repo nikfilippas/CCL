@@ -10,8 +10,10 @@ def _musigma(cosmo, k, a, *, c_mg=None):
     parametrizations of modified gravity."""
     # This function can be extended to include other
     # redshift and scale z-dependencies for μ and Σ in the future.
-    k_use = np.atleast_1d(k)
-    out = np.full(k_use.shape, c_mg)
+    k_use, a_use = map(np.atleast_1d, [k, a])
+    k_use, a_use = k_use[None, :], a_use[:, None]
+    shp = np.broadcast_shapes(a.shape, k.shape)
+    out = np.full(shp, c_mg)
 
     idx = k_use != 0
     H0 = 100*cosmo["h"]
