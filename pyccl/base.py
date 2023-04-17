@@ -440,8 +440,34 @@ class UnlockInstance:
 unlock_instance = UnlockInstance.unlock_instance
 
 
+class EqControl:
+    """Controls the usage of custom ``__eq__`` for ``CCLObjects``."""
+    _enabled: bool = True
+    _classes: dict = {}
+
+    @classmethod
+    def add(cls, cl):
+        """Add class to the internal dictionary of fancy-repr classes."""
+        cls._classes[cl] = cl.__eq__
+
+    @classmethod
+    def enable(cls):
+        """Enable fancy representations if they exist."""
+        for cl, method in cls._classes.items():
+            setattr(cl, "__eq__", method)
+        cls._enabled = True
+
+    @classmethod
+    def disable(cls):
+        """Disable fancy representations and fall back to Python defaults."""
+        for cl in cls._classes.keys():
+            cl.__eq__ = object.__eq__
+        cls._enabled = False
+
+
+
 class FancyRepr:
-    """Controls the usage of fancy ``__repr__` for ``CCLObjects."""
+    """Controls the usage of fancy ``__repr__` for ``CCLObjects``."""
     _enabled: bool = True
     _classes: dict = {}
 
@@ -546,6 +572,8 @@ class CCLObject(ABC):
         if "__repr__" in vars(cls):
             CCLObject._fancy_repr.add(cls)
             FancyRepr.bind_and_replace(cls, cls.__repr__)
+        if "__eq__" in vars(cls):
+            EqControl.add(cls)
 
         # 3. Unlock instance on specific methods.
         UnlockInstance.Funlock(cls, "__init__", mutate=False)
