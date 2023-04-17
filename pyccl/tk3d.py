@@ -135,7 +135,7 @@ class Tk3D(CCLObject):
 
     def __eq__(self, other):
         # Check the object class.
-        if self.__class__ is not other.__class__:
+        if type(self) is not type(other):
             return False
         # If the objects contain no data, return early.
         if not (self or other):
@@ -152,7 +152,7 @@ class Tk3D(CCLObject):
         a2, lk21, lk22, tk2 = other.get_spline_arrays()
         return ((a1 == a2).all()
                 and (lk11 == lk21).all() and (lk21 == lk22).all()
-                and np.allclose(tk1, tk2, atol=0, rtol=1e-12))
+                and np.array_equal(tk1, tk2))
 
     def __hash__(self):
         return hash(repr(self))

@@ -189,7 +189,7 @@ class Tracer(CCLObject):
 
     def __eq__(self, other):
         # Check the object class.
-        if self.__class__ is not other.__class__:
+        if type(self) is not type(other):
             return False
 
         # If the tracer collections are empty, return early.
@@ -207,7 +207,6 @@ class Tracer(CCLObject):
             return False
 
         # Check the kernels.
-        kwargs = {"atol": 0, "rtol": 1e-12, "equal_nan": True}
         for t1, t2 in zip(self._trc, other._trc):
             if bool(t1.kernel) ^ bool(t2.kernel):
                 # only one of them has a kernel
@@ -215,9 +214,8 @@ class Tracer(CCLObject):
             if t1.kernel is None:
                 # none of them has a kernel
                 continue
-            if not np.allclose(_get_spline1d_arrays(t1.kernel.spline),
-                               _get_spline1d_arrays(t2.kernel.spline),
-                               **kwargs):
+            if not np.array_equal(_get_spline1d_arrays(t1.kernel.spline),
+                                  _get_spline1d_arrays(t2.kernel.spline)):
                 # both have kernels, but they are unequal
                 return False
 
@@ -251,7 +249,7 @@ class Tracer(CCLObject):
                 pts1, pts2 = c2py[attr](spl1), c2py[attr](spl2)
                 for pt1, pt2 in zip(pts1, pts2):
                     # loop through output points of `_get_splinend_arrays`
-                    if not np.allclose(pt1, pt2, **kwargs):
+                    if not np.array_equal(pt1, pt2):
                         # both have this transfer type, but they are unequal
                         # or are defined at different grid points
                         return False

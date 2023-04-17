@@ -3,6 +3,7 @@ from ..core import check
 from ..background import species_types
 from ..base import CCLAutoRepr, CCLNamedClass, warn_api, deprecate_attr
 import numpy as np
+from functools import cached_property
 
 
 __all__ = ("mass2radius_lagrangian", "convert_concentration", "MassDef",
@@ -115,7 +116,7 @@ class MassDef(CCLAutoRepr, CCLNamedClass):
             self.concentration = Concentration.create_instance(
                 concentration, mass_def=self)
 
-    @property
+    @cached_property
     def name(self):
         """Give a name to this mass definition."""
         if isinstance(self.Delta, (int, float)):
@@ -288,10 +289,6 @@ def MassDefVir(concentration='Klypin11'):
 
 
 @warn_api(pairs=[('c_m', 'concentration')])
-def MassDefFof(concentration=None):
-    r""":math:`\Delta = \rm FoF` mass definition.
-
-    Args:
-        concentration (string): concentration-mass relation.
-    """
-    return MassDef('fof', 'matter', concentration=concentration)
+def MassDefFof():
+    r""":math:`\Delta = \rm FoF` mass definition."""
+    return MassDef('fof', 'matter')

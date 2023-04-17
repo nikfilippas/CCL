@@ -132,7 +132,7 @@ class Pk2D(CCLObject):
 
     def __eq__(self, other):
         # Check the object class.
-        if self.__class__ is not other.__class__:
+        if type(self) is not type(other):
             return False
         # If the objects contain no data, return early.
         if not (self or other):
@@ -145,7 +145,7 @@ class Pk2D(CCLObject):
         a1, lk1, pk1 = self.get_spline_arrays()
         a2, lk2, pk2 = other.get_spline_arrays()
         return ((a1 == a2).all() and (lk1 == lk2).all()
-                and np.allclose(pk1, pk2, atol=0, rtol=1e-12))
+                and np.array_equal(pk1, pk2))
 
     def __hash__(self):
         return hash(repr(self))

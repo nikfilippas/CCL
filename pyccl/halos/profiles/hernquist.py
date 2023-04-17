@@ -44,8 +44,8 @@ class HaloProfileHernquist(HaloProfileMatter):
             radii.
     """
     __repr_attrs__ = __eq_attrs__ = (
-        "concentration", "fourier_analytic", "projected_analytic",
-        "cumul2d_analytic", "truncated", "precision_fftlog", "normprof",)
+        "fourier_analytic", "projected_analytic", "cumul2d_analytic",
+        "truncated", "concentration", "precision_fftlog", "normprof",)
     name = 'Hernquist'
 
     @warn_api(pairs=[("c_M_relation", "concentration")])
