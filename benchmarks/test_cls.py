@@ -11,7 +11,6 @@ def set_up(request):
 
     nztyp = request.param
     dirdat = os.path.dirname(__file__) + '/data/'
-    ccl.gsl_params.LENSING_KERNEL_SPLINE_INTEGRATION = False
     ccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1E-4
     ccl.gsl_params.INTEGRATION_EPSREL = 1E-4
     cosmo = ccl.Cosmology(Omega_c=0.30, Omega_b=0.00, Omega_g=0, Omega_k=0,
@@ -69,21 +68,21 @@ def set_up(request):
 
     # Initialize tracers
     trc = {}
-    trc['g1'] = ccl.NumberCountsTracer(cosmo, has_rsd=False,
-                                       dndz=(z1, pz1),
-                                       bias=(z2, bz))
-    trc['g2'] = ccl.NumberCountsTracer(cosmo, has_rsd=False,
-                                       dndz=(z2, pz2),
-                                       bias=(z2, bz))
-    trc['l1'] = ccl.WeakLensingTracer(cosmo, dndz=(z1, pz1))
-    trc['l2'] = ccl.WeakLensingTracer(cosmo, dndz=(z2, pz2))
-    trc['i1'] = ccl.WeakLensingTracer(cosmo, dndz=(z1, pz1),
+    trc['g1'] = ccl.NumberCountsTracer(cosmo, False,
+                                       (z1, pz1),
+                                       (z2, bz))
+    trc['g2'] = ccl.NumberCountsTracer(cosmo, False,
+                                       (z2, pz2),
+                                       (z2, bz))
+    trc['l1'] = ccl.WeakLensingTracer(cosmo, (z1, pz1))
+    trc['l2'] = ccl.WeakLensingTracer(cosmo, (z2, pz2))
+    trc['i1'] = ccl.WeakLensingTracer(cosmo, (z1, pz1),
                                       has_shear=False,
                                       ia_bias=(z1, a1))
-    trc['i2'] = ccl.WeakLensingTracer(cosmo, dndz=(z2, pz2),
+    trc['i2'] = ccl.WeakLensingTracer(cosmo, (z2, pz2),
                                       has_shear=False,
                                       ia_bias=(z2, a2))
-    trc['ct'] = ccl.CMBLensingTracer(cosmo, z_source=1100.)
+    trc['ct'] = ccl.CMBLensingTracer(cosmo, 1100.)
 
     # Read benchmarks
     def read_bm(fname):
@@ -194,8 +193,8 @@ def set_up(request):
                           ('i2', 'i2', 'ii_22',   # IA2-IA2
                            'll_22', 'll_22', 'll_22', 'll_22',
                            'fl_ll')])
-def test_cells(set_up, t1, t2, bm,
-               a1b1, a1b2, a2b1, a2b2, fl):
+def test_cls(set_up, t1, t2, bm,
+             a1b1, a1b2, a2b1, a2b2, fl):
     cosmo, trcs, lfc, bmk = set_up
     cl = ccl.angular_cl(cosmo, trcs[t1], trcs[t2], lfc['ells'],
                         limber_integration_method='qag_quad') * lfc[fl]
@@ -214,8 +213,8 @@ def test_cells(set_up, t1, t2, bm,
                           ('l2', 'l2', 'll_22',   # WL2-WL2
                            'll_22', 'll_22', 'll_22', 'll_22',
                            'fl_ll')])
-def test_cells_spline(set_up, t1, t2, bm,
-                      a1b1, a1b2, a2b1, a2b2, fl):
+def test_cls_spline(set_up, t1, t2, bm,
+                    a1b1, a1b2, a2b1, a2b2, fl):
     cosmo, trcs, lfc, bmk = set_up
     cl = ccl.angular_cl(cosmo, trcs[t1], trcs[t2], lfc['ells'],
                         limber_integration_method='spline') * lfc[fl]

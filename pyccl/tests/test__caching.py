@@ -4,8 +4,6 @@ import pyccl as ccl
 import numpy as np
 from time import time
 
-# Enable caching for this test.
-DEFAULT_CACHING_STATUS = ccl.Caching._enabled
 
 NUM = 3  # number of different Cosmologies we will check
 # some unusual numbers that have not occurred before
@@ -13,6 +11,11 @@ s8_arr = np.linspace(0.753141592, 0.953141592, NUM)
 # a modest speed increase - we are modest in the test to accommodate for slow
 # runs; normally this is is expected to be another order of magnitude faster
 SPEEDUP = 50
+
+# enable caching if not already enabled
+DEFAULT_CACHING_STATUS = ccl.Caching._enabled
+if not ccl.Caching._enabled:
+    ccl.Caching.enable()
 
 
 def get_cosmo(sigma8):
@@ -34,6 +37,7 @@ def timeit_(sigma8):
 
 def test_caching_switches():
     """Test that the Caching switches work as intended."""
+    assert ccl.Caching._enabled == DEFAULT_CACHING_STATUS
     assert ccl.Caching._maxsize == ccl.Caching._default_maxsize
     ccl.Caching.maxsize = 128
     assert ccl.Caching._maxsize == 128
@@ -147,13 +151,4 @@ def test_caching_policy_raises():
         ccl.Caching.policy = "my_policy"
 
 
-def test_caching_parentheses():
-    """Verify that ``cache`` can be used with or without parentheses."""
-    func1, func2 = [lambda: None for _ in range(2)]
-    ccl.cache(func1)
-    ccl.cache(maxsize=10, policy="lru")(func2)
-    assert all([hasattr(func, "cache_info") for func in [func1, func2]])
-
-
-# Revert to defaults.
 ccl.Caching._enabled = DEFAULT_CACHING_STATUS

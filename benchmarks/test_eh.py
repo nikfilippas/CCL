@@ -21,7 +21,7 @@ def test_eh(transfer, fname):
         m_nu=0.0,
         w0=-1.0,
         wa=0.0,
-        mass_split='normal',
+        m_nu_type='normal',
         Omega_g=0,
         Omega_k=0,
         transfer_function=transfer,

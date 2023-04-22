@@ -1,12 +1,9 @@
 import numpy as np
 import pytest
+import warnings
 
 import pyccl as ccl
 
-# NOTE: We now check up to kmax=23
-# because CLASS v3 has a slight mismatch
-# (6e-3) at higher k wavenumbers.
-KMAX = 23
 POWER_NU_TOL = 1.0E-3
 
 
@@ -29,7 +26,7 @@ def test_power_nu(model):
         w0=w_0[model],
         wa=w_a[model],
         m_nu=mnu[model],
-        mass_split='list',
+        m_nu_type='list',
         transfer_function='boltzmann_class')
 
     a = 1
@@ -38,14 +35,20 @@ def test_power_nu(model):
     k_lin = data_lin[:, 0] * cosmo['h']
     pk_lin = data_lin[:, 1] / (cosmo['h']**3)
 
-    pk_lin_ccl = ccl.linear_matter_power(cosmo, k_lin, a)
+    with warnings.catch_warnings():
+        # Linear power with massive neutrinos raises a warning.
+        # Ignore it.
+        # XXX: Do you really want to be raising a warning for this?
+        #      This seems spurious to me.  (MJ)
+        warnings.simplefilter("ignore")
+        pk_lin_ccl = ccl.linear_matter_power(cosmo, k_lin, a)
 
-    assert np.allclose(pk_lin_ccl[k_lin < KMAX],
-                       pk_lin[k_lin < KMAX],
-                       rtol=POWER_NU_TOL)
+    err = np.abs(pk_lin_ccl/pk_lin - 1)
+    assert np.allclose(err, 0, rtol=0, atol=POWER_NU_TOL)
 
     data_nl = np.loadtxt("./benchmarks/data/model%d_pk_nl_nu.txt" % (model+1))
     k_nl = data_nl[:, 0] * cosmo['h']
     pk_nl = data_nl[:, 1] / (cosmo['h']**3)
     pk_nl_ccl = ccl.nonlin_matter_power(cosmo, k_nl, a)
-    assert np.allclose(pk_nl_ccl, pk_nl, rtol=POWER_NU_TOL)
+    err = np.abs(pk_nl_ccl/pk_nl - 1)
+    assert np.allclose(err, 0, rtol=0, atol=POWER_NU_TOL)
