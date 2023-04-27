@@ -28,7 +28,7 @@ def nfw_profile_3d(cosmo, concentration, halo_mass, odelta, a, r):
     """
     mdef = hal.MassDef(odelta, 'matter')
     c = hal.ConcentrationConstant(c=concentration, mass_def=mdef)
-    p = hal.HaloProfileNFW(c, truncated=False)
+    p = hal.HaloProfileNFW(concentration=c, truncated=False)
     return p.real(cosmo, r, halo_mass, a)
 
 
@@ -58,7 +58,7 @@ def einasto_profile_3d(cosmo, concentration, halo_mass, odelta, a, r):
     """
     mdef = hal.MassDef(odelta, 'matter')
     c = hal.ConcentrationConstant(c=concentration, mass_def=mdef)
-    p = hal.HaloProfileEinasto(c, truncated=False)
+    p = hal.HaloProfileEinasto(concentration=c, truncated=False)
     return p.real(cosmo, r, halo_mass, a)
 
 
@@ -86,7 +86,7 @@ def hernquist_profile_3d(cosmo, concentration, halo_mass, odelta, a, r):
     """
     mdef = hal.MassDef(odelta, 'matter')
     c = hal.ConcentrationConstant(c=concentration, mass_def=mdef)
-    p = hal.HaloProfileHernquist(c, truncated=False)
+    p = hal.HaloProfileHernquist(concentration=c, truncated=False)
     return p.real(cosmo, r, halo_mass, a)
 
 
@@ -115,5 +115,6 @@ def nfw_profile_2d(cosmo, concentration, halo_mass, odelta, a, r):
     """
     mdef = hal.MassDef(odelta, 'matter')
     c = hal.ConcentrationConstant(c=concentration, mass_def=mdef)
-    p = hal.HaloProfileNFW(c, truncated=False, projected_analytic=True)
+    p = hal.HaloProfileNFW(concentration=c, truncated=False,
+                           projected_analytic=True)
     return p.projected(cosmo, r, halo_mass, a)
