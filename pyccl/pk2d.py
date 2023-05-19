@@ -15,7 +15,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Callable, Literal, Optional, Tuple, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import (
     CCLObject, DEFAULT_POWER_SPECTRUM, get_pk_spline_a,
@@ -379,8 +379,8 @@ class Pk2D(CCLObject):
 
     def __call__(
             self,
-            k: Union[Real, NDArray[Real]],
-            a: Union[Real, NDArray[Real]],
+            k: ArrayLike,
+            a: ArrayLike,
             cosmo: Optional[Cosmology] = None,
             *,
             derivative: bool = False

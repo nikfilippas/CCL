@@ -19,7 +19,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import DEFAULT_POWER_SPECTRUM, Pk2D, lib
 from . import CCLDeprecationWarning, warn_api
@@ -80,7 +80,7 @@ def correlation(
         *,
         ell: NDArray[Real],
         C_ell: NDArray[Real],
-        theta: Union[Real, NDArray[Real]],
+        theta: ArrayLike,
         type: str = 'NN',
         corr_type: Optional[str] = None,
         method: str = 'fftlog'
@@ -215,7 +215,7 @@ def correlation(
 def correlation_3d(
         cosmo: Cosmology,
         *,
-        r: Union[Real, NDArray[Real]],
+        r: ArrayLike,
         a: Real,
         p_of_k_a: Union[str, Pk2D] = DEFAULT_POWER_SPECTRUM
 ) -> Union[float, NDArray[float]]:
@@ -265,7 +265,7 @@ def correlation_3d(
 def correlation_multipole(
         cosmo: Cosmology,
         *,
-        r: Union[Real, NDArray[Real]],
+        r: ArrayLike,
         a: Real,
         beta: Real,
         ell: int,
@@ -320,10 +320,10 @@ def correlation_pi_sigma(cosmo, *, pi, sigma, a, beta,
 def correlation3D_RSD(
         cosmo: Cosmology,
         *,
-        r: Optional[Union[Real, NDArray[Real]]] = None,
-        mu: Optional[Union[Real, NDArray[Real]]] = None,
-        pi: Optional[Union[Real, NDArray[Real]]] = None,
-        sigma: Optional[Union[Real, NDArray[Real]]] = None,
+        r: Optional[ArrayLike] = None,
+        mu: Optional[ArrayLike] = None,
+        pi: Optional[ArrayLike] = None,
+        sigma: Optional[ArrayLike] = None,
         a: Real,
         beta: Real,
         ell: Literal[0, 2, 4] = 0,

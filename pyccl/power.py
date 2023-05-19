@@ -12,11 +12,10 @@ __all__ = ("linear_power", "nonlin_power", "linear_matter_power",
            "nonlin_matter_power", "sigmaM", "sigmaR", "sigmaV", "sigma8",
            "kNL",)
 
-from numbers import Real
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import DEFAULT_POWER_SPECTRUM, lib, warn_api
 
@@ -27,8 +26,8 @@ if TYPE_CHECKING:
 @warn_api
 def linear_power(
         cosmo: Cosmology,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
         *,
         p_of_k_a: str = DEFAULT_POWER_SPECTRUM
 ) -> Union[float, NDArray[float]]:
@@ -61,8 +60,8 @@ def linear_power(
 @warn_api
 def nonlin_power(
         cosmo: Cosmology,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
         *,
         p_of_k_a: str = DEFAULT_POWER_SPECTRUM
 ) -> Union[float, NDArray[float]]:
@@ -119,8 +118,8 @@ def nonlin_power(
 
 def linear_matter_power(
         cosmo: Cosmology,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
 ) -> Union[float, NDArray[float]]:
     r"""The linear matter power spectrum.
 
@@ -148,8 +147,8 @@ def linear_matter_power(
 
 def nonlin_matter_power(
         cosmo: Cosmology,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
 ) -> Union[float, NDArray[float]]:
     r"""The non-linear matter power spectrum.
 
@@ -177,8 +176,8 @@ def nonlin_matter_power(
 
 def sigmaM(
         cosmo: Cosmology,
-        M: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]]
+        M: ArrayLike,
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Root mean squared variance of the linear power spectrum.
 
@@ -223,8 +222,8 @@ def sigmaM(
 @warn_api
 def sigmaR(
         cosmo: Cosmology,
-        R: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]] = 1,
+        R: ArrayLike,
+        a: ArrayLike = 1,
         *,
         p_of_k_a: Union[str, Pk2D] = DEFAULT_POWER_SPECTRUM
 ):
@@ -277,8 +276,8 @@ def sigmaR(
 @warn_api
 def sigmaV(
         cosmo: Cosmology,
-        R: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]] = 1,
+        R: ArrayLike,
+        a: ArrayLike = 1,
         *,
         p_of_k_a: str = DEFAULT_POWER_SPECTRUM
 ):
@@ -363,7 +362,7 @@ def sigma8(
 @warn_api
 def kNL(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]],
+        a: ArrayLike,
         *,
         p_of_k_a: str = DEFAULT_POWER_SPECTRUM
 ) -> Union[float, NDArray[float]]:

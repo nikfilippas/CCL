@@ -5,7 +5,7 @@ __all__ = ("DEFAULT_POWER_SPECTRUM", "CosmologyParams", "NeutrinoMassSplits",)
 import warnings
 from enum import Enum
 from numbers import Real
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -132,7 +132,7 @@ class CosmologyParams(Parameters, factory=lib.parameters):
     :meta hide-value:
     """
 
-    m_nu: Sequence[Real] = (0,)
+    m_nu: Union[Real, Sequence[Real]] = (0,)
     r"""Neutrino masses, :math:`m_{\rm \nu}`.
 
     :meta hide-value:

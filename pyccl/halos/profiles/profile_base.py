@@ -8,7 +8,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from ... import CCLObject, FFTLogParams
 from ... import CCLDeprecationWarning, deprecate_attr, warn_api, mass_def_api
@@ -216,8 +216,8 @@ class HaloProfile(CCLObject):
     def real(
             self,
             cosmo: Cosmology,
-            r: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r: ArrayLike,
+            M: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Compute the 3-D real-space profile.
@@ -258,8 +258,8 @@ class HaloProfile(CCLObject):
     def fourier(
             self,
             cosmo: Cosmology,
-            k: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            k: ArrayLike,
+            M: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Compute the 3-D Forier-space profile.
@@ -305,8 +305,8 @@ class HaloProfile(CCLObject):
     def projected(
             self,
             cosmo: Cosmology,
-            r_t: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r_t: ArrayLike,
+            M: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Compute the 2-D projected profile.
@@ -351,8 +351,8 @@ class HaloProfile(CCLObject):
     def cumul2d(
             self,
             cosmo: Cosmology,
-            r_t: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r_t: ArrayLike,
+            M: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Compute the 2-D cumulative surface mass density.
@@ -398,11 +398,11 @@ class HaloProfile(CCLObject):
     def convergence(
             self,
             cosmo: Cosmology,
-            r: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r: ArrayLike,
+            M: ArrayLike,
             *,
             a_lens: Real,
-            a_source: Union[Real, NDArray[Real]]
+            a_source: ArrayLike
     ) -> Union[float, NDArray[float]]:
         r"""Compute the convergence.
 
@@ -451,11 +451,11 @@ class HaloProfile(CCLObject):
     def shear(
             self,
             cosmo: Cosmology,
-            r: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r: ArrayLike,
+            M: ArrayLike,
             *,
             a_lens: Real,
-            a_source: Union[Real, NDArray[Real]]
+            a_source: ArrayLike
     ) -> Union[float, NDArray[float]]:
         r"""Compute the tangential shear.
 
@@ -506,11 +506,11 @@ class HaloProfile(CCLObject):
     def reduced_shear(
             self,
             cosmo: Cosmology,
-            r: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r: ArrayLike,
+            M: ArrayLike,
             *,
             a_lens: Real,
-            a_source: Union[Real, NDArray[Real]]
+            a_source: ArrayLike
     ) -> Union[float, NDArray[float]]:
         r"""Compute the reduced shear.
 
@@ -560,11 +560,11 @@ class HaloProfile(CCLObject):
     def magnification(
             self,
             cosmo: Cosmology,
-            r: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            r: ArrayLike,
+            M: ArrayLike,
             *,
             a_lens: Real,
-            a_source: Union[Real, NDArray[Real]]
+            a_source: ArrayLike
     ) -> Union[float, NDArray[float]]:
         r"""Compute the magnification.
 

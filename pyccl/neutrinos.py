@@ -12,10 +12,10 @@ __all__ = ("nu_masses", "Omeganuh2",)
 
 import warnings
 from numbers import Real
-from typing import Iterable, Optional, Sequence, Union
+from typing import Iterable, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import root
 
 from . import CosmologyParams, NeutrinoMassSplits, lib, omega_x
@@ -26,8 +26,8 @@ from .pyutils import check
 
 @deprecated(new_api=omega_x)
 def Omeganuh2(
-        a: Union[Real, NDArray[Real]],
-        m_nu: Union[Real, Sequence[Real]],
+        a: ArrayLike,
+        m_nu: ArrayLike,
         T_CMB: float = CosmologyParams.T_CMB,
         T_ncdm: float = CosmologyParams.T_ncdm
 ) -> Union[float, NDArray[float]]:
@@ -38,10 +38,10 @@ def Omeganuh2(
     ---------
     a : array_like (na,)
         Scale factor.
-    m_nu
+    m_nu : array_like
         Neutrino mass in :math:`\rm eV`.
     T_CMB
-        Temperature of the CMB in :`\rm K`.
+        Temperature of the CMB in :math:`\rm K`.
     T_ncdm
         Non-CDM temperature in units of photon temperature.
 
@@ -79,7 +79,7 @@ def nu_masses(
         Omega_nu_h2: Optional[Real] = None,
         mass_split: str,
         T_CMB: Optional[Real] = None,
-        m_nu: Optional[Union[Real, Sequence[Real]]] = None  # TODO: v3 2nd arg
+        m_nu: Optional[ArrayLike] = None  # TODO: v3 2nd arg
 ) -> Union[float, NDArray[float]]:
     r"""Compute the neutrinos mass(es) given a mass hierarchy.
 

@@ -6,7 +6,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Callable, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from ... import warn_api, deprecated
 from . import HaloProfile
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .. import MassDef
 
     FuncSignature = Callable[[Cosmology,
-                              Union[Real, NDArray[Real]],
+                              ArrayLike,
                               Real],
                              NDArray[float]]
 

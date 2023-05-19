@@ -45,7 +45,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, List, Literal, Optional, Tuple, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import ccllib as lib
 from .errors import CCLWarning
@@ -60,8 +60,8 @@ if TYPE_CHECKING:
 
 def _Sig_MG(
         cosmo: Cosmology,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]]
+        k: ArrayLike,
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Redshift-dependent modification to Poisson equation for massless
     particles under modified gravity.
@@ -401,7 +401,7 @@ class Tracer(CCLObject):
 
     def get_kernel(
             self,
-            chi: Union[Real, NDArray[Real], None] = None
+            chi: Union[ArrayLike, None] = None
     ) -> Union[List[NDArray[float]],
                Tuple[List[NDArray[float]],
                      List[NDArray[float]]]]:
@@ -448,7 +448,7 @@ class Tracer(CCLObject):
 
     def get_f_ell(
             self,
-            ell: Union[Real, NDArray[Real]]
+            ell: ArrayLike
     ) -> NDArray[float]:
         r"""Get the :math:`\ell`-dependent prefactors for all tracers in this
         collection.
@@ -480,8 +480,8 @@ class Tracer(CCLObject):
 
     def get_transfer(
             self,
-            lk: Union[Real, NDArray[Real]],
-            a: Union[Real, NDArray[Real]]
+            lk: ArrayLike,
+            a: ArrayLike
     ) -> NDArray[float]:
         r"""Get the transfer functions for all tracers in this collection.
 

@@ -15,7 +15,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import DEFAULT_POWER_SPECTRUM, lib, warn_api
 from .pyutils import _check_array_params, integ_types
@@ -33,11 +33,11 @@ def angular_cl_cov_cNG(
         tracer1: Tracer,
         tracer2: Tracer,
         *,
-        ell: Union[Real, NDArray[Real]],
+        ell: ArrayLike,
         t_of_kk_a: Tk3D,
         tracer3: Optional[Tracer] = None,
         tracer4: Optional[Tracer] = None,
-        ell2: Optional[Union[Real, NDArray[Real]]] = None,
+        ell2: Optional[ArrayLike] = None,
         fsky: Real = 1,
         integration_method: str = 'qag_quad'
 ) -> Union[float, NDArray[float]]:
@@ -137,7 +137,7 @@ def angular_cl_cov_cNG(
 @warn_api(pairs=[('a', 'a_arr')])
 def sigma2_B_disc(
         cosmo: Cosmology,
-        a_arr: Optional[Union[Real, NDArray[Real]]] = None,
+        a_arr: Optional[ArrayLike] = None,
         *,
         fsky=1,
         p_of_k_a: Union[str, Pk2D] = DEFAULT_POWER_SPECTRUM
@@ -200,7 +200,7 @@ def sigma2_B_disc(
 @warn_api(pairs=[('a', 'a_arr')])
 def sigma2_B_from_mask(
         cosmo: Cosmology,
-        a_arr: Optional[Union[Real, NDArray[Real]]] = None,
+        a_arr: Optional[ArrayLike] = None,
         *,
         mask_wl: NDArray[Real],
         p_of_k_a: Union[str, Pk2D] = DEFAULT_POWER_SPECTRUM
@@ -286,11 +286,11 @@ def angular_cl_cov_SSC(
         tracer1: Tracer,
         tracer2: Tracer,
         *,
-        ell: Union[Real, NDArray[Real]],
+        ell: ArrayLike,
         t_of_kk_a: Tk3D,
         tracer3: Optional[Tracer] = None,
         tracer4: Optional[Tracer] = None,
-        ell2: Optional[Union[Real, NDArray[Real]]] = None,
+        ell2: Optional[ArrayLike] = None,
         sigma2_B: Optional[Tuple[NDArray[Real], NDArray[Real]]] = None,
         fsky: Real = 1,
         integration_method: str = 'qag_quad'

@@ -16,11 +16,10 @@ __all__ = (
     "growth_factor", "growth_factor_unnorm", "growth_rate",)
 
 from enum import Enum
-from numbers import Real
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import lib, warn_api
 from . import physical_constants as const
@@ -63,7 +62,7 @@ species_types = {
 
 def h_over_h0(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]]
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Ratio of Hubble constant at `a` over Hubble constant today.
 
@@ -89,7 +88,7 @@ def h_over_h0(
 
 def comoving_radial_distance(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]]
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Comoving radial distance (in :math:`\rm Mpc`).
 
@@ -116,7 +115,7 @@ def comoving_radial_distance(
 
 def scale_factor_of_chi(
         cosmo: Cosmology,
-        chi: Union[Real, NDArray[Real]]
+        chi: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Scale factor at some comoving radial distance, :math:`a(\chi)`.
 
@@ -139,7 +138,7 @@ def scale_factor_of_chi(
 
 def comoving_angular_distance(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]]
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Comoving angular distance (in :math:`\rm Mpc`).
 
@@ -175,8 +174,8 @@ def comoving_angular_distance(
 
 def angular_diameter_distance(
         cosmo: Cosmology,
-        a1: Union[Real, NDArray[Real]],
-        a2: Optional[Union[Real, NDArray[Real]]] = None
+        a1: ArrayLike,
+        a2: Optional[ArrayLike] = None
 ) -> Union[float, NDArray[float]]:
     r"""Angular diameter distance (in :math:`\rm Mpc`).
 
@@ -234,7 +233,7 @@ def angular_diameter_distance(
 
 def luminosity_distance(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]]
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Luminosity distance.
 
@@ -264,7 +263,7 @@ def luminosity_distance(
 
 def distance_modulus(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]]
+        a: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Distance modulus.
 
@@ -297,8 +296,8 @@ def distance_modulus(
 def sigma_critical(
         cosmo: Cosmology,
         *,
-        a_lens: Union[Real, NDArray[Real]],
-        a_source: Union[Real, NDArray[Real]]
+        a_lens: ArrayLike,
+        a_source: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Compute the critical surface mass density.
 
@@ -341,7 +340,7 @@ def sigma_critical(
 
 def omega_x(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]],
+        a: ArrayLike,
         species: str
 ) -> Union[float, NDArray[float]]:
     r"""Density fraction of a given species at a particular scale factor.
@@ -379,7 +378,7 @@ def omega_x(
 @warn_api
 def rho_x(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]],
+        a: ArrayLike,
         species: str,
         *,
         is_comoving: bool = False
@@ -417,7 +416,7 @@ def rho_x(
 
 def growth_factor(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]],
+        a: ArrayLike,
 ) -> Union[float, NDArray[float]]:
     """Growth factor, :math:`D(a)`.
 
@@ -444,7 +443,7 @@ def growth_factor(
 
 def growth_factor_unnorm(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]],
+        a: ArrayLike,
 ) -> Union[float, NDArray[float]]:
     """Unnormalized growth factor.
 
@@ -472,7 +471,7 @@ def growth_factor_unnorm(
 
 def growth_rate(
         cosmo: Cosmology,
-        a: Union[Real, NDArray[Real]],
+        a: ArrayLike,
 ) -> Union[float, NDArray[float]]:
     r"""Growth rate defined as the logarithmic derivative of the
     growth factor,

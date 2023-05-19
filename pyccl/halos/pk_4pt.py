@@ -15,7 +15,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import Tk3D, warn_api
 from . import HaloProfileNFW, Profile2pt
@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 def halomod_trispectrum_1h(
         cosmo: Cosmology,
         hmc: HMCalculator,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
         prof: HaloProfile,
         *,
         prof2: Optional[HaloProfile] = None,
@@ -216,10 +216,10 @@ def halomod_Tk3D_SSC_linear_bias(
         hmc: HMCalculator,
         *,
         prof: HaloProfileNFW,
-        bias1: Union[Real, NDArray[Real]] = 1,
-        bias2: Union[Real, NDArray[Real]] = 1,
-        bias3: Union[Real, NDArray[Real]] = 1,
-        bias4: Union[Real, NDArray[Real]] = 1,
+        bias1: ArrayLike = 1,
+        bias2: ArrayLike = 1,
+        bias3: ArrayLike = 1,
+        bias4: ArrayLike = 1,
         is_number_counts1: bool = False,
         is_number_counts2: bool = False,
         is_number_counts3: bool = False,

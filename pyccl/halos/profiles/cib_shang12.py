@@ -6,7 +6,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.integrate import simpson
 from scipy.special import lambertw
 
@@ -150,7 +150,7 @@ class HaloProfileCIBShang12(HaloProfileCIB):
 
     def dNsub_dlnM_TinkerWetzel10(
             self,
-            Msub: Union[Real, NDArray[Real]],
+            Msub: ArrayLike,
             Mparent: Real
     ) -> Union[float, NDArray[float]]:
         r"""Subhalo mass function of :footcite:t:`TinkerWetzel10`.

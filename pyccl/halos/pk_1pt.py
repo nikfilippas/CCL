@@ -10,11 +10,10 @@ from __future__ import annotations
 
 __all__ = ("halomod_mean_profile_1pt", "halomod_bias_1pt",)
 
-from numbers import Real
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import warn_api
 
@@ -78,8 +77,8 @@ def _Ix1(func, cosmo, hmc, k, a, prof, normprof):
 def halomod_mean_profile_1pt(
         cosmo: Cosmology,
         hmc: HMCalculator,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
         prof: HaloProfile,
         *,
         normprof: Optional[bool] = None
@@ -102,8 +101,8 @@ def halomod_mean_profile_1pt(
 def halomod_bias_1pt(
         cosmo: Cosmology,
         hmc: HMCalculator,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
         prof: HaloProfile,
         *,
         normprof: Optional[bool] = None

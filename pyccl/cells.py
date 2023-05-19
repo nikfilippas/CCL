@@ -14,7 +14,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import DEFAULT_POWER_SPECTRUM, CCLWarning, lib, warn_api
 from .pyutils import integ_types
@@ -28,7 +28,7 @@ def angular_cl(
         cosmo: Cosmology,
         tracer1: Tracer,
         tracer2: Tracer,
-        ell: Union[Real, NDArray[Real]],
+        ell: ArrayLike,
         *,
         p_of_k_a: Union[str, Pk2D] = DEFAULT_POWER_SPECTRUM,
         l_limber: Real = -1,

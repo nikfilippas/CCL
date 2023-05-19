@@ -13,7 +13,7 @@ from numbers import Real
 from typing import List, Literal, Optional, Tuple, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import CCLObject, lib
 from . import CCLDeprecationWarning, warn_api
@@ -197,8 +197,8 @@ class Tk3D(CCLObject):
 
     def __call__(
             self,
-            k: Union[Real, NDArray[Real]],
-            a: Union[Real, NDArray[Real]]
+            k: ArrayLike,
+            a: ArrayLike
     ) -> Union[float, NDArray[float]]:
         r"""Evaluate the trispectrum.
 

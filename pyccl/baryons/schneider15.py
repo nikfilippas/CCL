@@ -6,7 +6,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import Pk2D, update
 from . import Baryons
@@ -62,8 +62,8 @@ class BaryonsSchneider15(Baryons):
     def boost_factor(
             self,
             cosmo: Cosmology,
-            k: Union[Real, NDArray[Real]],
-            a: Union[Real, NDArray[Real]],
+            k: ArrayLike,
+            a: ArrayLike,
     ) -> Union[float, NDArray[float]]:
         r"""Compute the baryonic boost factor.
 

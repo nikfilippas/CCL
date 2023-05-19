@@ -13,7 +13,7 @@ __all__ = ("Profile2pt", "Profile2ptHOD", "Profile2ptCIB",)
 from numbers import Real
 from typing import TYPE_CHECKING, Optional, Union
 
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import CCLObject, mass_def_api, warn_api  # update # TODO: CCLv3 uncomm
 from . import HaloProfileHOD, HaloProfileCIB
@@ -62,8 +62,8 @@ class Profile2pt(CCLObject):
     def fourier_2pt(
             self,
             cosmo: Cosmology,
-            k: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            k: ArrayLike,
+            M: ArrayLike,
             a: Real,
             prof: HaloProfile,
             *,
@@ -126,8 +126,8 @@ class Profile2ptHOD(Profile2pt):
     def fourier_2pt(
             self,
             cosmo: Cosmology,
-            k: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            k: ArrayLike,
+            M: ArrayLike,
             a: Real,
             prof: HaloProfileHOD,
             *,
@@ -187,8 +187,8 @@ class Profile2ptCIB(Profile2pt):
     def fourier_2pt(
             self,
             cosmo: Cosmology,
-            k: Union[Real, NDArray[Real]],
-            M: Union[Real, NDArray[Real]],
+            k: ArrayLike,
+            M: ArrayLike,
             a: Real,
             prof: HaloProfileCIB,
             *,

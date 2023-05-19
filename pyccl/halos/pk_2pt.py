@@ -15,7 +15,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import CCLWarning, Pk2D, warn_api
 from . import Profile2pt
@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 def halomod_power_spectrum(
         cosmo: Cosmology,
         hmc: HMCalculator,
-        k: Union[Real, NDArray[Real]],
-        a: Union[Real, NDArray[Real]],
+        k: ArrayLike,
+        a: ArrayLike,
         prof: HaloProfile,
         *,
         prof2: Optional[HaloProfile] = None,

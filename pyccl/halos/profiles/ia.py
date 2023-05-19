@@ -7,7 +7,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.integrate import simpson
 from scipy.special import binom, gamma, spherical_jn
 
@@ -231,8 +231,8 @@ class SatelliteShearHOD(HaloProfileHOD):
 
     def gamma_I(
             self,
-            r: Union[Real, NDArray[Real]],
-            r_vir: Union[Real, NDArray[Real]]
+            r: ArrayLike,
+            r_vir: ArrayLike
     ) -> Union[float, NDArray[float]]:
         r"""Compute the intrinsic satellite shear,
 

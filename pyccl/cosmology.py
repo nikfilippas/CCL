@@ -19,10 +19,10 @@ import yaml
 from enum import Enum
 from inspect import getmembers, isfunction, signature
 from numbers import Real
-from typing import Dict, Iterable, Literal, Optional, Sequence, Union
+from typing import Dict, Iterable, Literal, Optional, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import (
     CCLError, CCLDeprecationWarning, CCLObject, CLevelErrors, CosmologyParams,
@@ -275,7 +275,7 @@ class Cosmology(CCLObject):
             Omega_k: Real = 0,
             Omega_g: Optional[Real] = None,
             Neff: Real = None,  # TODO: Default value from CosmologyParams (v3)
-            m_nu: Union[Real, Sequence[Real]] = 0,
+            m_nu: ArrayLike = 0,
             mass_split: str = 'normal',
             w0: Real = -1,
             wa: Real = 0,
@@ -967,7 +967,7 @@ class CosmologyCalculator(Cosmology):
             Omega_k: Real = 0,
             Omega_g: Optional[Real] = None,
             Neff: Real = None,  # TODO: Default from CosmologyParams in CCLv3.
-            m_nu: Union[Real, Sequence[Real]] = 0,
+            m_nu: ArrayLike = 0,
             mass_split: str = "normal",
             w0: Real = -1,
             wa: Real = 0,

@@ -18,7 +18,7 @@ from typing import (TYPE_CHECKING, Callable, Iterable, Optional, Sequence,
                     Tuple, Union)
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from . import CCLError, SplineParams, deprecated, lib
 
@@ -132,8 +132,8 @@ def _vectorize_fn(
         fn_vec: Callable,
         cosmo: Cosmology,
         *varargs,
-        x: Union[Real, NDArray[Real]],
-        x2: Union[Real, NDArray[Real]] = None,
+        x: ArrayLike,
+        x2: ArrayLike = None,
         pairwise: bool = False
 ) -> Union[float, NDArray[float]]:
     """Generic wrapper to allow vectorized access to CCL functions.
@@ -254,7 +254,7 @@ def get_pk_spline_lk(
 def resample_array(
         x_in: NDArray[Real],
         y_in: NDArray[Real],
-        x_out: Union[Real, NDArray[Real]],
+        x_out: ArrayLike,
         extrap_lo: str = 'none',
         extrap_hi: str = 'none',
         fill_value_lo: Real = 0,

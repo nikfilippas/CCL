@@ -19,7 +19,7 @@ from numbers import Real
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import CCLNamedClass, lib
 from .. import deprecate_attr, deprecated, warn_api, mass_def_api
@@ -211,7 +211,7 @@ class MassFunc(HMIngredients):
     def __call__(
             self,
             cosmo: Cosmology,
-            M: Union[Real, NDArray[Real]],
+            M: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Call the mass function. Calls :meth:`MassFunc._get_fsigma`.
@@ -295,9 +295,9 @@ class HaloBias(HMIngredients):
     def __call__(
             self,
             cosmo: Cosmology,
-            M: Union[Real, NDArray[Real]],
+            M: ArrayLike,
             a: Real
-    ) -> Union[Real, NDArray[Real]]:
+    ) -> Union[float, NDArray[float]]:
         r"""Call the halo bias function. Calls :meth:`~HaloBias._get_bsigma`.
 
         Arguments
@@ -388,9 +388,9 @@ class Concentration(HMIngredients):
     def __call__(
             self,
             cosmo: Cosmology,
-            M: Union[Real, NDArray[Real]],
+            M: ArrayLike,
             a: Real
-    ) -> Union[Real, NDArray[Real]]:
+    ) -> Union[float, NDArray[float]]:
         r"""Call the concentration relation. Calls
         :meth:`~Concentration._concentration`.
 

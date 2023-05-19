@@ -21,7 +21,7 @@ from typing import (TYPE_CHECKING,
                     Callable, Literal, Optional, Tuple, Type, Union)
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from .. import CCLDeprecationWarning, CCLNamedClass, CCLObject, lib
 from .. import warn_api
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 def mass2radius_lagrangian(
         cosmo: Cosmology,
-        M: Union[Real, NDArray[Real]]
+        M: ArrayLike
 ) -> Union[float, NDArray[float]]:
     r"""Compute the Lagrangian radius of a halo.
 
@@ -70,7 +70,7 @@ def mass2radius_lagrangian(
 def convert_concentration(
         cosmo: Cosmology,
         *,
-        c_old: Union[Real, NDArray[Real]],
+        c_old: ArrayLike,
         Delta_old: Real,
         Delta_new: Real
 ) -> Union[float, NDArray[float]]:
@@ -124,8 +124,8 @@ def mass_translator(
         mass_in: Union[str, MassDef],
         mass_out: Union[str, MassDef],
         concentration: Union[str, Concentration]
-) -> Callable[[Cosmology, Union[Real, NDArray], Real],
-              Union[Real, NDArray]]:
+) -> Callable[[Cosmology, Union[Real, NDArray[Real]], Real],
+              Union[float, NDArray[float]]]:
     r"""Translate between mass definitions.
 
     Mass translation requires a concentration to use for the NFW profile.
@@ -342,7 +342,7 @@ class MassDef(CCLNamedClass, CCLObject):  # TODO: Only keep CCLObject in CCLv3.
     def get_mass(
             self,
             cosmo: Cosmology,
-            R: Union[Real, NDArray[Real]],
+            R: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Translate halo radius to halo mass.
@@ -375,7 +375,7 @@ class MassDef(CCLNamedClass, CCLObject):  # TODO: Only keep CCLObject in CCLv3.
     def get_radius(
             self,
             cosmo: Cosmology,
-            M: Union[Real, NDArray[Real]],
+            M: ArrayLike,
             a: Real
     ) -> Union[float, NDArray[float]]:
         r"""Translate halo mass to halo radius.
@@ -410,7 +410,7 @@ class MassDef(CCLNamedClass, CCLObject):  # TODO: Only keep CCLObject in CCLv3.
     def translate_mass(
             self,
             cosmo: Cosmology,
-            M: Union[Real, NDArray[Real]],
+            M: ArrayLike,
             a: Real,
             *,
             mass_def_other: MassDef
