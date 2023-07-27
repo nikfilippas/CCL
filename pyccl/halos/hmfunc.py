@@ -163,7 +163,6 @@ class MassFunc(CCLHalosObject):
             mf = mf[0]
         return mf
 
-    @abstractmethod
     def _get_fsigma(self, cosmo, sigM, a, lnM):
         """ Get the :math:`f(\\sigma_M)` function for this mass function
         object (see description of this class for details).
