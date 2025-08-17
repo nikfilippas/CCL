@@ -104,8 +104,8 @@ class HMCalculator(CCLHalosObject):
             raise NotImplementedError("Only \'simpson\' and 'spline' "
                                       "supported as integration methods")
         elif self._prec['integration_method_M'] == 'simpson':
-            from scipy.integrate import simps
-            self._integrator = simps
+            from scipy.integrate import simpson
+            self._integrator = simpson
         else:
             self._integrator = self._integ_spline
 
@@ -123,7 +123,7 @@ class HMCalculator(CCLHalosObject):
         if a != self._a_mf or cosmo != self._cosmo_mf:
             massfunc = self._massfunc.get_mass_function
             self._mf = massfunc(cosmo, self._mass, a)
-            integ = self._integrator(self._mf*self._mass, self._lmass)
+            integ = self._integrator(self._mf*self._mass, x=self._lmass)
             self._mf0 = (rho0 - integ) / self._m0
             self._cosmo_mf, self._a_mf = cosmo, a  # cache
 
@@ -133,7 +133,7 @@ class HMCalculator(CCLHalosObject):
         if cosmo != self._cosmo_bf or a != self._a_bf:
             hbias = self._hbias.get_halo_bias
             self._bf = hbias(cosmo, self._mass, a)
-            integ = self._integrator(self._mf*self._bf*self._mass, self._lmass)
+            integ = self._integrator(self._mf*self._bf*self._mass, x=self._lmass)
             self._mbf0 = (rho0 - integ) / self._m0
             self._cosmo_bf, self._a_bf = cosmo, a  # cache
 
@@ -146,12 +146,12 @@ class HMCalculator(CCLHalosObject):
 
     def _integrate_over_mf(self, array_2):
         i1 = self._integrator(self._mf[..., :] * array_2,
-                              self._lmass)
+                              x=self._lmass)
         return i1 + self._mf0 * array_2[..., 0]
 
     def _integrate_over_mbf(self, array_2):
         i1 = self._integrator((self._mf * self._bf)[..., :] * array_2,
-                              self._lmass)
+                              x=self._lmass)
         return i1 + self._mbf0 * array_2[..., 0]
 
     def profile_norm(self, cosmo, a, prof):
@@ -227,11 +227,11 @@ class HMCalculator(CCLHalosObject):
             _selm = np.atleast_2d(sel(self._mass, _a)).T
             mint[i] = self._integrator(
                 dvda[i] * self._mf[..., :] * _selm[..., :],
-                self._lmass
+                x=self._lmass
             )
 
         # now do scale factor integral
-        mtot = self._integrator(mint, a)
+        mtot = self._integrator(mint, x=a)
 
         return mtot
 

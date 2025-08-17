@@ -553,7 +553,7 @@ class PowerSpectrumBACCO(PowerSpectrumEmulator):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
         import baccoemu
         with warnings.catch_warnings():
-            # supress pickling warnings
+            # suppress pickling warnings
             warnings.simplefilter("ignore")
             model = baccoemu.Matter_powerspectrum(**config)  # this is the emu
 

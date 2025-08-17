@@ -2,7 +2,7 @@ from .profiles import HaloProfile, HaloProfileNFW
 from .profiles_2pt import Profile2pt
 from .concentration import Concentration
 import numpy as np
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from scipy.special import lambertw
 
 
